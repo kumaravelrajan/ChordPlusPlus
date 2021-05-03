@@ -1,6 +1,6 @@
 # DHT-4
 
-[TOC]
+[[_TOC_]]
 
 ## Overview
 
