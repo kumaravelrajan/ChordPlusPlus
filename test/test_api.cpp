@@ -1,6 +1,6 @@
 #include <iostream>
 #include <cstdint>
-#include "test_assert.h"
+#include "assertions.h"
 #include "api.h"
 
 int main()

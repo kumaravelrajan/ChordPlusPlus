@@ -14,3 +14,4 @@ endmacro(my_add_test)
 
 my_add_test(NAME foo SOURCE_FILES foo.cpp)
 my_add_test(NAME api SOURCE_FILES test_api.cpp LIBRARIES lib::api)
+my_add_test(NAME util SOURCE_FILES test_util.cpp LIBRARIES lib::util)
