@@ -11,10 +11,12 @@ endif()
 list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 
 include(CPM)
+include(Tools)
+include(CTest)
 
-enable_testing()
-
+add_subdirectory(src)
 add_subdirectory(src/config)
 add_subdirectory(src/dht)
 add_subdirectory(src/api)
-add_subdirectory(src)
+
+add_subdirectory(test)
