@@ -23,7 +23,7 @@ namespace API
         template<class T>
         T *getData()
         {
-            static_assert(std::is_base_of<RequestData, std::remove_pointer<T>>::value, "T must inherit RequestData!");
+            static_assert(std::is_base_of<RequestData, typename std::remove_pointer<T>::type>::value, "T must inherit RequestData!");
             return dynamic_cast<std::remove_pointer<T> *>(m_decodedData.get());
         }
 
