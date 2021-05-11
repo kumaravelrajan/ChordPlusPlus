@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.14)
-project(DHT)
+project(dht)
 
 # require C++17
 set(CMAKE_CXX_STANDARD 17)
@@ -14,5 +14,7 @@ include(CPM)
 
 enable_testing()
 
-add_subdirectory(dht)
-add_subdirectory(api)
+add_subdirectory(src/config)
+add_subdirectory(src/dht)
+add_subdirectory(src/api)
+add_subdirectory(src)
