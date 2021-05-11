@@ -5,12 +5,6 @@
 
 using namespace API;
 
-Request::Request(std::vector<std::byte> bytes):
-    m_rawBytes(std::move(bytes))
-{
-    // TODO: decode data
-}
-
 Request::Request(Request &&other) noexcept
 {
     if (this != &other) {

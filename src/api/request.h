@@ -1,18 +1,56 @@
 #ifndef DHT_API_REQUEST_H
 #define DHT_API_REQUEST_H
 
+#include <iostream>
 #include <cstddef>
 #include <vector>
 #include <memory>
 #include <type_traits>
+#include <stdexcept>
 #include "request_data.h"
 
 namespace API
 {
     class Request
     {
+    private:
+        struct MessageHeader
+        {
+#pragma pack(push, 2)
+            struct _MessageHeaderRaw
+            {
+                uint16_t size, msg_type;
+            };
+#pragma pack(pop)
+
+            uint16_t size, msg_type;
+
+            MessageHeader(const _MessageHeaderRaw &raw) // NOLINT(google-explicit-constructor)
+            {
+                size = (raw.size);
+                msg_type = (raw.msg_type);
+            }
+        };
+
     public:
-        explicit Request(std::vector<std::byte> bytes);
+        class bad_buffer_size: public std::runtime_error
+        {
+            using std::runtime_error::runtime_error;
+        };
+
+        // Constructors
+
+        template<class T, std::enable_if_t<std::is_convertible_v<std::remove_cvref_t<T>, std::vector<std::byte>>, int> = 0>
+        explicit Request(T &&bytes):
+            m_rawBytes(std::forward<T>(bytes))
+        {
+            if (m_rawBytes.size() < sizeof(MessageHeader::_MessageHeaderRaw))
+                throw bad_buffer_size("buffer too small");
+
+            MessageHeader header = *reinterpret_cast<MessageHeader::_MessageHeaderRaw *>(&m_rawBytes[0]);
+            std::cout << "Size: " << header.size << std::endl;
+        }
+
         Request(Request &&other) noexcept;
         Request(const Request &other) = delete;
 
@@ -31,6 +69,6 @@ namespace API
         std::vector<std::byte> m_rawBytes;
         std::unique_ptr<RequestData> m_decodedData;
     };
-}
+} // namespace API
 
 #endif //DHT_API_REQUEST_H
