@@ -24,7 +24,7 @@ namespace API
         T *getData()
         {
             static_assert(std::is_base_of<RequestData, typename std::remove_pointer<T>::type>::value, "T must inherit RequestData!");
-            return dynamic_cast<std::remove_pointer<T> *>(m_decodedData.get());
+            return dynamic_cast<typename std::remove_pointer<T>::type *>(m_decodedData.get());
         }
 
     private:

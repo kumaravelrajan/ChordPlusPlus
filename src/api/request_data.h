@@ -9,6 +9,9 @@ namespace API
     struct RequestData
     {
         std::vector<uint8_t> m_rawBytes;
+
+    private:
+        [[maybe_unused]] virtual void temporary() {}
     };
 
     struct Request_DHT_PUT: RequestData
@@ -20,6 +23,6 @@ namespace API
     {
         std::vector<uint8_t> key;
     };
-}
+} // namespace API
 
 #endif //DHT_REQUEST_DATA_H
