@@ -1,7 +1,8 @@
 #include <iostream>
 #include <cstdint>
 #include "assertions.h"
-#include "util.h"
+#include <util.h>
+#include <constants.h>
 
 int main()
 {
@@ -14,6 +15,11 @@ int main()
 
         assert_equal(0xf0debc9a78563412ull, util::swapBytes64(0x123456789abcdef0ull));
         assert_equal(0x0807060504030201ull, util::swapBytes64(0x0102030405060708ull));
+
+        assert_equal(650, util::constants::DHT_PUT);
+        assert_equal(651, util::constants::DHT_GET);
+        assert_equal(652, util::constants::DHT_SUCCESS);
+        assert_equal(653, util::constants::DHT_FAILURE);
 
         return 0;
     });
