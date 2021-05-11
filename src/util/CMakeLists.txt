@@ -1,6 +1,6 @@
 set(LIBRARY_NAME util)
 
-set(MODULE_HEADERS util.h)
+set(MODULE_HEADERS util.h constants.h)
 
 set(MODULE_SOURCES util.cpp)
 
