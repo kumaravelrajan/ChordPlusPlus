@@ -4,6 +4,7 @@
 #include <cstddef>
 #include <vector>
 #include <memory>
+#include <type_traits>
 #include "request_data.h"
 
 namespace API
@@ -20,10 +21,9 @@ namespace API
 
         void sendReply(const std::vector<std::byte> &bytes);
 
-        template<class T>
-        T *getData()
+        template<class T, std::enable_if_t<std::is_base_of_v<RequestData, std::remove_cv_t<T>>, int> = 0>
+        std::remove_cv_t<T> *getData()
         {
-            static_assert(std::is_base_of<RequestData, typename std::remove_pointer<T>::type>::value, "T must inherit RequestData!");
             return dynamic_cast<typename std::remove_pointer<T>::type *>(m_decodedData.get());
         }
 
