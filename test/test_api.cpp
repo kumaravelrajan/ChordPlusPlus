@@ -1,7 +1,8 @@
 #include <iostream>
 #include <cstdint>
 #include "assertions.h"
-#include "api.h"
+#include <api.h>
+#include <util.h>
 
 int main()
 {
@@ -10,7 +11,7 @@ int main()
 
         using namespace std::string_literals;
         std::string bytesString =
-            "\x00\x24\x28\x0b"s  // size, DHT GET
+            "\x00\x24\x02\x8b"s  // size, DHT GET
             "\x01\x02\x03\x04"s  // key
             "\x05\x06\x07\x08"s  // key
             "\x09\x0a\x0b\x0c"s  // key
@@ -24,7 +25,11 @@ int main()
 
         API::Request request(bytes);
 
-        assert_not_null(request.getData<API::Request_DHT_GET>(), "Data should not be null!");
+        API::Request_DHT_GET *request_data = request.getData<API::Request_DHT_GET>();
+        assert_not_null(request_data, "Data should not be null!");
+
+        std::cout << "Key:" << std::endl;
+        util::hexdump(request_data->key, 4);
 
         return 0;
     });

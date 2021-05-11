@@ -9,9 +9,6 @@ namespace API
     struct RequestData
     {
         virtual std::vector<std::byte> &getRawBytes() = 0;
-
-    private:
-        [[maybe_unused]] virtual void temporary() {}
     };
 
     struct Request_DHT_PUT: RequestData
@@ -19,6 +16,8 @@ namespace API
         std::vector<std::byte> key, value;
 
         Request_DHT_PUT(std::vector<std::byte> &bytes, int headerSize, int messageSize);
+
+        std::vector<std::byte> &getRawBytes() override;
 
     private:
         std::vector<std::byte> &m_bytes;
@@ -29,6 +28,8 @@ namespace API
         std::vector<std::byte> key;
 
         Request_DHT_GET(std::vector<std::byte> &bytes, int headerSize, int messageSize);
+
+        std::vector<std::byte> &getRawBytes() override;
 
     private:
         std::vector<std::byte> &m_bytes;

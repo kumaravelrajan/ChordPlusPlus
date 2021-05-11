@@ -1,7 +1,10 @@
 #ifndef DHT_UTIL_H
 #define DHT_UTIL_H
 
+#include <vector>
 #include <cstdint>
+#include <cstddef>
+#include <cctype>
 
 namespace util
 {
@@ -30,6 +33,8 @@ namespace util
                ((0x00ff000000000000 & x) >> 40) |
                ((0xff00000000000000 & x) >> 56);
     }
+
+    void hexdump(const std::vector<std::byte> &bytes, size_t stride = 16);
 } // namespace util
 
 #endif //DHT_UTIL_H

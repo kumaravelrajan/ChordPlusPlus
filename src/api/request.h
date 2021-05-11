@@ -2,12 +2,14 @@
 #define DHT_API_REQUEST_H
 
 #include <iostream>
+#include <string>
 #include <cstddef>
 #include <vector>
 #include <memory>
 #include <type_traits>
 #include <stdexcept>
 #include <util.h>
+#include <constants.h>
 #include "request_data.h"
 
 namespace API
@@ -39,6 +41,11 @@ namespace API
             using std::runtime_error::runtime_error;
         };
 
+        class bad_request: public std::runtime_error
+        {
+            using std::runtime_error::runtime_error;
+        };
+
         // Constructors
 
         template<class T, std::enable_if_t<std::is_convertible_v<std::remove_cvref_t<T>, std::vector<std::byte>>, int> = 0>
@@ -53,7 +60,13 @@ namespace API
             if (m_rawBytes.size() < header.size)
                 throw bad_buffer_size("buffer smaller than specified in header");
 
-
+            if (header.msg_type == util::constants::DHT_PUT) {
+                m_decodedData = std::make_unique<Request_DHT_PUT>(m_rawBytes, sizeof(MessageHeader::MessageHeaderRaw), header.size);
+            } else if (header.msg_type == util::constants::DHT_GET) {
+                m_decodedData = std::make_unique<Request_DHT_GET>(m_rawBytes, sizeof(MessageHeader::MessageHeaderRaw), header.size);
+            } else {
+                throw bad_request("message type incorrect: " + std::to_string(header.msg_type));
+            }
         }
 
         Request(Request &&other) noexcept;
