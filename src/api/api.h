@@ -8,20 +8,22 @@
 #include <set>
 #include "request.h"
 
-class Api
+namespace API
 {
-public:
-    Api();
-    ~Api();
+    class Api
+    {
+    public:
+        Api();
+        ~Api();
 
-    const std::queue<Request> newRequests;
+        const std::queue<Request> newRequests;
 
-private:
-    void run();
+    private:
+        void run();
 
-    bool isRunning;
-    std::future<void> server;
-
-};
+        bool isRunning;
+        std::future<void> server;
+    };
+}
 
 #endif //DHT_API_H

@@ -2,6 +2,8 @@
 #include <iostream>
 #include <chrono>
 
+using namespace API;
+
 Api::Api()
 {
     isRunning = true;

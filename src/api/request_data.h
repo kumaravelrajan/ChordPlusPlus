@@ -4,19 +4,22 @@
 #include <vector>
 #include <cstdint>
 
-struct RequestData
+namespace API
 {
-    std::vector<uint8_t> m_rawBytes;
-};
+    struct RequestData
+    {
+        std::vector<uint8_t> m_rawBytes;
+    };
 
-struct Request_DHT_PUT: RequestData
-{
-    std::vector<uint8_t> key, value;
-};
+    struct Request_DHT_PUT: RequestData
+    {
+        std::vector<uint8_t> key, value;
+    };
 
-struct Request_DHT_GET: RequestData
-{
-    std::vector<uint8_t> key;
-};
+    struct Request_DHT_GET: RequestData
+    {
+        std::vector<uint8_t> key;
+    };
+}
 
 #endif //DHT_REQUEST_DATA_H

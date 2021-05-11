@@ -3,6 +3,8 @@
 #include <iostream>
 #include <utility>
 
+using namespace API;
+
 Request::Request(std::vector<std::byte> bytes):
     m_rawBytes(std::move(bytes))
 {
