@@ -7,6 +7,7 @@
 #include <memory>
 #include <type_traits>
 #include <stdexcept>
+#include <util.h>
 #include "request_data.h"
 
 namespace API
@@ -17,7 +18,7 @@ namespace API
         struct MessageHeader
         {
 #pragma pack(push, 2)
-            struct _MessageHeaderRaw
+            struct MessageHeaderRaw
             {
                 uint16_t size, msg_type;
             };
@@ -25,10 +26,10 @@ namespace API
 
             uint16_t size, msg_type;
 
-            MessageHeader(const _MessageHeaderRaw &raw) // NOLINT(google-explicit-constructor)
+            MessageHeader(const MessageHeaderRaw &raw) // NOLINT(google-explicit-constructor)
             {
-                size = (raw.size);
-                msg_type = (raw.msg_type);
+                size = util::swapBytes16(raw.size);
+                msg_type = util::swapBytes16(raw.msg_type);
             }
         };
 
@@ -44,11 +45,15 @@ namespace API
         explicit Request(T &&bytes):
             m_rawBytes(std::forward<T>(bytes))
         {
-            if (m_rawBytes.size() < sizeof(MessageHeader::_MessageHeaderRaw))
-                throw bad_buffer_size("buffer too small");
+            if (m_rawBytes.size() < sizeof(MessageHeader::MessageHeaderRaw))
+                throw bad_buffer_size("buffer too small for header");
 
-            MessageHeader header = *reinterpret_cast<MessageHeader::_MessageHeaderRaw *>(&m_rawBytes[0]);
-            std::cout << "Size: " << header.size << std::endl;
+            MessageHeader header = *reinterpret_cast<MessageHeader::MessageHeaderRaw *>(&m_rawBytes[0]);
+
+            if (m_rawBytes.size() < header.size)
+                throw bad_buffer_size("buffer smaller than specified in header");
+
+
         }
 
         Request(Request &&other) noexcept;

@@ -8,7 +8,7 @@ namespace API
 {
     struct RequestData
     {
-        std::vector<uint8_t> m_rawBytes;
+        virtual std::vector<std::byte> &getRawBytes() = 0;
 
     private:
         [[maybe_unused]] virtual void temporary() {}
@@ -16,12 +16,22 @@ namespace API
 
     struct Request_DHT_PUT: RequestData
     {
-        std::vector<uint8_t> key, value;
+        std::vector<std::byte> key, value;
+
+        Request_DHT_PUT(std::vector<std::byte> &bytes, int headerSize, int messageSize);
+
+    private:
+        std::vector<std::byte> &m_bytes;
     };
 
     struct Request_DHT_GET: RequestData
     {
-        std::vector<uint8_t> key;
+        std::vector<std::byte> key;
+
+        Request_DHT_GET(std::vector<std::byte> &bytes, int headerSize, int messageSize);
+
+    private:
+        std::vector<std::byte> &m_bytes;
     };
 } // namespace API
 
