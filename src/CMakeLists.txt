@@ -6,7 +6,7 @@ add_library(${LIBRARY_NAME} INTERFACE)
 target_include_directories(
         ${LIBRARY_NAME} INTERFACE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>)
 
-target_compile_features(${LIBRARY_NAME} INTERFACE cxx_std_17)
+target_compile_features(${LIBRARY_NAME} INTERFACE cxx_std_20)
 
 set_target_properties(${LIBRARY_NAME} PROPERTIES LINKER_LANGUAGE CXX)
 

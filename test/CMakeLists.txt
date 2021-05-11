@@ -7,6 +7,7 @@ macro(my_add_test)
     #dump_cmake_variables(".*NAME.*")
 
     add_executable(test_${MY_ADD_TEST_NAME} ${MY_ADD_TEST_SOURCE_FILES})
+    target_compile_features(test_${MY_ADD_TEST_NAME} PUBLIC cxx_std_20)
     target_link_libraries(test_${MY_ADD_TEST_NAME} ${MY_ADD_TEST_LIBRARIES})
     add_test(NAME ${MY_ADD_TEST_NAME} COMMAND test_${MY_ADD_TEST_NAME})
 endmacro(my_add_test)
