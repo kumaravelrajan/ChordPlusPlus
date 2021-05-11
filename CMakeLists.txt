@@ -15,3 +15,4 @@ include(CPM)
 enable_testing()
 
 add_subdirectory(dht)
+add_subdirectory(api)
