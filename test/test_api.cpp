@@ -66,6 +66,33 @@ int main()
 
             return 0;
         }) ||
+        run_test("API ENCODE GET", []() {
+            std::string sKey =
+                "\x01\x02\x03\x04"s  // key
+                "\x05\x06\x07\x08"s  // key
+                "\x09\x0a\x0b\x0c"s  // key
+                "\x0d\x0e\x0f\x10"s  // key
+                "\x0d\x0e\x0f\x10"s  // key
+                "\x11\x12\x13\x14"s  // key
+                "\x15\x16\x17\x18"s  // key
+                "\x19\x1a\x1b\x1c"s  // key
+                "\x1d\x1e\x1f\x20"s; // key
+            auto key = util::convertToBytes(sKey);
+
+            auto sizeExpected = sizeof(API::MessageHeader::MessageHeaderRaw) + key.size();
+
+            API::Message_KEY message(util::constants::DHT_GET, key);
+
+            auto header = API::MessageHeader(reinterpret_cast<API::MessageHeader::MessageHeaderRaw &>(message.m_bytes[0]));
+
+            assert_equal(sizeExpected, static_cast<uint16_t>(header.size), "Size specified in header");
+            assert_equal(util::constants::DHT_GET, header.msg_type, "Message type specified in header");
+
+            std::cout << "Message:" << std::endl;
+            util::hexdump(message.m_bytes, 16);
+
+            return 0;
+        }) ||
         run_test("API ENCODE PUT", []() {
             std::string sKey =
                 "\x01\x02\x03\x04"s  // key
