@@ -46,14 +46,19 @@ void assert_equal(const T_EXPECTED &expected, const T_ACTUAL &actual, const std:
             "]" + (message ? (" (" + (*message) + ")") : ""));
 }
 
-int run_test(const std::function<int()> &test)
+int run_test(const std::string &name, const std::function<int()> &test)
 {
+    std::cout << "\nRunning Test [" << name << "]" << std::endl;
     try {
         return test();
     }
     catch (std::exception &e) {
         std::cerr << e.what() << std::endl;
         return 1;
+    }
+    catch (...) {
+        std::cerr << "unknown exception" << std::endl;
+        return -1;
     }
 }
 

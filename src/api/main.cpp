@@ -9,7 +9,7 @@ int main()
 
     std::cout << "This is the main method for testing api!" << std::endl;
     {
-        Api api{};
+        Api api {};
         std::this_thread::sleep_for(5s);
     }
     return 0;

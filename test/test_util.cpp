@@ -6,7 +6,7 @@
 
 int main()
 {
-    return run_test([]() {
+    return run_test("Util", []() {
         assert_equal(0x3412, util::swapBytes16(0x1234));
         assert_equal(0x0001, util::swapBytes16(0x0100));
 

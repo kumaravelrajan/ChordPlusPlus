@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <cstddef>
 #include <cctype>
+#include <string>
 
 namespace util
 {
@@ -33,6 +34,8 @@ namespace util
                ((0x00ff000000000000 & x) >> 40) |
                ((0xff00000000000000 & x) >> 56);
     }
+
+    std::vector<std::byte> convertToBytes(const std::string& byteString);
 
     void hexdump(const std::vector<std::byte> &bytes, size_t stride = 16);
 } // namespace util

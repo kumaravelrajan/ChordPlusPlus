@@ -1,4 +1,12 @@
 #include "util.h"
+#include <algorithm>
+
+std::vector<std::byte> util::convertToBytes(const std::string &byteString)
+{
+    std::vector<std::byte> bytes(byteString.size());
+    std::transform(byteString.begin(), byteString.end(), bytes.begin(), [](char c) { return std::byte(c); });
+    return bytes;
+}
 
 void util::hexdump(const std::vector<std::byte> &bytes, size_t stride)
 {

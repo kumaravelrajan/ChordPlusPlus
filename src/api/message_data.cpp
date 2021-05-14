@@ -21,7 +21,7 @@ API::MessageData::MessageData(std::vector<std::byte> bytes):
 
 API::Message_KEY_VALUE::Message_KEY_VALUE(std::vector<std::byte> bytes, const MessageHeader &header):
     MessageData(std::move(bytes)),
-    key(bytes.begin() + sizeof(MessageHeader::MessageHeaderRaw), bytes.begin() + (sizeof(MessageHeader::MessageHeaderRaw) + 32)),
+    key(m_bytes.begin() + sizeof(MessageHeader::MessageHeaderRaw), m_bytes.begin() + (sizeof(MessageHeader::MessageHeaderRaw) + 32)),
     value(m_bytes.begin() + (sizeof(MessageHeader::MessageHeaderRaw) + 32), m_bytes.begin() + header.size)
 {
 }

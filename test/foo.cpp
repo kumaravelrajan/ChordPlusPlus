@@ -2,7 +2,7 @@
 
 int main()
 {
-    return run_test([]() {
+    return run_test("Foo", []() {
         assert_true(true, "Message 1");
         assert_false(false, "Message 2");
 
