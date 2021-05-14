@@ -25,7 +25,7 @@ int main()
 
         API::Request request(bytes);
 
-        API::Request_DHT_GET *request_data = request.getData<API::Request_DHT_GET>();
+        auto *request_data = request.getData<API::Message_KEY>();
         assert_not_null(request_data, "Data should not be null!");
 
         std::cout << "Key:" << std::endl;
