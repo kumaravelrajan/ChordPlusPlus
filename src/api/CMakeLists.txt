@@ -2,7 +2,7 @@ set(LIBRARY_NAME api)
 
 set(MODULE_HEADERS api.h)
 
-set(MODULE_SOURCES api.cpp request.cpp request_data.cpp)
+set(MODULE_SOURCES api.cpp request.cpp message_data.cpp)
 
 add_library(${LIBRARY_NAME} ${MODULE_HEADERS} ${MODULE_SOURCES})
 add_library(lib::${LIBRARY_NAME} ALIAS ${LIBRARY_NAME})

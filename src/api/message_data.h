@@ -25,12 +25,12 @@ namespace API
         }
     };
 
-    struct RequestData
+    struct MessageData
     {
         virtual std::vector<std::byte> &getRawBytes() = 0;
     };
 
-    struct Request_DHT_PUT: RequestData
+    struct Request_DHT_PUT: MessageData
     {
         std::vector<std::byte> key, value;
 
@@ -42,7 +42,7 @@ namespace API
         std::vector<std::byte> &m_bytes;
     };
 
-    struct Request_DHT_GET: RequestData
+    struct Request_DHT_GET: MessageData
     {
         std::vector<std::byte> key;
 

@@ -10,7 +10,7 @@
 #include <stdexcept>
 #include <util.h>
 #include <constants.h>
-#include "request_data.h"
+#include "message_data.h"
 
 namespace API
 {
@@ -58,7 +58,7 @@ namespace API
 
         void sendReply(const std::vector<std::byte> &bytes);
 
-        template<class T, std::enable_if_t<std::is_base_of_v<RequestData, std::remove_cv_t<T>>, int> = 0>
+        template<class T, std::enable_if_t<std::is_base_of_v<MessageData, std::remove_cv_t<T>>, int> = 0>
         std::remove_cv_t<T> *getData()
         {
             return dynamic_cast<typename std::remove_pointer<T>::type *>(m_decodedData.get());
@@ -66,7 +66,7 @@ namespace API
 
     private:
         std::vector<std::byte> m_rawBytes;
-        std::unique_ptr<RequestData> m_decodedData;
+        std::unique_ptr<MessageData> m_decodedData;
     };
 } // namespace API
 
