@@ -3,9 +3,28 @@
 
 #include <vector>
 #include <cstdint>
+#include <util.h>
 
 namespace API
 {
+    struct MessageHeader
+    {
+#pragma pack(push, 2)
+        struct MessageHeaderRaw
+        {
+            uint16_t size, msg_type;
+        };
+#pragma pack(pop)
+
+        uint16_t size, msg_type;
+
+        MessageHeader(const MessageHeaderRaw &raw) // NOLINT(google-explicit-constructor)
+        {
+            size = util::swapBytes16(raw.size);
+            msg_type = util::swapBytes16(raw.msg_type);
+        }
+    };
+
     struct RequestData
     {
         virtual std::vector<std::byte> &getRawBytes() = 0;
@@ -15,7 +34,7 @@ namespace API
     {
         std::vector<std::byte> key, value;
 
-        Request_DHT_PUT(std::vector<std::byte> &bytes, int headerSize, int messageSize);
+        Request_DHT_PUT(std::vector<std::byte> &bytes, const MessageHeader &header);
 
         std::vector<std::byte> &getRawBytes() override;
 
@@ -27,7 +46,7 @@ namespace API
     {
         std::vector<std::byte> key;
 
-        Request_DHT_GET(std::vector<std::byte> &bytes, int headerSize, int messageSize);
+        Request_DHT_GET(std::vector<std::byte> &bytes, const MessageHeader &header);
 
         std::vector<std::byte> &getRawBytes() override;
 
