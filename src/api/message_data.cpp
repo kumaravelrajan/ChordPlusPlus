@@ -1,24 +1,50 @@
 #include "message_data.h"
+#include <iostream>
 
-API::Request_DHT_PUT::Request_DHT_PUT(std::vector<std::byte> &bytes, const MessageHeader &header):
-    m_bytes(const_cast<std::vector<std::byte> &>(bytes)),
+API::MessageHeader::MessageHeader(uint16_t size, uint16_t msg_type):
+    size(size), msg_type(msg_type) {}
+
+API::MessageHeader::MessageHeader(const MessageHeaderRaw &raw):
+    size(util::swapBytes16(raw.size)),
+    msg_type(util::swapBytes16(raw.msg_type)) {}
+
+API::MessageHeader::operator MessageHeaderRaw() const
+{
+    return {
+        .size = util::swapBytes16(size),
+        .msg_type = util::swapBytes16(msg_type),
+    };
+}
+
+API::MessageData::MessageData(std::vector<std::byte> bytes):
+    m_bytes(std::move(bytes)) {}
+
+API::Message_KEY_VALUE::Message_KEY_VALUE(std::vector<std::byte> bytes, const MessageHeader &header):
+    MessageData(std::move(bytes)),
     key(bytes.begin() + sizeof(MessageHeader::MessageHeaderRaw), bytes.begin() + (sizeof(MessageHeader::MessageHeaderRaw) + 32)),
-    value(bytes.begin() + (sizeof(MessageHeader::MessageHeaderRaw) + 32), bytes.begin() + header.size)
+    value(m_bytes.begin() + (sizeof(MessageHeader::MessageHeaderRaw) + 32), m_bytes.begin() + header.size)
 {
 }
 
-std::vector<std::byte> &API::Request_DHT_PUT::getRawBytes()
+API::Message_KEY_VALUE::Message_KEY_VALUE(uint16_t msg_type, const std::vector<std::byte> &key, const std::vector<std::byte> &value):
+    MessageData(std::vector<std::byte>(sizeof(MessageHeader::MessageHeaderRaw) + key.size() + value.size()))
 {
-    return m_bytes;
+    MessageHeader header(static_cast<uint16_t>(m_bytes.size()), msg_type);
+    reinterpret_cast<MessageHeader::MessageHeaderRaw &>(m_bytes[0]) = MessageHeader::MessageHeaderRaw(header);
+    std::copy(key.begin(), key.end(), m_bytes.begin() + sizeof(MessageHeader::MessageHeaderRaw));
+    std::copy(value.begin(), value.end(), m_bytes.begin() + (static_cast<int>(sizeof(MessageHeader::MessageHeaderRaw))) + static_cast<int>(key.size()));
 }
 
-API::Request_DHT_GET::Request_DHT_GET(std::vector<std::byte> &bytes, const MessageHeader &header):
-    m_bytes(const_cast<std::vector<std::byte> &>(bytes)),
-    key(bytes.begin() + sizeof(MessageHeader::MessageHeaderRaw), bytes.begin() + (sizeof(MessageHeader::MessageHeaderRaw) + 32))
+API::Message_KEY::Message_KEY(std::vector<std::byte> bytes, const MessageHeader &header):
+    MessageData(std::move(bytes)),
+    key(m_bytes.begin() + sizeof(MessageHeader::MessageHeaderRaw), m_bytes.begin() + (sizeof(MessageHeader::MessageHeaderRaw) + 32))
 {
 }
 
-std::vector<std::byte> &API::Request_DHT_GET::getRawBytes()
+API::Message_KEY::Message_KEY(uint16_t msg_type, const std::vector<std::byte> &key):
+    MessageData(std::vector<std::byte>(sizeof(MessageHeader::MessageHeaderRaw) + key.size()))
 {
-    return m_bytes;
+    MessageHeader header(static_cast<uint16_t>(m_bytes.size()), msg_type);
+    reinterpret_cast<MessageHeader::MessageHeaderRaw &>(m_bytes[0]) = MessageHeader::MessageHeaderRaw(header);
+    std::copy(key.begin(), key.end(), m_bytes.begin() + sizeof(MessageHeader::MessageHeaderRaw));
 }

@@ -18,40 +18,37 @@ namespace API
 
         uint16_t size, msg_type;
 
-        MessageHeader(const MessageHeaderRaw &raw) // NOLINT(google-explicit-constructor)
-        {
-            size = util::swapBytes16(raw.size);
-            msg_type = util::swapBytes16(raw.msg_type);
-        }
+        MessageHeader() = default;
+        MessageHeader(uint16_t size, uint16_t msg_type);
+        explicit MessageHeader(const MessageHeaderRaw &raw);
+
+        explicit operator MessageHeaderRaw() const;
     };
 
     struct MessageData
     {
-        virtual std::vector<std::byte> &getRawBytes() = 0;
+        std::vector<std::byte> m_bytes;
+
+        explicit MessageData(std::vector<std::byte> bytes);
+
+    private:
+        [[maybe_unused]] virtual void VIRTUAL() {}
     };
 
-    struct Request_DHT_PUT: MessageData
+    struct Message_KEY_VALUE: MessageData
     {
         std::vector<std::byte> key, value;
 
-        Request_DHT_PUT(std::vector<std::byte> &bytes, const MessageHeader &header);
-
-        std::vector<std::byte> &getRawBytes() override;
-
-    private:
-        std::vector<std::byte> &m_bytes;
+        Message_KEY_VALUE(std::vector<std::byte> bytes, const MessageHeader &header);
+        Message_KEY_VALUE(uint16_t msg_type, const std::vector<std::byte> &key, const std::vector<std::byte> &value);
     };
 
-    struct Request_DHT_GET: MessageData
+    struct Message_KEY: MessageData
     {
         std::vector<std::byte> key;
 
-        Request_DHT_GET(std::vector<std::byte> &bytes, const MessageHeader &header);
-
-        std::vector<std::byte> &getRawBytes() override;
-
-    private:
-        std::vector<std::byte> &m_bytes;
+        Message_KEY(std::vector<std::byte> bytes, const MessageHeader &header);
+        Message_KEY(uint16_t msg_type, const std::vector<std::byte> &key);
     };
 } // namespace API
 

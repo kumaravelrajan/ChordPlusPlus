@@ -36,15 +36,15 @@ namespace API
             if (m_rawBytes.size() < sizeof(MessageHeader::MessageHeaderRaw))
                 throw bad_buffer_size("buffer too small for header");
 
-            MessageHeader header = *reinterpret_cast<MessageHeader::MessageHeaderRaw *>(&m_rawBytes[0]);
+            MessageHeader header(reinterpret_cast<MessageHeader::MessageHeaderRaw &>(m_rawBytes[0]));
 
             if (m_rawBytes.size() < header.size)
                 throw bad_buffer_size("buffer smaller than specified in header");
 
             if (header.msg_type == util::constants::DHT_PUT) {
-                m_decodedData = std::make_unique<Request_DHT_PUT>(m_rawBytes, header);
+                m_decodedData = std::make_unique<Message_KEY_VALUE>(m_rawBytes, header);
             } else if (header.msg_type == util::constants::DHT_GET) {
-                m_decodedData = std::make_unique<Request_DHT_GET>(m_rawBytes, header);
+                m_decodedData = std::make_unique<Message_KEY>(m_rawBytes, header);
             } else {
                 throw bad_request("message type incorrect: " + std::to_string(header.msg_type));
             }
