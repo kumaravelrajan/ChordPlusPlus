@@ -89,7 +89,7 @@ int main()
             assert_equal(util::constants::DHT_GET, header.msg_type, "Message type specified in header");
 
             std::cout << "Message:" << std::endl;
-            util::hexdump(message.m_bytes, 16);
+            util::hexdump(message.m_bytes, 4);
 
             return 0;
         }) ||
