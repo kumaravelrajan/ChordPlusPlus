@@ -6,6 +6,7 @@
 #include <queue>
 #include <optional>
 #include <set>
+#include <asio.hpp>
 #include "request.h"
 
 namespace API
@@ -13,7 +14,11 @@ namespace API
     class Api
     {
     public:
-        Api();
+        struct Options
+        {
+        };
+
+        explicit Api(const Options &o = {});
         ~Api();
 
         const std::queue<Request> newRequests;
@@ -24,6 +29,6 @@ namespace API
         bool isRunning;
         std::future<void> server;
     };
-}
+} // namespace API
 
 #endif //DHT_API_H

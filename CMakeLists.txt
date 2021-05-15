@@ -13,6 +13,9 @@ list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 include(CPM)
 include(Tools)
 include(CTest)
+find_package(Threads REQUIRED)
+
+add_subdirectory(lib/asio)
 
 add_subdirectory(src)
 add_subdirectory(src/config)

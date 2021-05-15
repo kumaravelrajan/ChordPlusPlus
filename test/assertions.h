@@ -9,7 +9,7 @@
 
 static void fail(const std::optional<std::string> &message = {})
 {
-    throw std::exception((message.value_or("")).c_str());
+    throw std::runtime_error((message.value_or("")).c_str());
 }
 
 void assert_true(bool expression, const std::optional<std::string> &message = {})

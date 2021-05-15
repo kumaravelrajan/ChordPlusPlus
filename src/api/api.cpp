@@ -4,7 +4,7 @@
 
 using namespace API;
 
-Api::Api()
+Api::Api(const Options &o)
 {
     isRunning = true;
     server = std::async(std::launch::async, [this]() { this->run(); });

@@ -1,0 +1,5 @@
+add_library(asio INTERFACE)
+add_library(lib::asio ALIAS asio)
+#target_compile_options(asio INTERFACE ASIO_STANDALONE)
+target_include_directories(asio INTERFACE include)
+target_link_libraries(asio INTERFACE Threads::Threads)
