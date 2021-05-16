@@ -22,8 +22,7 @@ Request &Request::operator=(Request &&other) noexcept
     return *this;
 }
 
-void Request::sendReply(const std::vector<std::byte> &bytes)
+std::vector<std::byte> Request::getBytes() const
 {
-    // TODO: send reply
-    std::cout << "Send Reply!" << std::endl;
+    return m_rawBytes;
 }

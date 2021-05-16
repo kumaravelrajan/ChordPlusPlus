@@ -4,6 +4,7 @@
 #include <chrono>
 #include <csignal>
 #include "api.h"
+#include "request.h"
 
 bool sigIntReceived = false;
 
@@ -27,6 +28,12 @@ int main()
     std::cout << "This is the main method for testing api!" << std::endl;
     try {
         auto api = std::make_unique<Api>();
+
+        // This is a placeholder request handler, it just echoes the request back, as long as it has the correct format.
+        api->setRequestHandler([](const Request &request){
+            return request.getBytes();
+        });
+
         while (!sigIntReceived)
             std::this_thread::sleep_for(1s);
         std::cout << "sigint received" << std::endl;

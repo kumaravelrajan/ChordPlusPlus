@@ -1,5 +1,6 @@
 #include "message_data.h"
 #include <iostream>
+#include <exception>
 
 API::MessageHeader::MessageHeader(uint16_t size, uint16_t msg_type):
     size(size), msg_type(msg_type) {}
@@ -24,6 +25,8 @@ API::Message_KEY_VALUE::Message_KEY_VALUE(std::vector<std::byte> bytes, const Me
     key(m_bytes.begin() + sizeof(MessageHeader::MessageHeaderRaw), m_bytes.begin() + (sizeof(MessageHeader::MessageHeaderRaw) + 32)),
     value(m_bytes.begin() + (sizeof(MessageHeader::MessageHeaderRaw) + 32), m_bytes.begin() + header.size)
 {
+    if (header.size < sizeof(MessageHeader::MessageHeaderRaw) + 32)
+        throw std::runtime_error("Key is too small!");
 }
 
 API::Message_KEY_VALUE::Message_KEY_VALUE(uint16_t msg_type, const std::vector<std::byte> &key, const std::vector<std::byte> &value):
@@ -39,6 +42,8 @@ API::Message_KEY::Message_KEY(std::vector<std::byte> bytes, const MessageHeader 
     MessageData(std::move(bytes)),
     key(m_bytes.begin() + sizeof(MessageHeader::MessageHeaderRaw), m_bytes.begin() + (sizeof(MessageHeader::MessageHeaderRaw) + 32))
 {
+    if (header.size < sizeof(MessageHeader::MessageHeaderRaw) + 32)
+        throw std::runtime_error("Key is too small!");
 }
 
 API::Message_KEY::Message_KEY(uint16_t msg_type, const std::vector<std::byte> &key):

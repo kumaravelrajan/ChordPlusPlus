@@ -3,6 +3,7 @@
 #include <chrono>
 #include <memory>
 #include <cstdlib>
+#include <utility>
 #include <util.h>
 
 using namespace API;
@@ -13,11 +14,10 @@ Api::Api(const Options &o):
 {
     isRunning = true;
     start_accept();
-    service_future = std::async(std::launch::async, [this]() {
+    serviceFuture = std::async(std::launch::async, [this]() {
         std::cout << "[API] run()" << std::endl;
         while (isRunning) {
             try {
-                std::cout << "[API] run()" << std::endl;
                 service->run();
             }
             catch (const std::exception &e) {
@@ -36,15 +36,24 @@ Api::~Api()
     std::cout << "[API] stopping service" << std::endl;
     service->stop();
     std::cout << "[API] awaiting service future" << std::endl;
-    service_future.get();
+    serviceFuture.get();
 
-    for(const auto &connection : openConnections) {
+    for (const auto &connection: openConnections) {
         connection->close();
+    }
+
+    for (const auto &connection: openConnections) {
+        connection->get();
     }
 
     // TODO: stop open connection handlers
 
     std::cout << "[API] stopped!" << std::endl;
+}
+
+void Api::setRequestHandler(std::optional<request_handler_t> handler)
+{
+    this->requestHandler = std::move(handler);
 }
 
 void Api::start_accept()
@@ -55,8 +64,10 @@ void Api::start_accept()
         return;
     }
     acceptor->async_accept([this](const asio::error_code &error, tcp::socket socket) {
-        std::cout << "async accept happened" << std::endl;
         start_accept();
-        openConnections.push_back(std::make_unique<Connection>(error, std::move(socket)));
+        if (error)
+            std::cerr << "[API.async_accept] " << error.message() << std::endl;
+        else
+            openConnections.push_back(std::make_unique<Connection>(error, std::move(socket), *this));
     });
 }

@@ -6,6 +6,7 @@
 #include <cstddef>
 #include <cctype>
 #include <string>
+#include <optional>
 
 namespace util
 {
@@ -34,9 +35,15 @@ namespace util
                ((0xff00000000000000ull & x) >> 56);
     }
 
-    std::vector<std::byte> convertToBytes(const std::string& byteString);
+    template<typename T>
+    std::vector<std::byte> convertToBytes(const T &bytes, std::optional<std::size_t> size = {})
+    {
+        std::vector<std::byte> ret(size ? size.value() : bytes.size());
+        std::transform(bytes.begin(), size ? bytes.begin() + (std::min(size.value(), bytes.size())) : bytes.end(), ret.begin(), [](char c) { return std::byte(c); });
+        return ret;
+    }
 
-    void hexdump(const std::vector<std::byte> &bytes, size_t stride = 16);
+    void hexdump(const std::vector<std::byte> &bytes, std::size_t stride = 16);
 } // namespace util
 
 #endif //DHT_UTIL_H

@@ -56,7 +56,7 @@ namespace API
         Request &operator=(Request &&other) noexcept;
         Request &operator=(const Request &other) = delete;
 
-        void sendReply(const std::vector<std::byte> &bytes);
+        [[nodiscard]] std::vector<std::byte> getBytes() const;
 
         template<class T, std::enable_if_t<std::is_base_of_v<MessageData, std::remove_cv_t<T>>, int> = 0>
         std::remove_cv_t<T> *getData()
