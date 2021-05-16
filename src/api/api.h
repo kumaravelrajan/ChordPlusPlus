@@ -8,11 +8,14 @@
 #include <set>
 #include <asio.hpp>
 #include "request.h"
+#include "connection.h"
 
 namespace API
 {
     class Api
     {
+        using tcp = asio::ip::tcp;
+
     public:
         struct Options
         {
@@ -24,10 +27,15 @@ namespace API
         const std::queue<Request> newRequests;
 
     private:
-        void run();
+        void start_accept();
 
-        bool isRunning;
-        std::future<void> server;
+        std::unique_ptr<asio::io_service> service;
+        std::unique_ptr<tcp::acceptor> acceptor;
+        std::future<void> service_future;
+
+        std::vector<std::unique_ptr<Connection>> openConnections;
+
+        bool isRunning = false;
     };
 } // namespace API
 
