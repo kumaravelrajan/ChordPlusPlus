@@ -4,6 +4,7 @@
 #include <memory>
 #include <cstdlib>
 #include <utility>
+#include <algorithm>
 #include <util.h>
 
 using namespace API;
@@ -70,4 +71,7 @@ void Api::start_accept()
         else
             openConnections.push_back(std::make_unique<Connection>(error, std::move(socket), *this));
     });
+    openConnections.erase(
+        std::remove_if(openConnections.begin(), openConnections.end(), [](const std::unique_ptr<Connection> &connection) { return connection->isDone(); }),
+        openConnections.end());
 }

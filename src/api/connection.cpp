@@ -36,12 +36,11 @@ API::Connection::Connection(asio::error_code error, tcp::socket &&sock, const Ap
                     }
                 }
 
-            } else {
-                // std::cout << "asd" << std::endl;
             }
         }
 
         std::cout << "[API.connection] disconnected!" << std::endl;
+        done = true;
     });
 }
 
@@ -53,4 +52,9 @@ void API::Connection::close()
 void API::Connection::get()
 {
     session.wait();
+}
+
+bool API::Connection::isDone()
+{
+    return done;
 }

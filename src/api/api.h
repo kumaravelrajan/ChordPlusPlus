@@ -60,11 +60,14 @@ namespace API
 
         void close();
         void get();
+        bool isDone();
 
     private:
         tcp::socket socket;
         std::future<void> session;
         const Api &api;
+
+        bool done = false;
     };
 } // namespace API
 
