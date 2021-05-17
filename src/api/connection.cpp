@@ -11,7 +11,7 @@ API::Connection::Connection(asio::error_code error, tcp::socket &&sock, const Ap
 
         auto error { e };
         std::array<uint8_t, (1 << 16) - 1> data { 0 };
-        for (;;) {
+        for (; socket.is_open();) {
             size_t length = socket.read_some(asio::buffer(data), error);
             if (error == asio::error::eof) break;
 
@@ -29,7 +29,7 @@ API::Connection::Connection(asio::error_code error, tcp::socket &&sock, const Ap
                     std::cerr << e.what() << std::endl;
                     continue;
                 }
-                if (api.requestHandler) {
+                if (socket.is_open() && api.requestHandler) {
                     std::vector<std::byte> response = api.requestHandler.value()(*request);
                     if (!response.empty()) {
                         socket.write_some(asio::buffer(response));
