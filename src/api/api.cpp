@@ -43,10 +43,6 @@ Api::~Api()
         connection->close();
     }
 
-    for (const auto &connection: openConnections) {
-        connection->get();
-    }
-
     // TODO: stop open connection handlers
 
     std::cout << "[API] stopped!" << std::endl;

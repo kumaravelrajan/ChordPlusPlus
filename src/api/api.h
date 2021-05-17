@@ -59,13 +59,15 @@ namespace API
         Connection &operator=(const Connection &other) = delete;
         Connection &operator=(Connection &&other) = delete;
 
+        void start_read();
         void close();
         void get();
         bool isDone();
 
     private:
+        std::vector<uint8_t> data = std::vector<uint8_t>((1 << 16) - 1, 0);
+
         tcp::socket socket;
-        std::future<void> session;
         const Api &api;
 
         bool done = false;

@@ -8,7 +8,7 @@
 
 bool sigIntReceived = false;
 
-void sigHandler(sig_t s)
+void sigHandler(sig_t)
 {
     sigIntReceived = true;
     std::cout << "Shutting down..." << std::endl;
