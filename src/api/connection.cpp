@@ -35,7 +35,6 @@ API::Connection::Connection(asio::error_code error, tcp::socket &&sock, const Ap
                         socket.write_some(asio::buffer(response));
                     }
                 }
-
             }
         }
 
