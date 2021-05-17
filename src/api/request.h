@@ -59,7 +59,7 @@ namespace API
         [[nodiscard]] std::vector<std::byte> getBytes() const;
 
         template<class T, std::enable_if_t<std::is_base_of_v<MessageData, std::remove_cv_t<T>>, int> = 0>
-        std::remove_cv_t<T> *getData()
+        std::remove_cv_t<T> *getData() const
         {
             return dynamic_cast<typename std::remove_pointer<T>::type *>(m_decodedData.get());
         }

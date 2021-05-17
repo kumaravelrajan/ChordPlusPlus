@@ -11,7 +11,7 @@ using namespace API;
 
 Api::Api(const Options &o):
     service(std::make_unique<asio::io_service>()),
-    acceptor(std::make_unique<tcp::acceptor>(*service, tcp::endpoint(tcp::v4(), 1234)))
+    acceptor(std::make_unique<tcp::acceptor>(*service, tcp::endpoint(tcp::v4(), o.port)))
 {
     isRunning = true;
     start_accept();

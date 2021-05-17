@@ -13,6 +13,11 @@
 
 namespace API
 {
+    struct Options
+    {
+        uint16_t port = 1234ull;
+    };
+
     class Connection;
     class Api
     {
@@ -20,10 +25,6 @@ namespace API
         using request_handler_t = std::function<std::vector<std::byte>(const Request &request)>;
 
     public:
-        struct Options
-        {
-        };
-
         explicit Api(const Options &o = {});
         ~Api();
 
