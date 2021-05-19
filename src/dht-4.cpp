@@ -1,8 +1,8 @@
 #include <iostream>
-#include <string>
 #include "api.h"
 
 int ParseConfigFile(char *ConfigFilePath);
+void PrintCmdUsage();
 
 using namespace std;
 
@@ -10,24 +10,37 @@ int main(int argc, char* argv[])
 {
     std::cout << "Hello, World!" << std::endl;
 
-    if(argc < 3)
+    if(argc < 3) // "-c PathToConfigFile" not given.
     {
         std::cout << "No configuration file path given. Program failed.";
         return -1;
     }
-    else if(argc == 3)
+    else if(argc > 2)
     {
-        // Check if configuration file path given.
-        if(strcmp(argv[1], "-c") == 0 || strcmp(argv[1], "-C"))
+        int option = 0;
+        while((option = getopt(argc, argv, "c:")) != -1)
         {
-            ParseConfigFile(argv[2]);
+            switch(option)
+            {
+            case 'c':
+                ParseConfigFile(optarg);
+                break;
+
+            default:
+                PrintCmdUsage();
+                break;
+            }
         }
     }
-
     return 0;
 }
 
 int ParseConfigFile(char *ConfigFilePath)
 {
 
+}
+
+void PrintCmdUsage()
+{
+    cout <<"Error! Wrong option.\nUsage: -c <Path to config file>";
 }
