@@ -1,5 +1,7 @@
 #include <iostream>
 #include "api.h"
+#include <getopt.h>
+#include "../lib/inih/INIReader.h" //Todo - Figure out correct way to include this.
 
 int ParseConfigFile(char *ConfigFilePath);
 void PrintCmdUsage();
@@ -17,8 +19,15 @@ int main(int argc, char* argv[])
     }
     else if(argc > 2)
     {
-        int option = 0;
-        while((option = getopt(argc, argv, "c:")) != -1)
+        // Define long and short options for cmd arguments
+        const struct option longopts[] =
+            {
+                {"config", required_argument, 0, 'c'},
+                {0,0,0,0}
+            };
+
+        int option = 0, index;
+        while((option = getopt_long_only(argc, argv, "c:", longopts, &index)) != -1)
         {
             switch(option)
             {
@@ -37,10 +46,19 @@ int main(int argc, char* argv[])
 
 int ParseConfigFile(char *ConfigFilePath)
 {
+    std::string sConfigFilePath(ConfigFilePath);
+    INIReader reader(sConfigFilePath);
 
+    if(reader.ParseError() != 0) {
+        cout << "Can't load " << ConfigFilePath <<endl;
+        return -1;
+    }
+
+    cout << "api_address = " << reader.Get("DHT", "api_address", "-1") <<endl <<"p2p_address = " <<reader.Get("DHT", "p2p_address", "-1");
+    return 0;
 }
 
 void PrintCmdUsage()
 {
-    cout <<"Error! Wrong option.\nUsage: -c <Path to config file>";
+    cout <<"Error! Wrong option.\nUsage-> \nConfiguration file path: --config <Path to config file> | -c <Path to config file>";
 }
