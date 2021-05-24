@@ -65,7 +65,7 @@ void Api::start_accept()
         if (error)
             std::cerr << "[API.async_accept] " << error.message() << std::endl;
         else
-            openConnections.push_back(std::make_unique<Connection>(error, std::move(socket), *this));
+            openConnections.push_back(std::make_unique<Connection>(std::move(socket), *this));
     });
     openConnections.erase(
         std::remove_if(openConnections.begin(), openConnections.end(), [](const std::unique_ptr<Connection> &connection) { return connection->isDone(); }),

@@ -52,7 +52,7 @@ namespace API
 
     public:
         Connection() = delete;
-        Connection(asio::error_code error, tcp::socket &&socket, const Api &api);
+        Connection(tcp::socket &&socket, const Api &api);
         Connection(const Connection &other) = delete;
         Connection(Connection &&other) = delete;
 
