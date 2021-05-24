@@ -1,3 +1,5 @@
+#include "constants.h"
+#include "message_data.h"
 #define ASIO_STANDALONE
 
 #include <iostream>
@@ -30,8 +32,14 @@ int main()
         auto api = std::make_unique<Api>();
 
         // This is a placeholder request handler, it just echoes the request back, as long as it has the correct format.
-        api->setRequestHandler([](const Request &request){
-            return request.getBytes();
+        api->on<util::constants::DHT_GET>([](const Message_KEY &message_data) {
+            std::cout << "[apiMain] DHT_GET" << std::endl;
+            return message_data.m_bytes;
+        });
+
+        api->on<util::constants::DHT_PUT>([](const Message_KEY_VALUE &message_data) {
+            std::cout << "[apiMain] DHT_PUT" << std::endl;
+            return message_data.m_bytes;
         });
 
         while (!sigIntReceived)

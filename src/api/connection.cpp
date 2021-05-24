@@ -37,10 +37,14 @@ void API::Connection::start_read()
                 std::cerr << e.what() << std::endl;
                 return;
             }
-            if (socket.is_open() && api.requestHandler) {
-                std::vector<std::byte> response = api.requestHandler.value()(*request);
-                if (!response.empty()) {
-                    socket.write_some(asio::buffer(response));
+            if (socket.is_open()) {
+                auto t = request->getData()->m_header.msg_type;
+
+                if (api.requestHandlers.contains(t)) {
+                    std::vector<std::byte> response = api.requestHandlers.find(t)->second(*request->getData<>());
+                    if (!response.empty()) {
+                        socket.write_some(asio::buffer(response));
+                    }
                 }
             }
         }

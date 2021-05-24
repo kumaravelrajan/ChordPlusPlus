@@ -42,9 +42,9 @@ namespace API
                 throw bad_buffer_size("buffer smaller than specified in header");
 
             if (header.msg_type == util::constants::DHT_PUT) {
-                m_decodedData = std::make_unique<Message_KEY_VALUE>(m_rawBytes, header);
+                m_decodedData = std::make_unique<Message_KEY_VALUE>(m_rawBytes);
             } else if (header.msg_type == util::constants::DHT_GET) {
-                m_decodedData = std::make_unique<Message_KEY>(m_rawBytes, header);
+                m_decodedData = std::make_unique<Message_KEY>(m_rawBytes);
             } else {
                 throw bad_request("message type incorrect: " + std::to_string(header.msg_type));
             }
@@ -58,7 +58,7 @@ namespace API
 
         [[nodiscard]] std::vector<std::byte> getBytes() const;
 
-        template<class T, std::enable_if_t<std::is_base_of_v<MessageData, std::remove_cv_t<T>>, int> = 0>
+        template<class T = MessageData, std::enable_if_t<std::is_base_of_v<MessageData, std::remove_cv_t<T>>, int> = 0>
         std::remove_cv_t<T> *getData() const
         {
             return dynamic_cast<typename std::remove_pointer<T>::type *>(m_decodedData.get());

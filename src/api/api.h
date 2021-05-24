@@ -9,6 +9,9 @@
 #include <cstddef>
 #include <asio.hpp>
 #include <functional>
+#include <type_traits>
+#include <map>
+#include "message_data.h"
 #include "request.h"
 
 namespace API
@@ -22,13 +25,25 @@ namespace API
     class Api
     {
         using tcp = asio::ip::tcp;
-        using request_handler_t = std::function<std::vector<std::byte>(const Request &request)>;
+
+        using request_handler_t = std::function<std::vector<std::byte>(const MessageData &message_data)>;
+        template<typename MSG_TYPE, std::enable_if_t<util::is_one_of_v<MSG_TYPE, Message_KEY, Message_KEY_VALUE>, int> = 0>
+        using request_handler_specific_t = std::function<std::vector<std::byte>(const MSG_TYPE &message_data)>;
 
     public:
         explicit Api(const Options &o = {});
         ~Api();
 
-        void setRequestHandler(std::optional<request_handler_t> requestHandler);
+        template<uint16_t request_type>
+        void on(std::optional<request_handler_specific_t<message_type_from_int_t<request_type>>> requestHandler = {})
+        {
+            if (requestHandler)
+                requestHandlers[request_type] = [r(requestHandler.value())](const MessageData &message_data) {
+                    return r(dynamic_cast<const message_type_from_int_t<request_type> &>(message_data));
+                };
+            else
+                requestHandlers.erase(request_type);
+        }
 
     private:
         void start_accept();
@@ -39,7 +54,7 @@ namespace API
 
         std::vector<std::unique_ptr<Connection>> openConnections;
 
-        std::optional<request_handler_t> requestHandler;
+        std::map<uint16_t, request_handler_t> requestHandlers;
 
         bool isRunning = false;
 

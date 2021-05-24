@@ -1,4 +1,5 @@
 #include "api.h"
+#include "message_data.h"
 #include <iostream>
 #include <chrono>
 #include <memory>
@@ -46,11 +47,6 @@ Api::~Api()
     // TODO: stop open connection handlers
 
     std::cout << "[API] stopped!" << std::endl;
-}
-
-void Api::setRequestHandler(std::optional<request_handler_t> handler)
-{
-    this->requestHandler = std::move(handler);
 }
 
 void Api::start_accept()
