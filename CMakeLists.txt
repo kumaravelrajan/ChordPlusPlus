@@ -77,9 +77,9 @@ CPMAddPackage("gh:jarro2783/cxxopts@2.2.1")
 # pull inipp using cpm:
 CPMAddPackage(
         NAME inipp
-        VERSION 1.0.12
-        GITHUB_REPOSITORY mcmtroffaes/inipp
-        GIT_TAG 1.0.12
+        VERSION 1.0.13
+        GITHUB_REPOSITORY MixusMinimax/inipp
+        GIT_TAG 1.0.13
 )
 if (inipp_ADDED)
     add_library(inipp INTERFACE IMPORTED)
