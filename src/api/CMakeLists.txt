@@ -17,6 +17,7 @@ set_target_properties(${LIBRARY_NAME} PROPERTIES LINKER_LANGUAGE CXX)
 # target_link_libraries(${LIBRARY_NAME} lib::asio)
 target_link_libraries(${LIBRARY_NAME} lib::util)
 target_link_libraries(${LIBRARY_NAME} Threads::Threads)
+target_link_libraries(${LIBRARY_NAME} asio)
 
 add_executable(apiMain main.cpp)
 target_link_libraries(apiMain ${LIBRARY_NAME})

@@ -1,7 +1,7 @@
-#include "constants.h"
-#include "message_data.h"
 #define ASIO_STANDALONE
 
+#include "constants.h"
+#include "message_data.h"
 #include <iostream>
 #include <chrono>
 #include <csignal>
@@ -23,11 +23,7 @@ int main()
     using namespace util::constants;
     using namespace API;
 
-    struct sigaction sigIntHandler
-    {
-    };
-    sigIntHandler.sa_handler = sigHandler;
-    sigaction(SIGINT, &sigIntHandler, nullptr);
+    signal(SIGINT, sigHandler);
 
     std::cout << "This is the main method for testing api!" << std::endl;
     try {
