@@ -5,7 +5,7 @@ int main()
 {
     std::cout << "This is the main method for testing config!" << std::endl;
 
-    const auto conf = config::parseConfigFile(R"(C:\Users\maxib\Documents\config.ini)");
+    const auto conf = config::parseConfigFile(R"(..\..\..\config.ini)");
 
     std::cout
         << "p2p_address: " << conf.p2p_address << "\n"
