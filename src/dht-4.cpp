@@ -1,7 +1,7 @@
 #include <iostream>
 #include "api.h"
-#include <getopt.h>
-#include "../lib/inih/INIReader.h" //Todo - Figure out correct way to include this.
+#include <cxxopts.hpp>
+#include <INIReader.h>
 
 int ParseConfigFile(char *ConfigFilePath);
 void PrintCmdUsage();
