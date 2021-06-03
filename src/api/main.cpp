@@ -1,5 +1,3 @@
-#define ASIO_STANDALONE
-
 #include "constants.h"
 #include "message_data.h"
 #include <iostream>

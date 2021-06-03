@@ -18,30 +18,72 @@ find_package(Threads REQUIRED)
 # pull asio using cpm:
 CPMAddPackage(
         NAME asio
+        VERSION 1-18-2
         GITHUB_REPOSITORY chriskohlhoff/asio
         GIT_TAG asio-1-18-2
 )
 if (asio_ADDED)
-    add_library(asio INTERFACE IMPORTED)
-    target_include_directories(asio INTERFACE "${asio_SOURCE_DIR}/asio/include")
-else ()
-    message(FATAL_ERROR "asio not added!")
+    add_library(asio INTERFACE)
+
+    target_include_directories(asio
+            INTERFACE ${asio_SOURCE_DIR}/asio/include
+            )
+
+    target_compile_definitions(asio
+            INTERFACE
+            ASIO_STANDALONE
+            )
+
+    target_link_libraries(asio
+            INTERFACE
+            Threads::Threads
+            )
+
+    if (WIN32)
+        # macro see @ https://stackoverflow.com/a/40217291/1746503
+        macro(get_win32_winnt version)
+            if (CMAKE_SYSTEM_VERSION)
+                set(ver ${CMAKE_SYSTEM_VERSION})
+                string(REGEX MATCH "^([0-9]+).([0-9])" ver ${ver})
+                string(REGEX MATCH "^([0-9]+)" verMajor ${ver})
+                if ("${verMajor}" MATCHES "10")
+                    set(verMajor "A")
+                    string(REGEX REPLACE "^([0-9]+)" ${verMajor} ver ${ver})
+                endif ("${verMajor}" MATCHES "10")
+                string(REPLACE "." "" ver ${ver})
+                string(REGEX REPLACE "([0-9A-Z])" "0\\1" ver ${ver})
+                set(${version} "0x${ver}")
+            endif ()
+        endmacro()
+
+        if (NOT DEFINED _WIN32_WINNT)
+            get_win32_winnt(ver)
+            set(_WIN32_WINNT ${ver})
+        endif ()
+
+        message(STATUS "Set _WIN32_WINNET=${_WIN32_WINNT}")
+
+        target_compile_definitions(asio
+                INTERFACE
+                _WIN32_WINNT=${_WIN32_WINNT}
+                WIN32_LEAN_AND_MEAN
+                )
+    endif ()
 endif ()
 
 # pull cxxopts using cpm:
 CPMAddPackage("gh:jarro2783/cxxopts@2.2.1")
 
-# pull inih using cpm:
+# pull inipp using cpm:
 CPMAddPackage(
-        NAME inih
-        GITHUB_REPOSITORY benhoyt/inih
-        GIT_TAG r53
+        NAME inipp
+        VERSION 1.0.12
+        GITHUB_REPOSITORY mcmtroffaes/inipp
+        GIT_TAG 1.0.12
 )
-if (inih_ADDED)
-    add_library(inih INTERFACE IMPORTED)
-    target_include_directories(inih INTERFACE "${inih_SOURCE_DIR}/cpp")
-else ()
-    message(FATAL_ERROR "inih not added!")
+if (inipp_ADDED)
+    add_library(inipp INTERFACE IMPORTED)
+    target_include_directories(inipp INTERFACE ${inipp_SOURCE_DIR}/inipp)
 endif ()
 
 
