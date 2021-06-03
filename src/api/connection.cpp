@@ -6,13 +6,34 @@ API::Connection::Connection(tcp::socket &&sock, const Api &api):
     api(api)
 {
     start_read();
+
+    handlerCallManager = std::async(std::launch::async, [this]() {
+        using namespace std::chrono_literals;
+
+        while (socket.is_open()) {
+
+            if (!handlerCalls.empty() && handlerCalls[0].wait_for(0s) == std::future_status::ready) {
+
+                handlerCallMutex.lock();
+                auto bytes = handlerCalls.front().get();
+                handlerCalls.pop_front();
+                handlerCallMutex.unlock();
+
+                if (socket.is_open() && !bytes.empty()) {
+                    socket.write_some(asio::buffer(bytes));
+                }
+            }
+
+            std::this_thread::sleep_for(100ms);
+        }
+        done = true;
+    });
 }
 
 void API::Connection::start_read()
 {
     if (!socket.is_open()) {
         std::cout << "[API.connection] disconnected!" << std::endl;
-        done = true;
         return;
     }
     socket.async_read_some(asio::buffer(data), [this](const asio::error_code &error, std::size_t length) {
@@ -28,9 +49,9 @@ void API::Connection::start_read()
             auto bytes = util::convertToBytes(data, length);
             util::hexdump(bytes);
 
-            Request *request;
+            std::unique_ptr<Request> request;
             try {
-                request = new Request(bytes);
+                request = std::make_unique<Request>(bytes);
             }
             catch (const std::exception &e) {
                 std::cerr << "[API.connection] Exception thrown when parsing request:\n";
@@ -39,12 +60,12 @@ void API::Connection::start_read()
             }
             if (socket.is_open()) {
                 auto t = request->getData()->m_header.msg_type;
-
                 if (api.requestHandlers.contains(t)) {
-                    std::vector<std::byte> response = api.requestHandlers.find(t)->second(*request->getData<>());
-                    if (!response.empty()) {
-                        socket.write_some(asio::buffer(response));
-                    }
+                    handlerCallMutex.lock();
+                    handlerCalls.push_back(std::async(std::launch::async, [this, request(std::move(request))]() {
+                        return api.requestHandlers.find(request->getData()->m_header.msg_type)->second(*(request->getData<>()), cancellation_token);
+                    }));
+                    handlerCallMutex.unlock();
                 }
             }
         }
@@ -56,7 +77,12 @@ void API::Connection::close()
     socket.close();
 }
 
-bool API::Connection::isDone()
+bool API::Connection::isDone() const
 {
     return done;
+}
+
+API::Connection::~Connection()
+{
+    cancellation_token = true;
 }

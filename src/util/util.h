@@ -1,6 +1,7 @@
 #ifndef DHT_UTIL_H
 #define DHT_UTIL_H
 
+#include <algorithm>
 #include <type_traits>
 #include <vector>
 #include <cstdint>
