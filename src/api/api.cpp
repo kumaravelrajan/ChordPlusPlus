@@ -8,7 +8,7 @@
 #include <algorithm>
 #include <util.h>
 
-using namespace API;
+using namespace api;
 
 Api::Api(const Options &o):
     service(std::make_unique<asio::io_service>()),

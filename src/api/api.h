@@ -14,7 +14,7 @@
 #include "message_data.h"
 #include "request.h"
 
-namespace API
+namespace api
 {
     struct Options
     {
@@ -26,20 +26,26 @@ namespace API
     {
         using tcp = asio::ip::tcp;
 
-        using request_handler_t = std::function<std::vector<std::byte>(const MessageData &message_data)>;
+        using request_handler_t = std::function<std::vector<std::byte>(const MessageData &message_data, std::atomic_bool &cancelled)>;
         template<typename MSG_TYPE, std::enable_if_t<util::is_one_of_v<MSG_TYPE, Message_KEY, Message_KEY_VALUE>, int> = 0>
-        using request_handler_specific_t = std::function<std::vector<std::byte>(const MSG_TYPE &message_data)>;
+        using request_handler_specific_t = std::function<std::vector<std::byte>(const MSG_TYPE &message_data, std::atomic_bool &cancelled)>;
 
     public:
         explicit Api(const Options &o = {});
         ~Api();
 
+        /**
+         * @brief Set or unset request handler for specified request type. It is the responsibility of the requestHandler to periodically check the cancellation token, in order to keep shutdown times short.
+         *
+         * @tparam request_type
+         * @param requestHandler
+         */
         template<uint16_t request_type>
         void on(std::optional<request_handler_specific_t<message_type_from_int_t<request_type>>> requestHandler = {})
         {
             if (requestHandler)
-                requestHandlers[request_type] = [r(requestHandler.value())](const MessageData &message_data) {
-                    return r(dynamic_cast<const message_type_from_int_t<request_type> &>(message_data));
+                requestHandlers[request_type] = [r(requestHandler.value())](const MessageData &message_data, std::atomic_bool &cancelled) {
+                    return r(dynamic_cast<const message_type_from_int_t<request_type> &>(message_data), cancelled);
                 };
             else
                 requestHandlers.erase(request_type);
@@ -76,8 +82,9 @@ namespace API
 
         void start_read();
         void close();
-        void get();
-        bool isDone();
+        [[nodiscard]] bool isDone() const;
+
+        ~Connection();
 
     private:
         std::vector<uint8_t> data = std::vector<uint8_t>((1 << 16) - 1, 0);
@@ -86,6 +93,12 @@ namespace API
         const Api &api;
 
         bool done = false;
+
+        std::deque<std::future<std::vector<std::byte>>> handlerCalls;
+        std::future<void> handlerCallManager;
+        std::mutex handlerCallMutex;
+
+        std::atomic_bool cancellation_token { false };
     };
 } // namespace API
 

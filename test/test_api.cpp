@@ -22,10 +22,10 @@ int main()
                 "\x1d\x1e\x1f\x20"s; // key
             auto bytes = util::convertToBytes(byteString);
 
-            API::Request request(bytes);
+            api::Request request(bytes);
 
-            auto *request_data = request.getData<API::Message_KEY>();
-            assert_null(request.getData<API::Message_KEY_VALUE>());
+            auto *request_data = request.getData<api::Message_KEY>();
+            assert_null(request.getData<api::Message_KEY_VALUE>());
             assert_not_null(request_data, "Data should not be null!");
 
             std::cout << "Key:" << std::endl;
@@ -52,10 +52,10 @@ int main()
 
             auto bytes = util::convertToBytes(byteString);
 
-            API::Request request(bytes);
+            api::Request request(bytes);
 
-            auto *request_data = request.getData<API::Message_KEY_VALUE>();
-            assert_null(request.getData<API::Message_KEY>());
+            auto *request_data = request.getData<api::Message_KEY_VALUE>();
+            assert_null(request.getData<api::Message_KEY>());
             assert_not_null(request_data, "Data should not be null!");
 
             std::cout << "Key:" << std::endl;
@@ -79,11 +79,11 @@ int main()
                 "\x1d\x1e\x1f\x20"s; // key
             auto key = util::convertToBytes(sKey);
 
-            auto sizeExpected = sizeof(API::MessageHeader::MessageHeaderRaw) + key.size();
+            auto sizeExpected = sizeof(api::MessageHeader::MessageHeaderRaw) + key.size();
 
-            API::Message_KEY message(util::constants::DHT_GET, key);
+            api::Message_KEY message(util::constants::DHT_GET, key);
 
-            auto header = API::MessageHeader(reinterpret_cast<API::MessageHeader::MessageHeaderRaw &>(message.m_bytes[0]));
+            auto header = api::MessageHeader(reinterpret_cast<api::MessageHeader::MessageHeaderRaw &>(message.m_bytes[0]));
 
             assert_equal(sizeExpected, static_cast<uint16_t>(header.size), "Size specified in header");
             assert_equal(util::constants::DHT_GET, header.msg_type, "Message type specified in header");
@@ -109,11 +109,11 @@ int main()
             auto key = util::convertToBytes(sKey);
             auto value = util::convertToBytes(sValue);
 
-            auto sizeExpected = sizeof(API::MessageHeader::MessageHeaderRaw) + key.size() + value.size();
+            auto sizeExpected = sizeof(api::MessageHeader::MessageHeaderRaw) + key.size() + value.size();
 
-            API::Message_KEY_VALUE message(util::constants::DHT_PUT, key, value);
+            api::Message_KEY_VALUE message(util::constants::DHT_PUT, key, value);
 
-            auto header = API::MessageHeader(reinterpret_cast<API::MessageHeader::MessageHeaderRaw &>(message.m_bytes[0]));
+            auto header = api::MessageHeader(reinterpret_cast<api::MessageHeader::MessageHeaderRaw &>(message.m_bytes[0]));
 
             assert_equal(sizeExpected, static_cast<uint16_t>(header.size), "Size specified in header");
             assert_equal(util::constants::DHT_PUT, header.msg_type, "Message type specified in header");
