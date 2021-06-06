@@ -3,6 +3,11 @@
 #include <capnp/serialize-packed.h>
 #include "person.capnp.h"
 
+// This is just required for the quick demo.
+#ifdef _MSC_VER
+#include <io.h>
+#include <fcntl.h>
+#endif
 
 void dht::Dht::mainLoop()
 {
@@ -16,7 +21,11 @@ void dht::Dht::mainLoop()
 
     std::cout << "[DHT] Main Loop Entered" << std::endl;
 
+#ifdef _MSC_VER
+    if (int p[2]; _pipe(p, 1024, _O_BINARY) >= 0) {
+#else
     if (int p[2]; pipe(p) >= 0) {
+#endif
         std::this_thread::sleep_for(1s);
         dht::writeMessage(p[1]);
         std::this_thread::sleep_for(1s);
