@@ -72,7 +72,12 @@ if (asio_ADDED)
 endif ()
 
 # pull cxxopts using cpm:
-CPMAddPackage("gh:jarro2783/cxxopts@2.2.1")
+CPMAddPackage(
+        NAME cxxopts
+        VERSION 2.2.1
+        GITHUB_REPOSITORY jarro2783/cxxopts
+        OPTIONS "CXXOPTS_BUILD_TESTS OFF"
+)
 
 # pull inipp using cpm:
 CPMAddPackage(
@@ -80,6 +85,7 @@ CPMAddPackage(
         VERSION 1.0.13
         GITHUB_REPOSITORY MixusMinimax/inipp
         GIT_TAG 1.0.13
+        OPTIONS "INIPP_ENABLE_TESTING OFF"
 )
 if (inipp_ADDED)
     add_library(inipp INTERFACE IMPORTED)
@@ -92,5 +98,7 @@ add_subdirectory(src/config)
 add_subdirectory(src/dht)
 add_subdirectory(src/api)
 add_subdirectory(src/util)
+
+add_subdirectory(lib/cpp_unit_test)
 
 add_subdirectory(test)

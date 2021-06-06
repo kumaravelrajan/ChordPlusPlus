@@ -18,7 +18,7 @@ void util::hexdump(const std::vector<std::byte> &bytes, size_t stride)
         std::cout << " ";
         for (j = 0; j < stride; j++)
             if (i + j < bytes.size())
-                std::cout << (std::isprint(static_cast<char>(bytes[i + j])) ? static_cast<char>(bytes[i + j]) : '.');
+                std::cout << (std::isprint(static_cast<int>(bytes[i + j])) ? static_cast<char>(bytes[i + j]) : '.');
         std::cout << std::endl;
     }
     std::cout.flags(old);
