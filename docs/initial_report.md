@@ -8,11 +8,11 @@
 - Chosen Implementation: Chord
 
 #### Chosen programming language and operating system and reasons for choosing them
-- **Programming Language**: C++, because of its efficiency benefits. We chose it over C mainly because namespaces, operators, templates, and easier memory management.
+- **Programming Language**: C++, because of its efficiency benefits. We chose it over C mainly because of namespaces, operators, templates, and easier memory management.
 - **Operating system**: linux, so that it can be easily dockerized and used on any system.
 
 #### Build System:
-- cmake. For now only works with gcc and clang, but we might make it work with Visual C++. But because WSL and docker exist, there is no real incentive to do so.
+- cmake. For now the project only works with gcc and clang, but we might make it work with Visual C++. But because WSL and docker exist, there is no real incentive to do so.
 
 #### Intended measures to guarantee quality of your software
 - ctest
@@ -20,11 +20,11 @@
 - Client scripts for testing the api, or even the p2p connection.
 
 #### Available libraries
-- benhoyt/inih
-- cap'n proto
-- asio standalone
+- [benhoyt/inih](https://github.com/benhoyt/inih)
+- [cap'n proto](https://capnproto.org/)
+- [asio standalone](https://think-async.com/Asio/asio-1.18.2/doc/)
 
-We might use CPM for handling libraries. For now, however, they are found in `/usr/lib`, and in the future the Dockerfile will make sure that they are installed.
+We might use CPM for handling libraries. For now, however, they are searched for in the system itself, and in the future the Dockerfile will make sure that they are installed.
 
 #### License you intend to assign your project’s software and reasons for doing so
 **MIT** license
@@ -44,7 +44,7 @@ Since this is just an educational project, the relevance of this is debatable, s
 
 #### Planned workload distribution
 - Maxi
-  - **API**: Message [de-]serialization, asynchronous networking, error handling
+  - **api**: Message [de-]serialization, asynchronous networking, error handling
   - **DHT** implementation
 - Kumaravel
   - **Conf** Parsing / Command-line **Arguments**

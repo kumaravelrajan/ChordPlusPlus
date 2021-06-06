@@ -3,7 +3,7 @@
 #include <iostream>
 #include <utility>
 
-using namespace API;
+using namespace api;
 
 Request::Request(Request &&other) noexcept
 {
