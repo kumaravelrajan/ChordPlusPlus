@@ -3,6 +3,30 @@
 #include <capnp/serialize-packed.h>
 #include "person.capnp.h"
 
+
+void dht::Dht::mainLoop()
+{
+    /*
+     * This is where the dht will fix fingers, store and retrieve data, etc.
+     * This needs to be thread-safe, and needs to be able to exit at any time.
+     * (No blocking function calls in here)
+     */
+
+    using namespace std::chrono_literals;
+
+    std::cout << "[DHT] Main Loop Entered" << std::endl;
+
+    if (int p[2]; pipe(p) >= 0) {
+        std::this_thread::sleep_for(1s);
+        dht::writeMessage(p[1]);
+        std::this_thread::sleep_for(1s);
+        dht::printMessage(p[0]);
+        std::this_thread::sleep_for(1s);
+    }
+
+    std::cout << "[DHT] Exiting Main Loop" << std::endl;
+}
+
 void dht::writeMessage(int fd)
 {
     capnp::MallocMessageBuilder message;

@@ -1,17 +1,20 @@
 #include <iostream>
+#include <memory>
+
 #include "dht.h"
+
 
 int main()
 {
-    std::cout << "This is the main method for testing dht!" << std::endl;
+    std::cout << "[DHT main] This is the main method for testing dht!" << std::endl;
 
-    int p[2];
-    if (pipe(p) < 0)
-        exit(1);
+    {
+        // The constructor of Dht starts mainLoop asynchronously.
+        auto dht = std::make_unique<dht::Dht>();
+        std::cout << "[DHT main] destroying dht..." << std::endl;
+    } // <- The destructor of Dht waits for mainLoop to exit.
 
-    dht::writeMessage(p[1]);
-
-    dht::printMessage(p[0]);
+    std::cout << "[DHT main] dht destroyed!" << std::endl;
 
     return 0;
 }
