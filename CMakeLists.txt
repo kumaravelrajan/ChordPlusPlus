@@ -99,6 +99,4 @@ add_subdirectory(src/dht)
 add_subdirectory(src/api)
 add_subdirectory(src/util)
 
-add_subdirectory(lib/cpp_unit_test)
-
 add_subdirectory(test)
