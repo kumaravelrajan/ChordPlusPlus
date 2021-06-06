@@ -92,6 +92,8 @@ if (inipp_ADDED)
     target_include_directories(inipp INTERFACE ${inipp_SOURCE_DIR}/inipp)
 endif ()
 
+# pull cap'n proto from github:
+CPMAddPackage("gh:capnproto/capnproto@0.8.0")
 
 add_subdirectory(src)
 add_subdirectory(src/config)
