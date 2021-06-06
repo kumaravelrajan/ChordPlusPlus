@@ -44,7 +44,7 @@ Since this is just an educational project, the relevance of this is debatable, s
 
 #### Planned workload distribution
 - Maxi
-  - **API**: Message [de-]serialization, asynchronous networking, error handling
+  - **api**: Message [de-]serialization, asynchronous networking, error handling
   - **DHT** implementation
 - Kumaravel
   - **Conf** Parsing / Command-line **Arguments**

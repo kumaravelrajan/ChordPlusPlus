@@ -12,7 +12,7 @@
 #include <constants.h>
 #include "message_data.h"
 
-namespace API
+namespace api
 {
     class Request
     {

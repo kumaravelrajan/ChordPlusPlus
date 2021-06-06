@@ -14,8 +14,10 @@ target_compile_features(${LIBRARY_NAME} PUBLIC cxx_std_20)
 
 set_target_properties(${LIBRARY_NAME} PROPERTIES LINKER_LANGUAGE CXX)
 
-add_executable(dhtMain main.cpp)
 target_link_libraries(${LIBRARY_NAME} lib::api)
+target_link_libraries(${LIBRARY_NAME} capnp)
+
+add_executable(dhtMain main.cpp)
 target_link_libraries(dhtMain ${LIBRARY_NAME})
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang")

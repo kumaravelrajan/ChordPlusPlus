@@ -6,7 +6,7 @@
 #include <cstdint>
 #include <util.h>
 
-namespace API
+namespace api
 {
     struct MessageHeader
     {

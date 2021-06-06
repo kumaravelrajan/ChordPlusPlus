@@ -1,5 +1,5 @@
 #include <iostream>
-#include "api.h"
+#include "dht.h"
 
 int main()
 {

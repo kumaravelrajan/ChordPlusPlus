@@ -14,7 +14,7 @@
 #include "message_data.h"
 #include "request.h"
 
-namespace API
+namespace api
 {
     struct Options
     {

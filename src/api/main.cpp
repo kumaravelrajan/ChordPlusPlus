@@ -19,7 +19,7 @@ int main()
 {
     using namespace std::chrono_literals;
     using namespace util::constants;
-    using namespace API;
+    using namespace api;
 
     signal(SIGINT, sigHandler);
 

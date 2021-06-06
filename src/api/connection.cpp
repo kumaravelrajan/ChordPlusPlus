@@ -1,7 +1,7 @@
 #include "api.h"
 #include <cstdint>
 
-API::Connection::Connection(tcp::socket &&sock, const Api &api):
+api::Connection::Connection(tcp::socket &&sock, const Api &api):
     socket(std::move(sock)),
     api(api)
 {
@@ -30,7 +30,7 @@ API::Connection::Connection(tcp::socket &&sock, const Api &api):
     });
 }
 
-void API::Connection::start_read()
+void api::Connection::start_read()
 {
     if (!socket.is_open()) {
         std::cout << "[API.connection] disconnected!" << std::endl;
@@ -72,17 +72,17 @@ void API::Connection::start_read()
     });
 }
 
-void API::Connection::close()
+void api::Connection::close()
 {
     socket.close();
 }
 
-bool API::Connection::isDone() const
+bool api::Connection::isDone() const
 {
     return done;
 }
 
-API::Connection::~Connection()
+api::Connection::~Connection()
 {
     cancellation_token = true;
 }
