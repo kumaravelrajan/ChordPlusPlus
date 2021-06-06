@@ -5,7 +5,9 @@
 
 namespace dht
 {
+    void writeMessage(int fd);
 
+    void printMessage(int fd);
 }
 
 #endif //DHT_DHT_H
