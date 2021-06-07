@@ -10,6 +10,10 @@ int main()
 {
     std::cout << "[DHT main] This is the main method for testing dht!" << std::endl;
 
+    // fixme - Finding node id with sha1 hash
+    NodeInformation N{};
+    N.FindSha1Key(N.getMKey());
+
     {
         // The constructor of Dht starts mainLoop asynchronously.
         auto dht = std::make_unique<dht::Dht>();
@@ -25,9 +29,5 @@ int main()
     } // <- The destructor of Dht waits for mainLoop to exit.
 
     std::cout << "[DHT main] dht destroyed!" << std::endl;
-
-    // fixme - Finding node id with sha1 hash
-    NodeInformation N{};
-    N.FindSha1Key(N.getMKey());
     return 0;
 }
