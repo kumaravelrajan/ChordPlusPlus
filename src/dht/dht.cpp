@@ -1,12 +1,15 @@
 #include "dht.h"
+#include <util.h>
 #include <capnp/message.h>
 #include <capnp/serialize-packed.h>
 #include "person.capnp.h"
 
 // This is just required for the quick demo.
 #ifdef _MSC_VER
+
 #include <io.h>
 #include <fcntl.h>
+
 #endif
 
 void dht::Dht::mainLoop()
@@ -24,7 +27,7 @@ void dht::Dht::mainLoop()
 #ifdef _MSC_VER
     if (int p[2]; _pipe(p, 1024, _O_BINARY) >= 0) {
 #else
-    if (int p[2]; pipe(p) >= 0) {
+        if (int p[2]; pipe(p) >= 0) {
 #endif
         std::this_thread::sleep_for(1s);
         dht::writeMessage(p[1]);
@@ -35,6 +38,35 @@ void dht::Dht::mainLoop()
 
     std::cout << "[DHT] Exiting Main Loop" << std::endl;
 }
+
+void dht::Dht::setApi(std::unique_ptr<api::Api> api)
+{
+    // Destroy old api:
+    m_api = nullptr;
+    // Move in new api:
+    m_api = std::move(api);
+
+    // Set Request handlers:
+    m_api->on<util::constants::DHT_PUT>(
+        [this](const api::Message_KEY_VALUE &m, std::atomic_bool &cancelled) {
+            return onDhtPut(m, cancelled);
+        });
+    m_api->on<util::constants::DHT_GET>(
+        [this](const api::Message_KEY &m, std::atomic_bool &cancelled) {
+            return onDhtGet(m, cancelled);
+        });
+}
+
+std::vector<std::byte> dht::Dht::onDhtPut(const api::Message_KEY_VALUE &m, std::atomic_bool &cancelled)
+{
+    return {};
+}
+
+std::vector<std::byte> dht::Dht::onDhtGet(const api::Message_KEY &m, std::atomic_bool &cancelled)
+{
+    return {};
+}
+
 
 void dht::writeMessage(int fd)
 {
