@@ -1,49 +1,45 @@
-//
-// Created by kumar on 30-05-2021.
-//
-
 #ifndef DHT_NODEINFORMATION_H
 #define DHT_NODEINFORMATION_H
 
-# include <string>
-# include <openssl/sha.h>
+#include <string>
+#include <openssl/sha.h>
 #include <iostream>
 
 #define SHA1_CONSIDERATION_LIMIT 9
 
-using namespace std;
+// using namespace std; // This is the greatest sin you can commit
 
-class NodeInformation{
+class NodeInformation
+{
 private:
-    string m_Key;
-    string m_Value;
-    string m_Ip;
-    string m_Port;
-    string m_Sha1_nodeId;
+    std::string m_Key;
+    std::string m_Value;
+    std::string m_Ip;
+    std::string m_Port;
+    std::string m_Sha1_nodeId;
 
 public:
-    const string &getMSha1NodeId() const;
-    void setMSha1NodeId(const string &mSha1NodeId);
+    const std::string &getMSha1NodeId() const;
+    void setMSha1NodeId(const std::string &mSha1NodeId);
 
 public:
-    const string &getMValue() const;
-    void setMValue(const string &mValue);
-    const string &getMIp() const;
-    void setMIp(const string &mIp);
-    const string &getMPort() const;
-    void setMPort(const string &mPort);
-    const string &getMKey() const;
-    void setMKey(const string &mKey);
+    const std::string &getMValue() const;
+    void setMValue(const std::string &mValue);
+    const std::string &getMIp() const;
+    void setMIp(const std::string &mIp);
+    const std::string &getMPort() const;
+    void setMPort(const std::string &mPort);
+    const std::string &getMKey() const;
+    void setMKey(const std::string &mKey);
 
 public:
     // Constructor
     NodeInformation();
 
     // Methods
-    void FindSha1Key(string key);
+    void FindSha1Key(const std::string &key);
 
     // Getters and setters
-
 };
 
 #endif //DHT_NODEINFORMATION_H

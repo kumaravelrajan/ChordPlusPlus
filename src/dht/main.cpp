@@ -27,7 +27,7 @@ int main()
     std::cout << "[DHT main] dht destroyed!" << std::endl;
 
     // fixme - Finding node id with sha1 hash
-    NodeInformation N = NodeInformation();
+    NodeInformation N{};
     N.FindSha1Key(N.getMKey());
     return 0;
 }
