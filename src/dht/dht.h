@@ -16,10 +16,15 @@ namespace dht
         Dht() :
             m_mainLoop(std::async(std::launch::async, [this]() { mainLoop(); }))
         {}
-        ~Dht() = default;
+        ~Dht()
+        { m_api = nullptr; };
         Dht(const Dht &) = delete;
         Dht(Dht &&) = delete;
 
+        /**
+         * The api is used to receive requests.
+         * @param api - unique, transfers ownership
+         */
         void setApi(std::unique_ptr<api::Api> api);
 
     private:

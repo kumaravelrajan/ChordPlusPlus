@@ -11,6 +11,14 @@ int main()
     {
         // The constructor of Dht starts mainLoop asynchronously.
         auto dht = std::make_unique<dht::Dht>();
+
+        dht->setApi(std::make_unique<api::Api>(api::Options{
+            .port= 6969,
+        }));
+
+        // Wait for input:
+        std::cin.get();
+
         std::cout << "[DHT main] destroying dht..." << std::endl;
     } // <- The destructor of Dht waits for mainLoop to exit.
 

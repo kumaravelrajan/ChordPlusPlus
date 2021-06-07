@@ -12,6 +12,8 @@
 
 #endif
 
+using namespace std::chrono_literals;
+
 void dht::Dht::mainLoop()
 {
     /*
@@ -57,14 +59,22 @@ void dht::Dht::setApi(std::unique_ptr<api::Api> api)
         });
 }
 
-std::vector<std::byte> dht::Dht::onDhtPut(const api::Message_KEY_VALUE &m, std::atomic_bool &cancelled)
+std::vector<std::byte> dht::Dht::onDhtPut(const api::Message_KEY_VALUE &message_data, std::atomic_bool &cancelled)
 {
-    return {};
+    // Store the request somewhere, and wait until the mainLoop has the answer
+    std::cout << "[dht] DHT_PUT" << std::endl;
+    for (uint8_t i{0}; !cancelled && i < 10; ++i)
+        std::this_thread::sleep_for(1s);
+    return message_data.m_bytes;
 }
 
-std::vector<std::byte> dht::Dht::onDhtGet(const api::Message_KEY &m, std::atomic_bool &cancelled)
+std::vector<std::byte> dht::Dht::onDhtGet(const api::Message_KEY &message_data, std::atomic_bool &cancelled)
 {
-    return {};
+    // Store the request somewhere, and wait until the mainLoop has the answer
+    std::cout << "[dht] DHT_GET" << std::endl;
+    for (uint8_t i{0}; !cancelled && i < 10; ++i)
+        std::this_thread::sleep_for(1s);
+    return message_data.m_bytes;
 }
 
 
