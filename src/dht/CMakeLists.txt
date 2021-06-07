@@ -4,11 +4,6 @@ set(MODULE_HEADERS dht.h)
 
 set(MODULE_SOURCES dht.cpp NodeInformation.cpp NodeInformation.h)
 
-set(OPENSSL_ROOT_DIR /usr/include/openssl)
-
-set(OPENSSL_USE_STATIC_LIBS TRUE)
-find_package(OpenSSL REQUIRED)
-
 capnp_generate_cpp(CAPNP_SRCS CAPNP_HDRS schemas/person.capnp)
 
 add_library(${LIBRARY_NAME} ${MODULE_HEADERS} ${MODULE_SOURCES} ${CAPNP_SRCS} ${CAPNP_HDRS})
@@ -23,11 +18,11 @@ set_target_properties(${LIBRARY_NAME} PROPERTIES LINKER_LANGUAGE CXX)
 
 target_link_libraries(${LIBRARY_NAME} lib::api)
 target_link_libraries(${LIBRARY_NAME} CapnProto::capnp-rpc)
+target_link_libraries(${LIBRARY_NAME} ssl)
 target_include_directories(${LIBRARY_NAME} PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/schemas)
 
 add_executable(dhtMain main.cpp)
 target_link_libraries(dhtMain ${LIBRARY_NAME})
-target_link_libraries(dhtMain OpenSSL::SSL)
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
     target_compile_options(dhtMain PUBLIC -Wall -Wextra -Wconversion -pedantic -Wfatal-errors)

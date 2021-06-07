@@ -97,6 +97,14 @@ endif ()
 # pull cap'n proto from github:
 CPMAddPackage("gh:capnproto/capnproto@0.8.0")
 
+# pull openssl from github:
+CPMAddPackage(
+        NAME openssl
+        VERSION 1.1.1
+        GITHUB_REPOSITORY janbar/openssl-cmake
+        GIT_TAG 1.1.1k-20210430
+)
+
 add_subdirectory(src)
 add_subdirectory(src/config)
 add_subdirectory(src/dht)
