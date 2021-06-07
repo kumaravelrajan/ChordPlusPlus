@@ -3,6 +3,8 @@
 
 #include "dht.h"
 
+#include "api.h"
+#include "NodeInformation.h"
 
 int main()
 {
@@ -24,5 +26,8 @@ int main()
 
     std::cout << "[DHT main] dht destroyed!" << std::endl;
 
+    // fixme - Finding node id with sha1 hash
+    NodeInformation N = NodeInformation();
+    N.FindSha1Key(N.getMKey());
     return 0;
 }
