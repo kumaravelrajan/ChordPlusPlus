@@ -79,13 +79,15 @@ CPMAddPackage(
         OPTIONS "CXXOPTS_BUILD_TESTS OFF"
 )
 
+message("Testing: ${BUILD_TESTING}")
+
 # pull inipp using cpm:
 CPMAddPackage(
         NAME inipp
         VERSION 1.0.13
         GITHUB_REPOSITORY MixusMinimax/inipp
         GIT_TAG 1.0.13
-        OPTIONS "INIPP_ENABLE_TESTING OFF"
+        OPTIONS "BUILD_TESTING OFF"
 )
 if (inipp_ADDED)
     add_library(inipp INTERFACE IMPORTED)

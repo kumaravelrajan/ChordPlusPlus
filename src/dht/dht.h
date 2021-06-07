@@ -17,7 +17,11 @@ namespace dht
             m_mainLoop(std::async(std::launch::async, [this]() { mainLoop(); }))
         {}
         ~Dht()
-        { m_api = nullptr; };
+        {
+            m_api = nullptr;
+            m_dhtRunning = false;
+            m_mainLoop.wait(); // This happens after the destructor anyway, but this way it is clearer
+        };
         Dht(const Dht &) = delete;
         Dht(Dht &&) = delete;
 
@@ -28,6 +32,11 @@ namespace dht
         void setApi(std::unique_ptr<api::Api> api);
 
     private:
+        /**
+         * This is where the actual work happens.
+         * mainLoop is called asynchronously from the constructor of Dht.
+         * It needs to worry about stopping itself.
+         */
         void mainLoop();
 
         std::vector<std::byte> onDhtPut(const api::Message_KEY_VALUE &m, std::atomic_bool &cancelled);
@@ -35,10 +44,13 @@ namespace dht
 
         std::future<void> m_mainLoop;
         std::unique_ptr<api::Api> m_api;
+        std::atomic_bool m_dhtRunning{true};
     };
 
+    // vvv can be removed
     void writeMessage(int fd);
     void printMessage(int fd);
+    // ^^^ can be removed
 }
 
 #endif //DHT_DHT_H

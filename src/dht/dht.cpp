@@ -4,13 +4,12 @@
 #include <capnp/serialize-packed.h>
 #include "person.capnp.h"
 
-// This is just required for the quick demo.
+// vvv This is just required for the quick demo.
 #ifdef _MSC_VER
-
 #include <io.h>
 #include <fcntl.h>
-
 #endif
+// ^^^ can be removed
 
 using namespace std::chrono_literals;
 
@@ -22,14 +21,14 @@ void dht::Dht::mainLoop()
      * (No blocking function calls in here)
      */
 
-    using namespace std::chrono_literals;
-
     std::cout << "[DHT] Main Loop Entered" << std::endl;
 
+
+    // vvv can be removed
 #ifdef _MSC_VER
     if (int p[2]; _pipe(p, 1024, _O_BINARY) >= 0) {
 #else
-        if (int p[2]; pipe(p) >= 0) {
+    if (int p[2]; pipe(p) >= 0) {
 #endif
         std::this_thread::sleep_for(1s);
         dht::writeMessage(p[1]);
@@ -37,6 +36,11 @@ void dht::Dht::mainLoop()
         dht::printMessage(p[0]);
         std::this_thread::sleep_for(1s);
     }
+
+    while (m_dhtRunning) {
+        std::this_thread::sleep_for(500ms);
+    }
+    // ^^^ can be removed
 
     std::cout << "[DHT] Exiting Main Loop" << std::endl;
 }
@@ -61,23 +65,30 @@ void dht::Dht::setApi(std::unique_ptr<api::Api> api)
 
 std::vector<std::byte> dht::Dht::onDhtPut(const api::Message_KEY_VALUE &message_data, std::atomic_bool &cancelled)
 {
-    // Store the request somewhere, and wait until the mainLoop has the answer
+    // TODO: Store the request somewhere, and wait until the mainLoop has the answer
+
+    // vvv can be removed
     std::cout << "[dht] DHT_PUT" << std::endl;
     for (uint8_t i{0}; !cancelled && i < 10; ++i)
         std::this_thread::sleep_for(1s);
     return message_data.m_bytes;
+    // ^^^ can be removed
 }
 
 std::vector<std::byte> dht::Dht::onDhtGet(const api::Message_KEY &message_data, std::atomic_bool &cancelled)
 {
-    // Store the request somewhere, and wait until the mainLoop has the answer
+    // TODO: Store the request somewhere, and wait until the mainLoop has the answer
+
+    // vvv can be removed
     std::cout << "[dht] DHT_GET" << std::endl;
     for (uint8_t i{0}; !cancelled && i < 10; ++i)
         std::this_thread::sleep_for(1s);
     return message_data.m_bytes;
+    // ^^^ can be removed
 }
 
 
+// vvv can be removed
 void dht::writeMessage(int fd)
 {
     capnp::MallocMessageBuilder message;
@@ -133,3 +144,4 @@ void dht::printMessage(int fd)
         }
     }
 }
+// ^^^ can be removed
