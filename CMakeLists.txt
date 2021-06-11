@@ -79,8 +79,6 @@ CPMAddPackage(
         OPTIONS "CXXOPTS_BUILD_TESTS OFF"
 )
 
-message("Testing: ${BUILD_TESTING}")
-
 # pull inipp using cpm:
 CPMAddPackage(
         NAME inipp
@@ -110,5 +108,6 @@ add_subdirectory(src/config)
 add_subdirectory(src/dht)
 add_subdirectory(src/api)
 add_subdirectory(src/util)
+add_subdirectory(src/p2p)
 
 add_subdirectory(test)
