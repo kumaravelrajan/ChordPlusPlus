@@ -19,17 +19,17 @@ private:
     std::string m_Sha1_nodeId;
 
 public:
-    const std::string &getMSha1NodeId() const;
+    [[nodiscard]] const std::string &getMSha1NodeId() const;
     void setMSha1NodeId(const std::string &mSha1NodeId);
 
 public:
-    const std::string &getMValue() const;
+    [[nodiscard]] const std::string &getMValue() const;
     void setMValue(const std::string &mValue);
-    const std::string &getMIp() const;
+    [[nodiscard]] const std::string &getMIp() const;
     void setMIp(const std::string &mIp);
-    const std::string &getMPort() const;
+    [[nodiscard]] const std::string &getMPort() const;
     void setMPort(const std::string &mPort);
-    const std::string &getMKey() const;
+    [[nodiscard]] const std::string &getMKey() const;
     void setMKey(const std::string &mKey);
 
 public:

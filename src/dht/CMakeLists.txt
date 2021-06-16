@@ -1,10 +1,10 @@
 set(LIBRARY_NAME dht)
 
-set(MODULE_HEADERS dht.h)
+set(MODULE_HEADERS Dht.h)
 
-set(MODULE_SOURCES dht.cpp NodeInformation.cpp NodeInformation.h)
+set(MODULE_SOURCES Dht.cpp NodeInformation.cpp Peer.cpp)
 
-capnp_generate_cpp(CAPNP_SRCS CAPNP_HDRS schemas/person.capnp)
+capnp_generate_cpp(CAPNP_SRCS CAPNP_HDRS schemas/person.capnp schemas/peer.capnp)
 
 add_library(${LIBRARY_NAME} ${MODULE_HEADERS} ${MODULE_SOURCES} ${CAPNP_SRCS} ${CAPNP_HDRS})
 add_library(lib::${LIBRARY_NAME} ALIAS ${LIBRARY_NAME})
@@ -18,8 +18,9 @@ set_target_properties(${LIBRARY_NAME} PROPERTIES LINKER_LANGUAGE CXX)
 
 target_link_libraries(${LIBRARY_NAME} lib::api)
 target_link_libraries(${LIBRARY_NAME} CapnProto::capnp-rpc)
+target_link_libraries(${LIBRARY_NAME} CapnProto::kj)
 target_link_libraries(${LIBRARY_NAME} ssl)
-target_include_directories(${LIBRARY_NAME} PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/schemas)
+target_include_directories(${LIBRARY_NAME} PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/schemas)
 
 add_executable(dhtMain main.cpp)
 target_link_libraries(dhtMain ${LIBRARY_NAME})

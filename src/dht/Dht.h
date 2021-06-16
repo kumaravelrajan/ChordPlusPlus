@@ -7,6 +7,7 @@
 #include <cstddef>
 #include <memory>
 #include <message_data.h>
+#include "Peer.h"
 
 namespace dht
 {
@@ -46,11 +47,6 @@ namespace dht
         std::unique_ptr<api::Api> m_api;
         std::atomic_bool m_dhtRunning{true};
     };
-
-    // vvv can be removed
-    void writeMessage(int fd);
-    void printMessage(int fd);
-    // ^^^ can be removed
 }
 
 #endif //DHT_DHT_H

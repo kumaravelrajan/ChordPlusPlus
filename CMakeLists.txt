@@ -79,8 +79,6 @@ CPMAddPackage(
         OPTIONS "CXXOPTS_BUILD_TESTS OFF"
 )
 
-message("Testing: ${BUILD_TESTING}")
-
 # pull inipp using cpm:
 CPMAddPackage(
         NAME inipp
