@@ -2,11 +2,14 @@
 #include <util.h>
 #include <capnp/message.h>
 #include <capnp/serialize-packed.h>
+#include <capnp/ez-rpc.h>
+#include <kj/vector.h>
 #include "person.capnp.h"
 
+using dht::Dht;
 using namespace std::chrono_literals;
 
-void dht::Dht::mainLoop()
+void Dht::mainLoop()
 {
     /*
      * This is where the dht will fix fingers, store and retrieve data, etc.
@@ -16,15 +19,19 @@ void dht::Dht::mainLoop()
 
     std::cout << "[DHT] Main Loop Entered" << std::endl;
 
-    while (m_dhtRunning)
-        std::this_thread::sleep_for(500ms);
+    ::capnp::EzRpcServer peerServer{kj::heap<PeerImpl>(), m_options.address, m_options.port};
+    auto &waitScope = peerServer.getWaitScope();
+
+    while (m_dhtRunning) {
+        waitScope.poll();
+    }
 
     std::cout << "[DHT] Exiting Main Loop" << std::endl;
 }
 
-void dht::Dht::setApi(std::unique_ptr<api::Api> api)
+void Dht::setApi(std::unique_ptr<api::Api> api)
 {
-    // Destroy old api:
+    // Destroy old api (This is in two statements for easier debugging):
     m_api = nullptr;
     // Move in new api:
     m_api = std::move(api);
@@ -40,24 +47,44 @@ void dht::Dht::setApi(std::unique_ptr<api::Api> api)
         });
 }
 
-std::vector<std::byte> dht::Dht::onDhtPut(const api::Message_KEY_VALUE &message_data, std::atomic_bool &cancelled)
+std::string Dht::getSuccessor(kj::Vector<kj::byte> key) const
+{
+    capnp::EzRpcClient client{m_options.address, m_options.port};
+    auto &waitScope = client.getWaitScope();
+    auto cap = client.getMain<Peer>();
+    auto req = cap.getSuccessorRequest();
+    req.setKey(capnp::Data::Builder{key});
+    auto response = req.send().wait(waitScope);
+    auto ip = response.getPeerInfo().getIp();
+    return std::string{ip.begin(), ip.end()};
+}
+
+std::vector<uint8_t> Dht::onDhtPut(const api::Message_KEY_VALUE &message_data, std::atomic_bool &cancelled)
 {
     // TODO: Store the request somewhere, and wait until the mainLoop has the answer
 
     // vvv can be removed
-    std::cout << "[dht] DHT_PUT" << std::endl;
+    std::cout << "[DHT] DHT_PUT" << std::endl;
+
+    std::cout << "[DHT] getSuccessor" << std::endl;
+    auto succ = getSuccessor(
+        kj::heapArray(std::initializer_list<kj::byte>{0x01, 0x23, 0x45, 0x67})
+    );
+    std::cout << "[DHT] Successor got: \"" << succ << "\"" << std::endl;
+
+
     for (uint8_t i{0}; !cancelled && i < 10; ++i)
         std::this_thread::sleep_for(1s);
     return message_data.m_bytes;
     // ^^^ can be removed
 }
 
-std::vector<std::byte> dht::Dht::onDhtGet(const api::Message_KEY &message_data, std::atomic_bool &cancelled)
+std::vector<uint8_t> Dht::onDhtGet(const api::Message_KEY &message_data, std::atomic_bool &cancelled)
 {
     // TODO: Store the request somewhere, and wait until the mainLoop has the answer
 
     // vvv can be removed
-    std::cout << "[dht] DHT_GET" << std::endl;
+    std::cout << "[DHT] DHT_GET" << std::endl;
     for (uint8_t i{0}; !cancelled && i < 10; ++i)
         std::this_thread::sleep_for(1s);
     return message_data.m_bytes;

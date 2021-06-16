@@ -38,14 +38,14 @@ namespace util
     }
 
     template<typename T>
-    std::vector<std::byte> convertToBytes(const T &bytes, std::optional<std::size_t> size = {})
+    std::vector<uint8_t> convertToBytes(const T &bytes, std::optional<std::size_t> size = {})
     {
-        std::vector<std::byte> ret(size ? size.value() : bytes.size());
-        std::transform(bytes.begin(), size ? bytes.begin() + static_cast<int>(std::min(size.value(), bytes.size())) : bytes.end(), ret.begin(), [](char c) { return std::byte(c); });
+        std::vector<uint8_t> ret(size ? size.value() : bytes.size());
+        std::transform(bytes.begin(), size ? bytes.begin() + static_cast<int>(std::min(size.value(), bytes.size())) : bytes.end(), ret.begin(), [](char c) { return uint8_t(c); });
         return ret;
     }
 
-    void hexdump(const std::vector<std::byte> &bytes, std::size_t stride = 16);
+    void hexdump(const std::vector<uint8_t> &bytes, std::size_t stride = 16);
 
     template<typename F, typename... Ts>
     struct is_one_of

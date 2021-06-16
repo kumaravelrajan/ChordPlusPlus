@@ -3,18 +3,28 @@
 
 #include <api.h>
 #include <future>
+#include <utility>
 #include <vector>
 #include <cstddef>
 #include <memory>
 #include <message_data.h>
+#include <shared_mutex>
+#include <peer.capnp.h>
 #include "Peer.h"
 
 namespace dht
 {
+    struct Options
+    {
+        std::string address = "127.0.0.1";
+        uint16_t port = 6969;
+    };
+
     class Dht
     {
     public:
-        Dht() :
+        explicit Dht(Options options = {}) :
+            m_options(std::move(options)),
             m_mainLoop(std::async(std::launch::async, [this]() { mainLoop(); }))
         {}
         ~Dht()
@@ -40,8 +50,11 @@ namespace dht
          */
         void mainLoop();
 
-        std::vector<std::byte> onDhtPut(const api::Message_KEY_VALUE &m, std::atomic_bool &cancelled);
-        std::vector<std::byte> onDhtGet(const api::Message_KEY &m, std::atomic_bool &cancelled);
+        Options m_options;
+
+        std::string getSuccessor(kj::Vector <kj::byte> key) const;
+        std::vector<uint8_t> onDhtPut(const api::Message_KEY_VALUE &m, std::atomic_bool &cancelled);
+        std::vector<uint8_t> onDhtGet(const api::Message_KEY &m, std::atomic_bool &cancelled);
 
         std::future<void> m_mainLoop;
         std::unique_ptr<api::Api> m_api;

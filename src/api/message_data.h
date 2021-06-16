@@ -28,28 +28,28 @@ namespace api
 
     struct MessageData
     {
-        std::vector<std::byte> m_bytes;
+        std::vector<uint8_t> m_bytes;
         MessageHeader m_header;
 
-        MessageData(std::vector<std::byte> bytes);
+        MessageData(std::vector<uint8_t> bytes);
 
         virtual ~MessageData(){}
     };
 
     struct Message_KEY_VALUE: MessageData
     {
-        std::vector<std::byte> key, value;
+        std::vector<uint8_t> key, value;
 
-        Message_KEY_VALUE(std::vector<std::byte> bytes);
-        Message_KEY_VALUE(uint16_t msg_type, const std::vector<std::byte> &key, const std::vector<std::byte> &value);
+        Message_KEY_VALUE(std::vector<uint8_t> bytes);
+        Message_KEY_VALUE(uint16_t msg_type, const std::vector<uint8_t> &key, const std::vector<uint8_t> &value);
     };
 
     struct Message_KEY: MessageData
     {
-        std::vector<std::byte> key;
+        std::vector<uint8_t> key;
 
-        Message_KEY(std::vector<std::byte> bytes);
-        Message_KEY(uint16_t msg_type, const std::vector<std::byte> &key);
+        Message_KEY(std::vector<uint8_t> bytes);
+        Message_KEY(uint16_t msg_type, const std::vector<uint8_t> &key);
     };
 
     template<uint16_t>

@@ -29,7 +29,7 @@ namespace api
 
         // Constructors
 
-        template<class T, std::enable_if_t<std::is_convertible_v<std::remove_cvref_t<T>, std::vector<std::byte>>, int> = 0>
+        template<class T, std::enable_if_t<std::is_convertible_v<std::remove_cvref_t<T>, std::vector<uint8_t>>, int> = 0>
         explicit Request(T &&bytes);
 
         Request(Request &&other) noexcept;
@@ -38,7 +38,7 @@ namespace api
         Request &operator=(Request &&other) noexcept;
         Request &operator=(const Request &other) = delete;
 
-        [[nodiscard]] std::vector<std::byte> getBytes() const;
+        [[nodiscard]] std::vector<uint8_t> getBytes() const;
 
         template<class T = MessageData, std::enable_if_t<std::is_base_of_v<MessageData, std::remove_cv_t<T>>, int> = 0>
         std::remove_cv_t<T> *getData() const
@@ -47,7 +47,7 @@ namespace api
         }
 
     private:
-        std::vector<std::byte> m_rawBytes;
+        std::vector<uint8_t> m_rawBytes;
         std::unique_ptr<MessageData> m_decodedData;
     };
 } // namespace API

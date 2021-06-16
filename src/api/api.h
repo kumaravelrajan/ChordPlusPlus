@@ -26,9 +26,9 @@ namespace api
     {
         using tcp = asio::ip::tcp;
 
-        using request_handler_t = std::function<std::vector<std::byte>(const MessageData &message_data, std::atomic_bool &cancelled)>;
+        using request_handler_t = std::function<std::vector<uint8_t>(const MessageData &message_data, std::atomic_bool &cancelled)>;
         template<typename MSG_TYPE, std::enable_if_t<util::is_one_of_v<MSG_TYPE, Message_KEY, Message_KEY_VALUE>, int> = 0>
-        using request_handler_specific_t = std::function<std::vector<std::byte>(const MSG_TYPE &message_data, std::atomic_bool &cancelled)>;
+        using request_handler_specific_t = std::function<std::vector<uint8_t>(const MSG_TYPE &message_data, std::atomic_bool &cancelled)>;
 
     public:
         explicit Api(const Options &o = {});
@@ -94,7 +94,7 @@ namespace api
 
         bool done = false;
 
-        std::deque<std::future<std::vector<std::byte>>> handlerCalls;
+        std::deque<std::future<std::vector<uint8_t>>> handlerCalls;
         std::future<void> handlerCallManager;
         std::mutex handlerCallMutex;
 

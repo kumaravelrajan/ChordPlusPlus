@@ -44,7 +44,7 @@ Api::~Api()
         connection->close();
     }
 
-    // TODO: stop open connection handlers
+    openConnections.clear();
 
     std::cout << "[API] stopped!" << std::endl;
 }

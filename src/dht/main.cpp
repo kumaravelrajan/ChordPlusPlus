@@ -1,7 +1,7 @@
 #include <iostream>
 #include <memory>
 
-#include "dht.h"
+#include "Dht.h"
 
 #include "api.h"
 #include "NodeInformation.h"
@@ -16,10 +16,13 @@ int main()
 
     {
         // The constructor of Dht starts mainLoop asynchronously.
-        auto dht = std::make_unique<dht::Dht>();
+        auto dht = std::make_unique<dht::Dht>(dht::Options{
+            .address = "127.0.0.1",
+            .port = 6969,
+        });
 
         dht->setApi(std::make_unique<api::Api>(api::Options{
-            .port= 6969,
+            .port= 1234,
         }));
 
         // Wait for input:

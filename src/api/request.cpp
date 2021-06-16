@@ -6,7 +6,7 @@
 
 using namespace api;
 
-template<class T, std::enable_if_t<std::is_convertible_v<std::remove_cvref_t<T>, std::vector<std::byte>>, int>>
+template<class T, std::enable_if_t<std::is_convertible_v<std::remove_cvref_t<T>, std::vector<uint8_t>>, int>>
 Request::Request(T &&bytes):
     m_rawBytes(std::forward<T>(bytes))
 {
@@ -44,11 +44,11 @@ Request &Request::operator=(Request &&other) noexcept
     return *this;
 }
 
-std::vector<std::byte> Request::getBytes() const
+std::vector<uint8_t> Request::getBytes() const
 {
     return m_rawBytes;
 }
 
-template Request::Request(std::vector<std::byte> &&);
-template Request::Request(std::vector<std::byte> &);
-template Request::Request(const std::vector<std::byte> &);
+template Request::Request(std::vector<uint8_t> &&);
+template Request::Request(std::vector<uint8_t> &);
+template Request::Request(const std::vector<uint8_t> &);

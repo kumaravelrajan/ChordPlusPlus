@@ -3,7 +3,7 @@
 #include <iostream>
 #include <iomanip>
 
-void util::hexdump(const std::vector<std::byte> &bytes, size_t stride)
+void util::hexdump(const std::vector<uint8_t> &bytes, size_t stride)
 {
     size_t i, j;
     auto old = std::cout.flags();
