@@ -1,10 +1,10 @@
 set(LIBRARY_NAME p2p)
 
-set(MODULE_HEADERS p2p.h)
+set(MODULE_HEADERS p2p.h peer.h)
 
 set(MODULE_SOURCES p2p.cpp)
 
-set(CAPNP_SCHEMA_FILES schemas/person.capnp)
+set(CAPNP_SCHEMA_FILES schemas/person.capnp schemas/peer.capnp)
 
 capnp_generate_cpp(CAPNP_SRCS CAPNP_HDRS ${CAPNP_SCHEMA_FILES})
 
@@ -20,8 +20,9 @@ set_target_properties(${LIBRARY_NAME} PROPERTIES LINKER_LANGUAGE CXX)
 
 target_link_libraries(${LIBRARY_NAME} lib::api)
 target_link_libraries(${LIBRARY_NAME} CapnProto::capnp-rpc)
+target_link_libraries(${LIBRARY_NAME} CapnProto::kj)
 target_link_libraries(${LIBRARY_NAME} ssl)
-target_include_directories(${LIBRARY_NAME} PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/schemas)
+target_include_directories(${LIBRARY_NAME} PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/schemas)
 
 add_executable(p2pMain main.cpp)
 target_link_libraries(p2pMain ${LIBRARY_NAME})
