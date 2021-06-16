@@ -30,25 +30,7 @@ namespace api
         // Constructors
 
         template<class T, std::enable_if_t<std::is_convertible_v<std::remove_cvref_t<T>, std::vector<std::byte>>, int> = 0>
-        explicit Request(T &&bytes):
-            m_rawBytes(std::forward<T>(bytes))
-        {
-            if (m_rawBytes.size() < sizeof(MessageHeader::MessageHeaderRaw))
-                throw bad_buffer_size("buffer too small for header");
-
-            MessageHeader header(reinterpret_cast<MessageHeader::MessageHeaderRaw &>(m_rawBytes[0]));
-
-            if (m_rawBytes.size() < header.size)
-                throw bad_buffer_size("buffer smaller than specified in header");
-
-            if (header.msg_type == util::constants::DHT_PUT) {
-                m_decodedData = std::make_unique<Message_KEY_VALUE>(m_rawBytes);
-            } else if (header.msg_type == util::constants::DHT_GET) {
-                m_decodedData = std::make_unique<Message_KEY>(m_rawBytes);
-            } else {
-                throw bad_request("message type incorrect: " + std::to_string(header.msg_type));
-            }
-        }
+        explicit Request(T &&bytes);
 
         Request(Request &&other) noexcept;
         Request(const Request &other) = delete;
