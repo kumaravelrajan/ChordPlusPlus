@@ -3,41 +3,55 @@
 
 #include <string>
 #include <openssl/sha.h>
+#include <array>
+#include <cstdint>
 #include <iostream>
 
 #define SHA1_CONSIDERATION_LIMIT 9
 
-// using namespace std; // This is the greatest sin you can commit
-
+/**
+ * @brief Stores the dynamic state of the Peer. Needs to be thread-safe.
+ */
 class NodeInformation
 {
+public:
+    class Node
+    {
+        std::string m_ip;
+        uint16_t m_port;
+        std::array<uint8_t, SHA_DIGEST_LENGTH> m_id;
+    public:
+        Node(std::string ip = "127.0.0.1", uint16_t port = 6969, std::array<uint8_t, SHA_DIGEST_LENGTH> id = {0})
+            :
+            m_ip(std::move(ip)), m_port(port), m_id(id)
+        {}
+
+        void setIp(std::string ip);
+        void setPort(uint16_t port);
+        void setId(std::array<uint8_t, SHA_DIGEST_LENGTH> id);
+
+        [[nodiscard]] std::string getIp() const;
+        [[nodiscard]] uint16_t getPort() const;
+        [[nodiscard]] std::array<uint8_t, SHA_DIGEST_LENGTH> getId() const;
+    };
+
 private:
-    std::string m_Key;
-    std::string m_Value;
-    std::string m_Ip;
-    std::string m_Port;
-    std::string m_Sha1_nodeId;
+    Node m_node;
 
 public:
-    [[nodiscard]] const std::string &getMSha1NodeId() const;
-    void setMSha1NodeId(const std::string &mSha1NodeId);
-
-public:
-    [[nodiscard]] const std::string &getMValue() const;
-    void setMValue(const std::string &mValue);
-    [[nodiscard]] const std::string &getMIp() const;
+    [[nodiscard]] std::array<uint8_t, SHA_DIGEST_LENGTH> getMSha1NodeId() const;
+    void setMSha1NodeId(const std::array<uint8_t, SHA_DIGEST_LENGTH> &mSha1NodeId);
+    [[nodiscard]] std::string getMIp() const;
     void setMIp(const std::string &mIp);
-    [[nodiscard]] const std::string &getMPort() const;
-    void setMPort(const std::string &mPort);
-    [[nodiscard]] const std::string &getMKey() const;
-    void setMKey(const std::string &mKey);
+    [[nodiscard]] uint16_t getMPort() const;
+    void setMPort(uint16_t mPort);
 
 public:
     // Constructor
     NodeInformation();
 
     // Methods
-    void FindSha1Key(const std::string &key);
+    static std::array<uint8_t, SHA_DIGEST_LENGTH> FindSha1Key(const std::string &str);
 
     // Getters and setters
 };

@@ -5,71 +5,58 @@
 
 NodeInformation::NodeInformation()
 {
-    m_Value = "";
-    m_Ip = "127.0.0.1";
-    m_Port = "40000";
-    m_Key = m_Ip + ":" + m_Port;
+    setMIp("127.0.0.1");
+    setMPort(40000);
+    setMSha1NodeId(FindSha1Key(m_node.getIp() + ":" + std::to_string(m_node.getPort())));
 }
 
-void NodeInformation::FindSha1Key(const std::string &key)
+std::array<uint8_t, SHA_DIGEST_LENGTH> NodeInformation::FindSha1Key(const std::string &str)
 {
     unsigned char obuf[SHA_DIGEST_LENGTH] = {};
 
-    // Invoke OpenSSL SHA1 method
-    SHA1(reinterpret_cast<const unsigned char *>(key.c_str()), key.length(), obuf);
+    SHA1(reinterpret_cast<const unsigned char *>(str.c_str()), str.length(), obuf);
 
-    char cFinalHash[SHA_DIGEST_LENGTH * 3 + 1] = {};
-
-    // Tracker for snprintf bytes
-    int n = 0;
-
-    // Convert uchar array to char array
-    for (auto i : obuf) {
-        n += snprintf(cFinalHash + n, SHA_DIGEST_LENGTH, "%u", i);
-    }
-
-    std::string sFinalHash(cFinalHash);
-    sFinalHash = sFinalHash.substr(0, SHA1_CONSIDERATION_LIMIT);
+    std::array<uint8_t, SHA_DIGEST_LENGTH> ret{};
+    std::copy(obuf, obuf + SHA_DIGEST_LENGTH, ret.begin());
+    return ret;
 }
 
 // Getters and Setters
-const std::string &NodeInformation::getMValue() const
+std::string NodeInformation::getMIp() const
 {
-    return m_Value;
-}
-void NodeInformation::setMValue(const std::string &mValue)
-{
-    m_Value = mValue;
-}
-const std::string &NodeInformation::getMIp() const
-{
-    return m_Ip;
+    return m_node.getIp();
 }
 void NodeInformation::setMIp(const std::string &mIp)
 {
-    m_Ip = mIp;
+    m_node.setIp(mIp);
 }
-const std::string &NodeInformation::getMPort() const
+uint16_t NodeInformation::getMPort() const
 {
-    return m_Port;
+    return m_node.getPort();
 }
-void NodeInformation::setMPort(const std::string &mPort)
+void NodeInformation::setMPort(uint16_t mPort)
 {
-    m_Port = mPort;
+    m_node.setPort(mPort);
 }
-const std::string &NodeInformation::getMKey() const
+std::array<uint8_t, SHA_DIGEST_LENGTH> NodeInformation::getMSha1NodeId() const
 {
-    return m_Key;
+    return m_node.getId();
 }
-void NodeInformation::setMKey(const std::string &mKey)
+void NodeInformation::setMSha1NodeId(const std::array<uint8_t, SHA_DIGEST_LENGTH> &mSha1NodeId)
 {
-    m_Key = mKey;
+    m_node.setId(mSha1NodeId);
 }
-const std::string &NodeInformation::getMSha1NodeId() const
-{
-    return m_Sha1_nodeId;
-}
-void NodeInformation::setMSha1NodeId(const std::string &mSha1NodeId)
-{
-    m_Sha1_nodeId = mSha1NodeId;
-}
+
+void NodeInformation::Node::setIp(std::string ip)
+{ m_ip = std::move(ip); }
+void NodeInformation::Node::setPort(uint16_t port)
+{ m_port = port; }
+void NodeInformation::Node::setId(std::array<uint8_t, SHA_DIGEST_LENGTH> id)
+{ m_id = id; }
+
+std::string NodeInformation::Node::getIp() const
+{ return m_ip; }
+uint16_t NodeInformation::Node::getPort() const
+{ return m_port; }
+std::array<uint8_t, SHA_DIGEST_LENGTH> NodeInformation::Node::getId() const
+{ return m_id; }

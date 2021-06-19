@@ -4,10 +4,35 @@
 #include <capnp/serialize-packed.h>
 #include <capnp/ez-rpc.h>
 #include <kj/vector.h>
-#include "person.capnp.h"
+#include "peer.capnp.h"
 
 using dht::Dht;
 using namespace std::chrono_literals;
+
+void Dht::runServer()
+{
+    auto peerImpl = kj::heap<PeerImpl>(m_nodeInformation);
+    m_peerImpl = *peerImpl;
+    ::capnp::EzRpcServer peerServer{
+        std::move(peerImpl),
+        m_nodeInformation->getMIp(),
+        m_nodeInformation->getMPort()
+    };
+    auto &waitScope = peerServer.getWaitScope();
+
+    m_executor.emplace(kj::getCurrentThreadExecutor());
+
+    // It seems like promises are atomic in the event loop. So no *actual* asynchronous execution... Threads it is then
+    auto f = std::async(std::launch::async, [this]() {
+        mainLoop();
+    });
+
+    while (m_dhtRunning) {
+        waitScope.poll();
+    }
+
+    m_peerImpl.reset();
+}
 
 void Dht::mainLoop()
 {
@@ -19,11 +44,21 @@ void Dht::mainLoop()
 
     std::cout << "[DHT] Main Loop Entered" << std::endl;
 
-    ::capnp::EzRpcServer peerServer{kj::heap<PeerImpl>(), m_options.address, m_options.port};
-    auto &waitScope = peerServer.getWaitScope();
+    // TODO: get bootstrap node
+    // TODO: getPeerImpl().join(entryNode);
 
-    while (m_dhtRunning) {
-        waitScope.poll();
+    while (true) {
+        if (!m_dhtRunning) break;
+        m_executor.value().get().executeSync([this] { getPeerImpl().stabilize(); });
+        if (!m_dhtRunning) break;
+        m_executor.value().get().executeSync([this] { getPeerImpl().fixFingers(); });
+        if (!m_dhtRunning) break;
+        m_executor.value().get().executeSync([this] { getPeerImpl().checkPredecessor(); });
+        if (!m_dhtRunning) break;
+
+        // Wait one second
+        std::this_thread::sleep_for(1s);
+        // std::cout << "Main loop, m_dhtRunning: " << m_dhtRunning << std::endl;
     }
 
     std::cout << "[DHT] Exiting Main Loop" << std::endl;
@@ -47,41 +82,34 @@ void Dht::setApi(std::unique_ptr<api::Api> api)
         });
 }
 
-std::string Dht::getSuccessor(kj::Vector<kj::byte> key) const
+std::string Dht::getSuccessor(kj::Vector<kj::byte> key)
 {
-    capnp::EzRpcClient client{m_options.address, m_options.port};
-    auto &waitScope = client.getWaitScope();
-    auto cap = client.getMain<Peer>();
-    auto req = cap.getSuccessorRequest();
-    req.setKey(capnp::Data::Builder{key});
-    auto response = req.send().wait(waitScope);
-    auto ip = response.getPeerInfo().getIp();
+    auto response = getPeerImpl().getSuccessor(key.releaseAsArray());
+    auto ip = response.getIp();
     return std::string{ip.begin(), ip.end()};
 }
 
 std::vector<uint8_t> Dht::onDhtPut(const api::Message_KEY_VALUE &message_data, std::atomic_bool &cancelled)
 {
-    // TODO: Store the request somewhere, and wait until the mainLoop has the answer
+    // TODO
 
-    // vvv can be removed
     std::cout << "[DHT] DHT_PUT" << std::endl;
 
     std::cout << "[DHT] getSuccessor" << std::endl;
-    auto succ = getSuccessor(
+    auto successor = getSuccessor(
         kj::heapArray(std::initializer_list<kj::byte>{0x01, 0x23, 0x45, 0x67})
     );
-    std::cout << "[DHT] Successor got: \"" << succ << "\"" << std::endl;
+    std::cout << "[DHT] Successor got: \"" << successor << "\"" << std::endl;
 
 
     for (uint8_t i{0}; !cancelled && i < 10; ++i)
         std::this_thread::sleep_for(1s);
     return message_data.m_bytes;
-    // ^^^ can be removed
 }
 
 std::vector<uint8_t> Dht::onDhtGet(const api::Message_KEY &message_data, std::atomic_bool &cancelled)
 {
-    // TODO: Store the request somewhere, and wait until the mainLoop has the answer
+    // TODO
 
     // vvv can be removed
     std::cout << "[DHT] DHT_GET" << std::endl;

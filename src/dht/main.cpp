@@ -10,16 +10,13 @@ int main()
 {
     std::cout << "[DHT main] This is the main method for testing dht!" << std::endl;
 
-    // fixme - Finding node id with sha1 hash
-    NodeInformation N{};
-    N.FindSha1Key(N.getMKey());
+    auto N = std::make_shared<NodeInformation>();
+    N->setMIp("127.0.0.1");
+    N->setMPort(6969);
 
     {
         // The constructor of Dht starts mainLoop asynchronously.
-        auto dht = std::make_unique<dht::Dht>(dht::Options{
-            .address = "127.0.0.1",
-            .port = 6969,
-        });
+        auto dht = std::make_unique<dht::Dht>(N);
 
         dht->setApi(std::make_unique<api::Api>(api::Options{
             .port= 1234,
