@@ -80,11 +80,10 @@ void Dht::setApi(std::unique_ptr<api::Api> api)
         });
 }
 
-std::string Dht::getSuccessor(NodeInformation::id_type key)
+std::optional<NodeInformation::Node> Dht::getSuccessor(NodeInformation::id_type key)
 {
     auto response = getPeerImpl().getSuccessor(key);
-    auto ip = response.getIp();
-    return std::string{ip.begin(), ip.end()};
+    return response;
 }
 
 std::vector<uint8_t> Dht::onDhtPut(const api::Message_KEY_VALUE &message_data, std::atomic_bool &cancelled)
@@ -97,7 +96,10 @@ std::vector<uint8_t> Dht::onDhtPut(const api::Message_KEY_VALUE &message_data, s
     auto successor = getSuccessor(
         {0x01, 0x23, 0x45, 0x67}
     );
-    std::cout << "[DHT] Successor got: \"" << successor << "\"" << std::endl;
+    if (successor)
+        std::cout << "[DHT] Successor got: \"" << successor.value().getIp() << "\"" << std::endl;
+    else
+        std::cout << "[DHT] No Successor got!" << std::endl;
 
 
     for (uint8_t i{0}; !cancelled && i < 10; ++i)

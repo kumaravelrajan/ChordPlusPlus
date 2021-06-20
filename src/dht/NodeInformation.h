@@ -8,6 +8,7 @@
 #include <cstdint>
 #include <iostream>
 #include <shared_mutex>
+#include <optional>
 
 #define SHA1_CONSIDERATION_LIMIT 9
 
@@ -41,8 +42,10 @@ public:
 
 private:
     Node m_node;
-    std::vector<Node> m_fingerTable{SHA_DIGEST_LENGTH * 8}; // m = number of bits in the id
+    std::vector<std::optional<Node>> m_fingerTable{SHA_DIGEST_LENGTH * 8}; // m = number of bits in the id
     std::shared_mutex m_fingerTableMutex{};
+    std::optional<Node> m_predecessor{};
+    std::shared_mutex m_predecessorMutex{};
 
 public:
     [[nodiscard]] const Node &getNode() const;
@@ -57,12 +60,14 @@ public:
     /**
      * @throws std::out_of_range
      */
-    [[nodiscard]] const Node &getFinger(size_t index);
+    [[nodiscard]] const std::optional<Node> &getFinger(size_t index);
     /**
      * @throws std::out_of_range
      */
-    void setFinger(size_t index, const Node &node);
+    void setFinger(size_t index, const std::optional<Node> &node);
 
+    [[nodiscard]] const std::optional<Node> &getPredecessor();
+    void setPredecessor(const std::optional<Node> &node);
 
 public:
     // Constructor

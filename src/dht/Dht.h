@@ -51,7 +51,7 @@ namespace dht
 
         std::shared_ptr<NodeInformation> m_nodeInformation;
 
-        [[nodiscard]] std::string getSuccessor(NodeInformation::id_type key);
+        [[nodiscard]] std::optional<NodeInformation::Node> getSuccessor(NodeInformation::id_type key);
         std::vector<uint8_t> onDhtPut(const api::Message_KEY_VALUE &m, std::atomic_bool &cancelled);
         std::vector<uint8_t> onDhtGet(const api::Message_KEY &m, std::atomic_bool &cancelled);
 

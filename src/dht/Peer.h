@@ -11,14 +11,19 @@ namespace dht
     class PeerImpl : public Peer::Server
     {
         /**
-         * This function returns the successor of the supplied key. Sending additional requests is also done here.
+         * @brief This function returns the successor of the supplied key. Sending additional requests is also done here.
          */
         ::kj::Promise<void> getSuccessor(GetSuccessorContext context) override;
+
+        /**
+         * @brief This function returns the predecessor of this node.
+         */
+        ::kj::Promise<void> getPredecessor(GetPredecessorContext context) override;
 
     public:
         explicit PeerImpl(std::shared_ptr<NodeInformation>);
 
-        NodeInformation::Node getSuccessor(NodeInformation::id_type id);
+        std::optional<NodeInformation::Node> getSuccessor(NodeInformation::id_type id);
 
         void create();
         void join(const Node &node);

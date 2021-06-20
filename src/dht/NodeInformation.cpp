@@ -52,7 +52,7 @@ void NodeInformation::setMSha1NodeId(const id_type &mSha1NodeId)
     m_node.setId(mSha1NodeId);
 }
 
-const NodeInformation::Node &NodeInformation::getFinger(size_t index)
+const std::optional<NodeInformation::Node> &NodeInformation::getFinger(size_t index)
 {
     std::shared_lock l{m_fingerTableMutex};
     if (index >= m_fingerTable.size())
@@ -60,12 +60,24 @@ const NodeInformation::Node &NodeInformation::getFinger(size_t index)
     return m_fingerTable[index];
 }
 
-void NodeInformation::setFinger(size_t index, const Node &node)
+void NodeInformation::setFinger(size_t index, const std::optional<Node> &node)
 {
     std::unique_lock l{m_fingerTableMutex};
     if (index >= m_fingerTable.size())
         throw std::out_of_range("index out of bounds");
     m_fingerTable[index] = node;
+}
+
+const std::optional<NodeInformation::Node> &NodeInformation::getPredecessor()
+{
+    std::shared_lock f{m_predecessorMutex};
+    return m_predecessor;
+}
+
+void NodeInformation::setPredecessor(const std::optional<Node> &node)
+{
+    std::unique_lock f{m_predecessorMutex};
+    m_predecessor = node;
 }
 
 

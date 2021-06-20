@@ -16,15 +16,29 @@ PeerImpl::PeerImpl(std::shared_ptr<NodeInformation> nodeInformation) :
 ::kj::Promise<void> PeerImpl::getSuccessor(GetSuccessorContext context)
 {
     std::cout << "getSuccessor called!" << std::endl;
-    context.getResults().getPeerInfo().setIp("Some IP address");
-    context.getResults().getPeerInfo().setPort(2021);
-    context.getResults().getPeerInfo().setId(
+    context.getResults().getNode().getValue().setIp("Some IP address");
+    context.getResults().getNode().getValue().setPort(2021);
+    context.getResults().getNode().getValue().setId(
         capnp::Data::Builder(kj::arr<kj::byte>(
             1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20)));
     return kj::READY_NOW;
 }
 
-NodeInformation::Node PeerImpl::getSuccessor(NodeInformation::id_type id)
+::kj::Promise<void> PeerImpl::getPredecessor(GetPredecessorContext context)
+{
+    auto pred = m_nodeInformation->getPredecessor();
+    if (pred) {
+        auto node = context.getResults().getNode().getValue();
+        node.setIp(pred->getIp());
+        node.setPort(pred->getPort());
+        node.setId(capnp::Data::Builder(kj::heapArray<kj::byte>(pred->getId().begin(), pred->getId().end())));
+    } else {
+        context.getResults().getNode().setEmpty();
+    }
+    return kj::READY_NOW;
+}
+
+std::optional<NodeInformation::Node> PeerImpl::getSuccessor(NodeInformation::id_type id)
 {
     // TODO: Either return this Node, or send request to one of the finger entries
     std::cout << "[PEER] getSuccessor" << std::endl;
@@ -47,17 +61,22 @@ NodeInformation::Node PeerImpl::getSuccessor(NodeInformation::id_type id)
     auto req = cap.getSuccessorRequest();
     req.setKey(capnp::Data::Builder{kj::heapArray<kj::byte>(id.begin(), id.end())});
     std::cout << "[PEER] before response" << std::endl;
-    auto response = req.send().wait(waitScope).getPeerInfo();
+    auto response = req.send().wait(waitScope).getNode();
     std::cout << "[PEER] got response" << std::endl;
-    auto res_id_ = response.getId();
+
+    // empty
+    if (response.which() == Optional<Node>::EMPTY) return {};
+
+    auto value = response.getValue();
+    auto res_id_ = value.getId();
     std::cout << "[PEER] got id" << std::endl;
-    std::array<uint8_t, SHA_DIGEST_LENGTH> res_id{};
+    NodeInformation::id_type res_id{};
     std::copy_n(res_id_.begin(),
                 std::min(res_id_.size(), static_cast<unsigned long>(SHA_DIGEST_LENGTH)),
                 res_id.begin());
     NodeInformation::Node node(
-        response.getIp(),
-        response.getPort(),
+        value.getIp(),
+        value.getPort(),
         res_id
     );
     std::cout << "[PEER] got ip and port" << std::endl;
