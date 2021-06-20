@@ -17,6 +17,7 @@ struct Node {
 }
 
 interface Peer {
-  getSuccessor @0 (key :Data) -> (node :Optional(Node));
+  getSuccessor @0 (id :Data) -> (node :Optional(Node));
   getPredecessor @1 () -> (node :Optional(Node));
+  notify @2 (node :Node);
 }

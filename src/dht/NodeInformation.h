@@ -18,6 +18,7 @@
 class NodeInformation
 {
 public:
+    static constexpr size_t key_bits = SHA_DIGEST_LENGTH * 8;
     using id_type = std::array<uint8_t, SHA_DIGEST_LENGTH>;
 
     class Node
@@ -42,7 +43,7 @@ public:
 
 private:
     Node m_node;
-    std::vector<std::optional<Node>> m_fingerTable{SHA_DIGEST_LENGTH * 8}; // m = number of bits in the id
+    std::vector<std::optional<Node>> m_fingerTable{key_bits}; // m = number of bits in the id
     std::shared_mutex m_fingerTableMutex{};
     std::optional<Node> m_predecessor{};
     std::shared_mutex m_predecessorMutex{};
@@ -64,10 +65,12 @@ public:
     /**
      * @throws std::out_of_range
      */
-    void setFinger(size_t index, const std::optional<Node> &node);
+    void setFinger(size_t index, const std::optional<Node> &node = {});
 
+    [[nodiscard]] const std::optional<Node> &getSuccessor();
+    void setSuccessor(const std::optional<Node> &node = {});
     [[nodiscard]] const std::optional<Node> &getPredecessor();
-    void setPredecessor(const std::optional<Node> &node);
+    void setPredecessor(const std::optional<Node> &node = {});
 
 public:
     // Constructor

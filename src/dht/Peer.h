@@ -20,15 +20,24 @@ namespace dht
          */
         ::kj::Promise<void> getPredecessor(GetPredecessorContext context) override;
 
+        /**
+         * @brief This function notifies the node of a predecessor
+         */
+        ::kj::Promise<void> notify(NotifyContext context) override;
+
     public:
         explicit PeerImpl(std::shared_ptr<NodeInformation>);
 
+        static NodeInformation::Node nodeFromReader(Node::Reader node);
+        static std::optional<NodeInformation::Node> nodeFromReader(Optional<Node>::Reader node);
+        static void buildNode(Node::Builder builder, const NodeInformation::Node &node);
+
         std::optional<NodeInformation::Node> getSuccessor(NodeInformation::id_type id);
+        std::optional<NodeInformation::Node> getClosestPreceding(NodeInformation::id_type id);
 
         void create();
         void join(const Node &node);
         void stabilize();
-        void notify(const Node &node);
         void fixFingers();
         void checkPredecessor();
 

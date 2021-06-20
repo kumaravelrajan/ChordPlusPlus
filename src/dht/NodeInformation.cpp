@@ -68,6 +68,19 @@ void NodeInformation::setFinger(size_t index, const std::optional<Node> &node)
     m_fingerTable[index] = node;
 }
 
+const std::optional<NodeInformation::Node> &NodeInformation::getSuccessor()
+{
+    std::shared_lock f{m_predecessorMutex};
+    return m_fingerTable[0];
+}
+
+void NodeInformation::setSuccessor(const std::optional<Node> &node)
+{
+    std::unique_lock f{m_predecessorMutex};
+    m_fingerTable[0] = node;
+}
+
+
 const std::optional<NodeInformation::Node> &NodeInformation::getPredecessor()
 {
     std::shared_lock f{m_predecessorMutex};
