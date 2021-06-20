@@ -12,12 +12,12 @@
 
 namespace util
 {
-    inline uint16_t swapBytes16(uint16_t x)
+    constexpr uint16_t swapBytes16(uint16_t x)
     {
         return static_cast<uint16_t>(((0x00ffu & x) << 8) | ((0xff00u & x) >> 8));
     }
 
-    inline uint32_t swapBytes32(uint32_t x)
+    constexpr uint32_t swapBytes32(uint32_t x)
     {
         return ((0x000000ffu & x) << 24) |
                ((0x0000ff00u & x) << 8) |
@@ -25,7 +25,7 @@ namespace util
                ((0xff000000u & x) >> 24);
     }
 
-    inline uint64_t swapBytes64(uint64_t x)
+    constexpr uint64_t swapBytes64(uint64_t x)
     {
         return ((0x00000000000000ffull & x) << 56) |
                ((0x000000000000ff00ull & x) << 40) |
@@ -41,7 +41,9 @@ namespace util
     std::vector<uint8_t> convertToBytes(const T &bytes, std::optional<std::size_t> size = {})
     {
         std::vector<uint8_t> ret(size ? size.value() : bytes.size());
-        std::transform(bytes.begin(), size ? bytes.begin() + static_cast<int>(std::min(size.value(), bytes.size())) : bytes.end(), ret.begin(), [](char c) { return uint8_t(c); });
+        std::transform(bytes.begin(),
+                       size ? bytes.begin() + static_cast<int>(std::min(size.value(), bytes.size())) : bytes.end(),
+                       ret.begin(), [](char c) { return uint8_t(c); });
         return ret;
     }
 
@@ -64,6 +66,18 @@ namespace util
 
     template<typename T, T... Ts>
     constexpr bool t_is_one_of_v = t_is_one_of<T, Ts...>::value;
+
+    template<typename T, typename U, typename V>
+    constexpr bool is_in_range_loop(
+        const T &value, const U &min_value, const V &max_value,
+        bool include_min = true, bool include_max = false)
+    {
+        return (min_value <= max_value) ?
+               ((include_min ? (value >= min_value) : (value > min_value)) &&
+                (include_max ? (value <= max_value) : (value < max_value))) :
+               ((include_min ? (value >= min_value) : (value > min_value)) ||
+                (include_max ? (value <= max_value) : (value < max_value)));
+    }
 } // namespace util
 
 #endif //DHT_UTIL_H

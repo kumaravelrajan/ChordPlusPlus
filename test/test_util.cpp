@@ -21,6 +21,11 @@ int main()
         assert_equal(652, util::constants::DHT_SUCCESS);
         assert_equal(653, util::constants::DHT_FAILURE);
 
+        assert_true(util::is_in_range_loop(1, 0, 2, false, false)); // NOLINT
+        assert_true(util::is_in_range_loop(3, 2, 0, false, false)); // NOLINT
+        assert_true(!util::is_in_range_loop(1, 2, 0, true, true)); // NOLINT
+        assert_true(!util::is_in_range_loop(1, 2, 3, true, true)); // NOLINT
+
         return 0;
     });
 }
