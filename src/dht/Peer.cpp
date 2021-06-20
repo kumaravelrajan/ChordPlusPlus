@@ -24,15 +24,28 @@ PeerImpl::PeerImpl(std::shared_ptr<NodeInformation> nodeInformation) :
     return kj::READY_NOW;
 }
 
-NodeInformation::Node PeerImpl::getSuccessor(kj::Array<kj::byte> id)
+NodeInformation::Node PeerImpl::getSuccessor(NodeInformation::id_type id)
 {
     // TODO: Either return this Node, or send request to one of the finger entries
     std::cout << "[PEER] getSuccessor" << std::endl;
+
+    if (id == m_nodeInformation->getMSha1NodeId()) {
+        std::cout << "[PEER] requested this node" << std::endl;
+        return m_nodeInformation->getNode();
+    }
+
+    /*
+     * if id in (this.id, fingers[i].id] (make sure to make this a circular comparison)
+     */
+    // TODO: if id is between this and successor, then use successor
+
+    // TODO: otherwise, use closest preceding successor and forward the request
+
     capnp::EzRpcClient client{"127.0.0.1", 6969};
     auto &waitScope = client.getWaitScope();
     auto cap = client.getMain<Peer>();
     auto req = cap.getSuccessorRequest();
-    req.setKey(capnp::Data::Builder{id});
+    req.setKey(capnp::Data::Builder{kj::heapArray<kj::byte>(id.begin(), id.end())});
     std::cout << "[PEER] before response" << std::endl;
     auto response = req.send().wait(waitScope).getPeerInfo();
     std::cout << "[PEER] got response" << std::endl;
@@ -64,7 +77,6 @@ void PeerImpl::join(const Node &node)
 void PeerImpl::stabilize()
 {
     // TODO
-    std::cout << "[PEER] stabilize" << std::endl;
 }
 
 void PeerImpl::notify(const Node &node)

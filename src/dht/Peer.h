@@ -18,7 +18,7 @@ namespace dht
     public:
         explicit PeerImpl(std::shared_ptr<NodeInformation>);
 
-        NodeInformation::Node getSuccessor(kj::Array<kj::byte> id);
+        NodeInformation::Node getSuccessor(NodeInformation::id_type id);
 
         void create();
         void join(const Node &node);

@@ -103,6 +103,9 @@ CPMAddPackage(
         GIT_TAG 1.1.1k-20210430
 )
 
+# pull spdlog from github:
+CPMAddPackage("gh:gabime/spdlog@1.8.5")
+
 add_subdirectory(src)
 add_subdirectory(src/config)
 add_subdirectory(src/dht)

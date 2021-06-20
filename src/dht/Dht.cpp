@@ -3,8 +3,6 @@
 #include <capnp/message.h>
 #include <capnp/serialize-packed.h>
 #include <capnp/ez-rpc.h>
-#include <kj/vector.h>
-#include "peer.capnp.h"
 
 using dht::Dht;
 using namespace std::chrono_literals;
@@ -39,7 +37,7 @@ void Dht::mainLoop()
     /*
      * This is where the dht will fix fingers, store and retrieve data, etc.
      * This needs to be thread-safe, and needs to be able to exit at any time.
-     * (No blocking function calls in here)
+     * (No blocking function calls in here, at least not for too long)
      */
 
     std::cout << "[DHT] Main Loop Entered" << std::endl;
@@ -82,9 +80,9 @@ void Dht::setApi(std::unique_ptr<api::Api> api)
         });
 }
 
-std::string Dht::getSuccessor(kj::Vector<kj::byte> key)
+std::string Dht::getSuccessor(NodeInformation::id_type key)
 {
-    auto response = getPeerImpl().getSuccessor(key.releaseAsArray());
+    auto response = getPeerImpl().getSuccessor(key);
     auto ip = response.getIp();
     return std::string{ip.begin(), ip.end()};
 }
@@ -97,7 +95,7 @@ std::vector<uint8_t> Dht::onDhtPut(const api::Message_KEY_VALUE &message_data, s
 
     std::cout << "[DHT] getSuccessor" << std::endl;
     auto successor = getSuccessor(
-        kj::heapArray(std::initializer_list<kj::byte>{0x01, 0x23, 0x45, 0x67})
+        {0x01, 0x23, 0x45, 0x67}
     );
     std::cout << "[DHT] Successor got: \"" << successor << "\"" << std::endl;
 
