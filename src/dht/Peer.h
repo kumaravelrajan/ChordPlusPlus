@@ -44,6 +44,8 @@ namespace dht
     private:
         std::shared_ptr<NodeInformation> m_nodeInformation;
         capnp::Orphanage m_orphanage{};
+
+        size_t nextFinger{0};
     };
 }
 

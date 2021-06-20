@@ -3,6 +3,7 @@
 #include "assertions.h"
 #include <util.h>
 #include <constants.h>
+#include <array>
 
 int main()
 {
@@ -25,6 +26,19 @@ int main()
         assert_true(util::is_in_range_loop(3, 2, 0, false, false)); // NOLINT
         assert_true(!util::is_in_range_loop(1, 2, 0, true, true)); // NOLINT
         assert_true(!util::is_in_range_loop(1, 2, 3, true, true)); // NOLINT
+
+
+        assert_true(
+            std::array<uint8_t, 4>{1, 2, 3, 4} +
+            std::array<uint8_t, 4>{1, 2, 3, 4} ==
+            std::array<uint8_t, 4>{2, 4, 6, 8},
+            "array addition 1");
+
+        assert_true(
+            std::array<uint8_t, 4>{1, 254, 255, 128} +
+            std::array<uint8_t, 4>{1, 1, 0, 128} ==
+            std::array<uint8_t, 4>{3, 0, 0, 0},
+            "array addition 2");
 
         return 0;
     });

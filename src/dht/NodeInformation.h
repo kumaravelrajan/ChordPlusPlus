@@ -12,6 +12,7 @@
 
 #define SHA1_CONSIDERATION_LIMIT 9
 
+
 /**
  * @brief Stores the dynamic state of the Peer. Needs to be thread-safe.
  */

@@ -4,6 +4,7 @@
 #include <utility>
 #include <capnp/ez-rpc.h>
 #include <util.h>
+#include <InfInt.h>
 
 using dht::PeerImpl;
 using dht::Peer;
@@ -22,7 +23,7 @@ PeerImpl::PeerImpl(std::shared_ptr<NodeInformation> nodeInformation) :
     auto id_ = context.getParams().getId();
     NodeInformation::id_type id{};
     std::copy_n(id_.begin(),
-                std::min(id_.size(), static_cast<unsigned long>(SHA_DIGEST_LENGTH)),
+                std::min(id_.size(), static_cast<size_t>(SHA_DIGEST_LENGTH)),
                 id.begin());
     auto successor = getSuccessor(id);
     if (!successor) {
@@ -67,6 +68,7 @@ PeerImpl::PeerImpl(std::shared_ptr<NodeInformation> nodeInformation) :
         std::cout << "[PEER.notify] update predecessor" << std::endl;
         m_nodeInformation->setPredecessor(node);
     }
+    return kj::READY_NOW;
 }
 
 // Conversion
@@ -76,7 +78,7 @@ NodeInformation::Node PeerImpl::nodeFromReader(Node::Reader value)
     auto res_id_ = value.getId();
     NodeInformation::id_type res_id{};
     std::copy_n(res_id_.begin(),
-                std::min(res_id_.size(), static_cast<unsigned long>(SHA_DIGEST_LENGTH)),
+                std::min(res_id_.size(), static_cast<size_t>(SHA_DIGEST_LENGTH)),
                 res_id.begin());
     return NodeInformation::Node{
         value.getIp(),
@@ -204,11 +206,11 @@ void PeerImpl::stabilize()
     )) {
         capnp::EzRpcClient client2{node->getIp(), node->getPort()};
         auto &waitScope2 = client.getWaitScope();
-        auto cap2 = client.getMain<Peer>();
+        auto cap2 = client2.getMain<Peer>();
         auto req2 = cap.notifyRequest();
         buildNode(req2.getNode(), m_nodeInformation->getNode());
         std::cout << "[PEER.stabilize] before response" << std::endl;
-        auto response2 = req.send().wait(waitScope).getNode();
+        auto response2 = req2.send().wait(waitScope2);
         std::cout << "[PEER.stabilize] got response" << std::endl;
     }
 }
@@ -216,9 +218,17 @@ void PeerImpl::stabilize()
 void PeerImpl::fixFingers()
 {
     // TODO
+
+    m_nodeInformation->
+        setFinger(
+        nextFinger,
+        getSuccessor(m_nodeInformation->getMSha1NodeId() +
+                     util::pow2<uint8_t, SHA_DIGEST_LENGTH>(nextFinger)));
+
+    nextFinger = (nextFinger + 1) % NodeInformation::key_bits;
 }
 
 void PeerImpl::checkPredecessor()
 {
-    // TODO
+    // TODO:
 }

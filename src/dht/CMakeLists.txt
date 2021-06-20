@@ -20,6 +20,7 @@ target_link_libraries(${LIBRARY_NAME} lib::api)
 target_link_libraries(${LIBRARY_NAME} spdlog::spdlog)
 target_link_libraries(${LIBRARY_NAME} CapnProto::capnp-rpc)
 target_link_libraries(${LIBRARY_NAME} CapnProto::kj)
+target_link_libraries(${LIBRARY_NAME} infint)
 target_link_libraries(${LIBRARY_NAME} ssl)
 target_include_directories(${LIBRARY_NAME} PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/schemas)
 
