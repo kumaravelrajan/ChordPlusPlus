@@ -71,6 +71,38 @@ PeerImpl::PeerImpl(std::shared_ptr<NodeInformation> nodeInformation) :
     return kj::READY_NOW;
 }
 
+::kj::Promise<void> PeerImpl::getData(GetDataContext context)
+{
+    std::vector<uint8_t> key{context.getParams().getKey().begin(), context.getParams().getKey().end()};
+    auto value = m_nodeInformation->getData(key);
+    if (value) {
+        context.getResults().getData().setValue(
+            capnp::Data::Builder(kj::heapArray<kj::byte>(value->begin(), value->end())));
+    } else {
+        context.getResults().getData().setEmpty();
+    }
+    return kj::READY_NOW;
+}
+
+::kj::Promise<void> PeerImpl::setData(SetDataContext context)
+{
+    // TODO: only store if this node is responsible for the key.
+    //       But we'll deal with hardening against attacks later.
+    auto ttl_ = context.getParams().getTtl();
+    std::chrono::system_clock::duration ttl =
+        ttl_ >= 0 ?
+        std::chrono::seconds(ttl_) :
+        std::chrono::system_clock::duration::max();
+    auto key = context.getParams().getKey();
+    auto value = context.getParams().getValue();
+    m_nodeInformation->setData(
+        {key.begin(), key.end()},
+        {value.begin(), value.end()},
+        ttl
+    );
+    return kj::READY_NOW;
+}
+
 // Conversion
 
 NodeInformation::Node PeerImpl::nodeFromReader(Node::Reader value)

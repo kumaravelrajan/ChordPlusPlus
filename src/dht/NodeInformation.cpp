@@ -1,10 +1,34 @@
 #include "NodeInformation.h"
 
+using namespace std::chrono_literals;
+
 NodeInformation::NodeInformation()
 {
     setMIp("127.0.0.1");
     setMPort(40000);
     setMSha1NodeId(FindSha1Key(m_node.getIp() + ":" + std::to_string(m_node.getPort())));
+    m_dataCleaner = std::async(std::launch::async, [this]() {
+        while (!m_destroyed) {
+            {
+                std::unique_lock l{m_dataMutex};
+                for (auto it = m_data.begin(); it != m_data.end();) {
+                    auto tp = std::chrono::system_clock::now();
+                    if (it->second.second < tp) {
+                        it = m_data.erase(it);
+                    } else {
+                        ++it;
+                    }
+                }
+            }
+            std::this_thread::sleep_for(30s);
+        }
+    });
+}
+
+NodeInformation::~NodeInformation()
+{
+    m_destroyed = true;
+    m_dataCleaner.wait();
 }
 
 NodeInformation::id_type NodeInformation::FindSha1Key(const std::string &str)
@@ -93,6 +117,20 @@ void NodeInformation::setPredecessor(const std::optional<Node> &node)
     m_predecessor = node;
 }
 
+std::optional<std::vector<uint8_t>> NodeInformation::getData(const std::vector<uint8_t> &key)
+{
+    std::shared_lock l{m_dataMutex};
+    return m_data.contains(key) ? m_data[key].first : std::optional<std::vector<uint8_t>>{};
+}
+
+void NodeInformation::setData(const std::vector<uint8_t> &key, const std::vector<uint8_t> &value,
+                              std::chrono::system_clock::duration ttl)
+{
+    std::unique_lock l{m_dataMutex};
+    m_data[key] = std::make_pair(value, ttl == std::chrono::system_clock::duration::max()
+                                        ? std::chrono::system_clock::time_point::max() :
+                                        std::chrono::system_clock::now() + ttl);
+}
 
 
 // Node Methods:

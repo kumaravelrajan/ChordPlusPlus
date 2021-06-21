@@ -9,6 +9,8 @@
 #include <iostream>
 #include <shared_mutex>
 #include <optional>
+#include <map>
+#include <future>
 
 #define SHA1_CONSIDERATION_LIMIT 9
 
@@ -48,6 +50,12 @@ private:
     std::shared_mutex m_fingerTableMutex{};
     std::optional<Node> m_predecessor{};
     std::shared_mutex m_predecessorMutex{};
+    /// Stores data along with the expiry date.
+    std::map<std::vector<uint8_t>, std::pair<std::vector<uint8_t>, std::chrono::system_clock::time_point>> m_data{};
+    std::shared_mutex m_dataMutex{};
+    /// Asynchronously removes expired data entries.
+    std::future<void> m_dataCleaner{};
+    std::atomic_bool m_destroyed{false};
 
 public:
     [[nodiscard]] const Node &getNode() const;
@@ -73,9 +81,14 @@ public:
     [[nodiscard]] const std::optional<Node> &getPredecessor();
     void setPredecessor(const std::optional<Node> &node = {});
 
+    [[nodiscard]] std::optional<std::vector<uint8_t>> getData(const std::vector<uint8_t> &key);
+    void setData(const std::vector<uint8_t> &key, const std::vector<uint8_t> &value,
+                 std::chrono::system_clock::duration ttl = std::chrono::system_clock::duration::max());
+
 public:
     // Constructor
     NodeInformation();
+    ~NodeInformation();
 
     // Methods
     static id_type FindSha1Key(const std::string &str);

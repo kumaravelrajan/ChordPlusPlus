@@ -21,9 +21,19 @@ namespace dht
         ::kj::Promise<void> getPredecessor(GetPredecessorContext context) override;
 
         /**
-         * @brief This function notifies the node of a predecessor
+         * @brief This function notifies the node of a predecessor.
          */
         ::kj::Promise<void> notify(NotifyContext context) override;
+
+        /**
+         * @brief This function returns data if it is stored in this node.
+         */
+        ::kj::Promise<void> getData(GetDataContext context) override;
+
+        /**
+         * @brief This function stores data if this node is responsible for it.
+         */
+        ::kj::Promise<void> setData(SetDataContext context) override;
 
     public:
         explicit PeerImpl(std::shared_ptr<NodeInformation>);

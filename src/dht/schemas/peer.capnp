@@ -20,4 +20,6 @@ interface Peer {
   getSuccessor @0 (id :Data) -> (node :Optional(Node));
   getPredecessor @1 () -> (node :Optional(Node));
   notify @2 (node :Node);
+  getData @3 (key :Data) -> (data :Optional(Data));
+  setData @4 (key :Data, value :Data, ttl :Int64 = -1);
 }

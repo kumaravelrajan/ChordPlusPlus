@@ -6,6 +6,8 @@
 #include "api.h"
 #include "NodeInformation.h"
 
+using namespace std::chrono_literals;
+
 int main()
 {
     std::cout << "[DHT main] This is the main method for testing dht!" << std::endl;
