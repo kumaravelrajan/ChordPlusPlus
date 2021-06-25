@@ -13,8 +13,7 @@ int main()
     std::cout << "[DHT main] This is the main method for testing dht!" << std::endl;
 
     auto N = std::make_shared<NodeInformation>();
-    N->setMIp("127.0.0.1");
-    N->setMPort(6969);
+    std::cout << "N->getMIp = " << N->getMIp() << std::endl << "N->getMPort = " << N->getMPort() << std::flush;
 
     {
         // The constructor of Dht starts mainLoop asynchronously.

@@ -4,8 +4,6 @@ using namespace std::chrono_literals;
 
 NodeInformation::NodeInformation()
 {
-    setMIp("127.0.0.1");
-    setMPort(40000);
     setMSha1NodeId(FindSha1Key(m_node.getIp() + ":" + std::to_string(m_node.getPort())));
     m_dataCleaner = std::async(std::launch::async, [this]() {
         while (!m_destroyed) {
