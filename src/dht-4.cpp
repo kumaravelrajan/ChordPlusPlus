@@ -6,18 +6,30 @@
 
 int main(int argc, char *argv[])
 {
+    int dhtNodesToCreateForTesting = 0;
+
     cxxopts::Options options("dht-4", "DHT module for the VoidPhone project");
     options.add_options()
         (
             "c,config", "Configuration file path",
             cxxopts::value<std::string>()->default_value("./config.ini")
         )
-        ("h,help", "Print usage");
+        ("h,help", "Print usage")
+
+        ("t,testCreateNodes",
+             "Create multiple nodes on localhost for testing.",
+             cxxopts::value<int>()->default_value("5"))
+        ;
     auto args = options.parse(argc, argv);
 
     if (args.count("help")) {
         std::cout << options.help() << std::endl;
         exit(0);
+    }
+
+    // Get user input nodes to create
+    if (args.count("testCreateNodes")) {
+        dhtNodesToCreateForTesting = args["testCreateNodes"].as<int>();
     }
 
     std::cout << "Config path: " << args["config"].as<std::string>() << std::endl;
