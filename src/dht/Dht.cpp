@@ -92,9 +92,18 @@ std::vector<uint8_t> Dht::onDhtPut(const api::Message_KEY_VALUE &message_data, s
 
     std::cout << "[DHT] DHT_PUT" << std::endl;
 
+    // Hashing received key to convert it into length of 20 bytes
+    std::stringstream ssUInt_AsStream;
+    for(int i = 0; i < message_data.key.size(); ++i)
+    {
+        ssUInt_AsStream << message_data.key[i];
+    }
+    std::string sKey = ssUInt_AsStream.str();
+    NodeInformation::id_type finalHashedKey = NodeInformation::FindSha1Key(sKey);
+
     std::cout << "[DHT] getSuccessor" << std::endl;
     auto successor = getSuccessor(
-        {0x01, 0x23, 0x45, 0x67}
+        finalHashedKey
     );
     if (successor)
         std::cout << "[DHT] Successor got: \"" << successor.value().getIp() << "\"" << std::endl;
