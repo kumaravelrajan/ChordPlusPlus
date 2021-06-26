@@ -79,17 +79,20 @@ int main(int argc, char *argv[])
         << "api_address: " << conf.api_address << "\n"
         << "api_port:    " << conf.api_port << std::endl;
 
-    // TODO: start API
-    // TODO: start DHT
+    // Note: Starting DHT (and implicitly API as well) at port portForDhtNode.
 
     //Reason for ListOfFutures
     // A std::future object returned by std::async and launched with std::launch::async policy, blocks on destruction until the task that was launched has completed.
     //If std::future returned by std::async is not stored in a variable, it is destroyed at the end of the statement with std::async and as such, main cannot continue until the task is done.
     //Hence, storing the std::future object in ListOfFutures where its lifetime will be extended to the end of main and we get the behavior we want.
     std::vector<std::future<void>> ListOfFutures;
+
+    // 0-1024 are system ports. Avoiding those ports.
+    int portForDhtNode = 1025;
     for(int i = 0; i < dhtNodesToCreate; i++)
     {
-        ListOfFutures.push_back(std::async(std::launch::async, StartDHT, dhtNodesToCreate, (rand() % 65535) + 1024));
+        ListOfFutures.push_back(std::async(std::launch::async, StartDHT, dhtNodesToCreate, portForDhtNode));
+        ++portForDhtNode;
 
         // fixme - Temp solution to separate out thread creation so that there is no race condition for resources like std::cout
         std::this_thread::sleep_for(30s);
@@ -97,6 +100,7 @@ int main(int argc, char *argv[])
 
     // Wait for input
     std::cin.get();
+
     // TODO: enter command-line interface
 
     return 0;
