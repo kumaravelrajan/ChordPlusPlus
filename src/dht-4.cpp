@@ -2,11 +2,48 @@
 #include <string>
 #include <cxxopts.hpp>
 #include <config.h>
+
+#include <iostream>
+#include <memory>
+
+#include "Dht.h"
+
 #include "api.h"
+#include "NodeInformation.h"
+#include <cstdlib>
+
+using namespace std::chrono_literals;
+
+void StartDHT(int dhtNodesToCreate, uint16_t portInLocalhost)
+{
+    std::cout << "[DHT main] This is the main method for testing dht!" << std::endl;
+    std::cout << "============================================================================================";
+    std::cout << "ThreadId = " << std::this_thread::get_id << std::endl << "Port = " << portInLocalhost << std::endl;
+    std::cout << "============================================================================================";
+    auto N = std::make_shared<NodeInformation>();
+
+    {
+        // The constructor of Dht starts mainLoop asynchronously.
+        auto dht = std::make_unique<dht::Dht>(N);
+
+        dht->setApi(std::make_unique<api::Api>(api::Options{
+            .port= portInLocalhost,
+        }));
+
+        // Wait for input:
+        std::cin.get();
+
+        std::cout << "[DHT main] destroying dht..." << std::endl;
+    } // <- The destructor of Dht waits for mainLoop to exit.
+
+    std::cout << "[DHT main] dht destroyed!" << std::endl;
+
+    std::cin.get();
+}
 
 int main(int argc, char *argv[])
 {
-    int dhtNodesToCreateForTesting = 0;
+    int dhtNodesToCreate = 0;
 
     cxxopts::Options options("dht-4", "DHT module for the VoidPhone project");
     options.add_options()
@@ -18,7 +55,7 @@ int main(int argc, char *argv[])
 
         ("t,testCreateNodes",
              "Create multiple nodes on localhost for testing.",
-             cxxopts::value<int>()->default_value("5"))
+             cxxopts::value<int>()->default_value("1"))
         ;
     auto args = options.parse(argc, argv);
 
@@ -29,7 +66,7 @@ int main(int argc, char *argv[])
 
     // Get user input nodes to create
     if (args.count("testCreateNodes")) {
-        dhtNodesToCreateForTesting = args["testCreateNodes"].as<int>();
+        dhtNodesToCreate = args["testCreateNodes"].as<int>();
     }
 
     std::cout << "Config path: " << args["config"].as<std::string>() << std::endl;
@@ -44,6 +81,22 @@ int main(int argc, char *argv[])
 
     // TODO: start API
     // TODO: start DHT
+
+    //Reason for ListOfFutures
+    // A std::future object returned by std::async and launched with std::launch::async policy, blocks on destruction until the task that was launched has completed.
+    //If std::future returned by std::async is not stored in a variable, it is destroyed at the end of the statement with std::async and as such, main cannot continue until the task is done.
+    //Hence, storing the std::future object in ListOfFutures where its lifetime will be extended to the end of main and we get the behavior we want.
+    std::vector<std::future<void>> ListOfFutures;
+    for(int i = 0; i < dhtNodesToCreate; i++)
+    {
+        ListOfFutures.push_back(std::async(std::launch::async, StartDHT, dhtNodesToCreate, (rand() % 65535) + 1024));
+
+        // fixme - Temp solution to separate out thread creation so that there is no race condition for resources like std::cout
+        std::this_thread::sleep_for(30s);
+    }
+
+    // Wait for input
+    std::cin.get();
     // TODO: enter command-line interface
 
     return 0;

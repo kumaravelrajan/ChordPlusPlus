@@ -10,7 +10,9 @@ using namespace std::chrono_literals;
 
 int main()
 {
-    std::cout << "[DHT main] This is the main method for testing dht!" << std::endl;
+    // Note: Since DHT module is being initialized in dht-4.cpp, this main would not be called.
+
+    /*std::cout << "[DHT main] This is the main method for testing dht!" << std::endl;
 
     auto N = std::make_shared<NodeInformation>();
 
@@ -29,5 +31,5 @@ int main()
     } // <- The destructor of Dht waits for mainLoop to exit.
 
     std::cout << "[DHT main] dht destroyed!" << std::endl;
-    return 0;
+    return 0;*/
 }
