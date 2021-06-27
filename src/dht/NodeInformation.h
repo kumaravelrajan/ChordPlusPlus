@@ -89,6 +89,8 @@ public:
     // Constructor
     NodeInformation();
     ~NodeInformation();
+    NodeInformation(uint16_t portForNode);
+
 
     // Methods
     static id_type FindSha1Key(const std::string &str);

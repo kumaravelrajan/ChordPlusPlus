@@ -13,31 +13,42 @@
 
 using namespace std::chrono_literals;
 
-void StartDHT(int dhtNodesToCreate, uint16_t portInLocalhost)
+void StartDHT(int dhtNodesToCreate, uint16_t startPortForDhtNodes)
 {
-    std::cout << "[DHT main] This is the main method for testing dht!" << std::endl;
-    std::cout << "============================================================================================";
-    std::cout << "ThreadId = " << std::this_thread::get_id << std::endl << "Port = " << portInLocalhost << std::endl;
-    std::cout << "============================================================================================";
     auto N = std::make_shared<NodeInformation>();
+    std::vector<std::unique_ptr<dht::Dht>> vListOfDhtNodes = {};
+    std::vector<std::shared_ptr<NodeInformation>> vListOfNodeInformationObj = {};
+    uint16_t portinLocalHost = startPortForDhtNodes;
 
+    for(int i = 0; i < dhtNodesToCreate; i++)
     {
-        // The constructor of Dht starts mainLoop asynchronously.
-        auto dht = std::make_unique<dht::Dht>(N);
+        {
+            vListOfNodeInformationObj.push_back(std::make_shared<NodeInformation>(portinLocalHost));
 
-        dht->setApi(std::make_unique<api::Api>(api::Options{
-            .port= portInLocalhost,
-        }));
+            // The constructor of Dht starts mainLoop asynchronously.
+           vListOfDhtNodes.push_back(std::make_unique<dht::Dht>(vListOfNodeInformationObj[i]));
 
-        // Wait for input:
-        std::cin.get();
+            ++portinLocalHost;
 
-        std::cout << "[DHT main] destroying dht..." << std::endl;
-    } // <- The destructor of Dht waits for mainLoop to exit.
+            vListOfDhtNodes[i]->setApi(std::make_unique<api::Api>(api::Options{
+                .port= portinLocalHost,
+            }));
+
+            std::cout << "==================================================================================" <<std::endl;
+            printf("1. Node number %d \n2. Node port %d \n3. Node API port %d\n", i, vListOfNodeInformationObj[i]->getMPort(), portinLocalHost);
+            std::cout << "=================================================================================="<<std::endl;
+
+            ++portinLocalHost;
+
+        } // <- The destructor of Dht waits for mainLoop to exit.
+    }
+
+    // Wait for input:
+    std::cin.get();
+
+    std::cout << "[DHT main] destroying dht..." << std::endl;
 
     std::cout << "[DHT main] dht destroyed!" << std::endl;
-
-    std::cin.get();
 }
 
 int main(int argc, char *argv[])
@@ -82,27 +93,9 @@ int main(int argc, char *argv[])
 
     // Note: Starting DHT (and implicitly API as well) at port portForDhtNode.
 
-    /*
-     * Reason for ListOfFutures
-    A std::future object returned by std::async and launched with std::launch::async policy, blocks on destruction until the task that was launched has completed.
-    If std::future returned by std::async is not stored in a variable, it is destroyed at the end of the statement with std::async and as such, main cannot continue until the task is done.
-    Hence, storing the std::future object in ListOfFutures where its lifetime will be extended to the end of main and we get the behavior we want.
-     */
-
-    std::vector<std::future<void>> ListOfFutures;
-
     // 0-1023 are system ports. Avoiding those ports.
-    int portForDhtNode = 1024;
-    for(int i = 0; i < dhtNodesToCreate; i++)
-    {
-        ListOfFutures.push_back(std::async(std::launch::async, StartDHT, dhtNodesToCreate, portForDhtNode));
-        ++portForDhtNode;
-
-        // Note - Temp solution to space out thread creation so that there is no race condition for resources like std::cout
-
-        if(!(i == (dhtNodesToCreate - 1)))
-            std::this_thread::sleep_for(30s);
-    }
+    int startPortForDhtNodes = 1024;
+    StartDHT(dhtNodesToCreate, startPortForDhtNodes);
 
     // Wait for input
     std::cin.get();

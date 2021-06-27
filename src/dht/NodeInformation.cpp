@@ -23,6 +23,30 @@ NodeInformation::NodeInformation()
     });
 }
 
+NodeInformation::NodeInformation(uint16_t portForNode)
+{
+    // Port set from DHT-4.cpp's StartDHT to obtain different hashes for different nodes.
+    m_node.setPort(portForNode);
+
+    setMSha1NodeId(FindSha1Key(m_node.getIp() + ":" + std::to_string(m_node.getPort())));
+    m_dataCleaner = std::async(std::launch::async, [this]() {
+      while (!m_destroyed) {
+          {
+              std::unique_lock l{m_dataMutex};
+              for (auto it = m_data.begin(); it != m_data.end();) {
+                  auto tp = std::chrono::system_clock::now();
+                  if (it->second.second < tp) {
+                      it = m_data.erase(it);
+                  } else {
+                      ++it;
+                  }
+              }
+          }
+          std::this_thread::sleep_for(30s);
+      }
+    });
+}
+
 NodeInformation::~NodeInformation()
 {
     m_destroyed = true;
