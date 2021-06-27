@@ -12,6 +12,8 @@ namespace config
         uint16_t p2p_port{6002};
         std::string api_address{"127.0.0.1"};
         uint16_t api_port{7002};
+        std::string bootstrapNode_address{"127.0.0.1"};
+        uint16_t bootstrapNode_port{1124};
     };
 
     Configuration parseConfigFile(const std::string &path);

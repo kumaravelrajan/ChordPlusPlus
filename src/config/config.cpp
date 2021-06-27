@@ -38,7 +38,8 @@ config::Configuration config::parseConfigFile(const std::string &path)
         splitIP(str, config.p2p_address, config.p2p_port);
     if (inipp::get_value(ini.sections["dht"], "api_address", str = ""))
         splitIP(str, config.api_address, config.api_port);
-
+    if (inipp::get_value(ini.sections["dht"], "bootstrapNode_address", str = ""))
+        splitIP(str, config.bootstrapNode_address, config.bootstrapNode_port);
     return config;
 }
 
