@@ -56,6 +56,8 @@ private:
     /// Asynchronously removes expired data entries.
     std::future<void> m_dataCleaner{};
     std::atomic_bool m_destroyed{false};
+    /// Bootstrap node details
+    std::pair<std::string, uint16_t> m_bootstrapNodeAddress{};
 
 public:
     [[nodiscard]] const Node &getNode() const;
@@ -66,6 +68,8 @@ public:
     void setMIp(const std::string &mIp);
     [[nodiscard]] uint16_t getMPort() const;
     void setMPort(uint16_t mPort);
+    std::pair<std::string, uint16_t> getBootstrapNodeAddress();
+    void setBootstrapNodeAddress(std::pair<std::string, uint16_t>);
 
     /**
      * @throws std::out_of_range

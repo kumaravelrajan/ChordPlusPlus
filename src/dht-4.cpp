@@ -13,7 +13,7 @@
 
 using namespace std::chrono_literals;
 
-void StartDHT(int dhtNodesToCreate, uint16_t startPortForDhtNodes)
+void StartDHT(int dhtNodesToCreate, uint16_t startPortForDhtNodes, const config::Configuration &conf)
 {
     auto N = std::make_shared<NodeInformation>();
     std::vector<std::unique_ptr<dht::Dht>> vListOfDhtNodes = {};
@@ -24,6 +24,9 @@ void StartDHT(int dhtNodesToCreate, uint16_t startPortForDhtNodes)
     {
         {
             vListOfNodeInformationObj.push_back(std::make_shared<NodeInformation>(portinLocalHost));
+
+            // Set bootstrap node details parsed from config file
+            vListOfNodeInformationObj[i]->setBootstrapNodeAddress(std::make_pair(conf.bootstrapNode_address, conf.bootstrapNode_port));
 
             // The constructor of Dht starts mainLoop asynchronously.
            vListOfDhtNodes.push_back(std::make_unique<dht::Dht>(vListOfNodeInformationObj[i]));
@@ -95,7 +98,7 @@ int main(int argc, char *argv[])
 
     // 0-1023 are system ports. Avoiding those ports.
     int startPortForDhtNodes = 1024;
-    StartDHT(dhtNodesToCreate, startPortForDhtNodes);
+    StartDHT(dhtNodesToCreate, startPortForDhtNodes, conf);
 
     // Wait for input
     std::cin.get();

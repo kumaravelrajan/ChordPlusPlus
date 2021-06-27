@@ -153,7 +153,14 @@ void NodeInformation::setData(const std::vector<uint8_t> &key, const std::vector
                                         ? std::chrono::system_clock::time_point::max() :
                                         std::chrono::system_clock::now() + ttl);
 }
-
+std::pair<std::string, uint16_t> NodeInformation::getBootstrapNodeAddress()
+{
+    return m_bootstrapNodeAddress;
+}
+void NodeInformation::setBootstrapNodeAddress(std::pair<std::string, uint16_t> bootstrapNodeAddress)
+{
+    m_bootstrapNodeAddress = bootstrapNodeAddress;
+}
 
 // Node Methods:
 
