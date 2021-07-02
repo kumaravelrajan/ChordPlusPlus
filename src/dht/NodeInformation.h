@@ -28,20 +28,25 @@ public:
     {
         std::string m_ip;
         uint16_t m_port;
-        id_type m_id;
+
+        mutable bool id_valid{true};
+        mutable id_type m_id{0};
     public:
-        explicit Node(std::string ip = "127.0.0.1", uint16_t port = 6969, id_type id = {0})
-            :
-            m_ip(std::move(ip)), m_port(port), m_id(id)
-        {}
+        explicit Node(std::string ip = "127.0.0.1", uint16_t port = 6969)
+            : m_ip(std::move(ip)), m_port(port) { updateId(); }
+
+        Node(std::string ip, uint16_t port, id_type id)
+            : m_ip(std::move(ip)), m_port(port), m_id(id) {}
 
         void setIp(std::string ip);
         void setPort(uint16_t port);
-        void setId(id_type id);
+        void setId(id_type id) const;
 
         [[nodiscard]] std::string getIp() const;
         [[nodiscard]] uint16_t getPort() const;
         [[nodiscard]] id_type getId() const;
+
+        void updateId() const;
     };
 
 private:
@@ -56,8 +61,10 @@ private:
     /// Asynchronously removes expired data entries.
     std::future<void> m_dataCleaner{};
     std::atomic_bool m_destroyed{false};
+    std::mutex m_cv_m{};
+    std::condition_variable m_cv{};
     /// Bootstrap node details
-    std::pair<std::string, uint16_t> m_bootstrapNodeAddress{};
+    Node m_bootstrapNodeAddress{};
 
 public:
     [[nodiscard]] const Node &getNode() const;
@@ -68,8 +75,8 @@ public:
     void setMIp(const std::string &mIp);
     [[nodiscard]] uint16_t getMPort() const;
     void setMPort(uint16_t mPort);
-    std::pair<std::string, uint16_t> getBootstrapNodeAddress();
-    void setBootstrapNodeAddress(std::pair<std::string, uint16_t>);
+    [[nodiscard]] Node getBootstrapNodeAddress() const;
+    void setBootstrapNodeAddress(const Node &);
 
     /**
      * @throws std::out_of_range
@@ -91,13 +98,11 @@ public:
 
 public:
     // Constructor
-    NodeInformation();
+    explicit NodeInformation(std::string host = "", uint16_t port = 0);
     ~NodeInformation();
-    NodeInformation(uint16_t portForNode);
-
 
     // Methods
-    static id_type FindSha1Key(const std::string &str);
+    static id_type hash_sha1(const std::string &str);
 
     // Getters and setters
 };
