@@ -38,7 +38,7 @@ void StartDHT(size_t dhtNodesToCreate, uint16_t startPortForDhtNodes, const conf
             std::cout << "=================================================================================="
                       << std::endl;
             printf("1. Node number %lu \n2. Node port %hu \n3. Node API port %hu\n", i,
-                   vListOfNodeInformationObj[i]->getMPort(), portinLocalHost);
+                   vListOfNodeInformationObj[i]->getPort(), portinLocalHost);
             std::cout << "=================================================================================="
                       << std::endl;
 

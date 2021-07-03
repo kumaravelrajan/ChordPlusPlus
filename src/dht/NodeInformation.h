@@ -69,12 +69,12 @@ private:
 public:
     [[nodiscard]] const Node &getNode() const;
     void setNode(const Node &node);
-    [[nodiscard]] id_type getMSha1NodeId() const;
-    void setMSha1NodeId(const id_type &mSha1NodeId);
-    [[nodiscard]] std::string getMIp() const;
-    void setMIp(const std::string &mIp);
-    [[nodiscard]] uint16_t getMPort() const;
-    void setMPort(uint16_t mPort);
+    [[nodiscard]] id_type getId() const;
+    void setId(const id_type &mSha1NodeId);
+    [[nodiscard]] std::string getIp() const;
+    void setIp(const std::string &mIp);
+    [[nodiscard]] uint16_t getPort() const;
+    void setPort(uint16_t mPort);
     [[nodiscard]] Node getBootstrapNodeAddress() const;
     void setBootstrapNodeAddress(const Node &);
 
@@ -87,7 +87,7 @@ public:
      */
     void setFinger(size_t index, const std::optional<Node> &node = {});
 
-    [[nodiscard]] const std::optional<Node> &getSuccessor();
+    [[nodiscard]] std::optional<Node> &getSuccessor();
     void setSuccessor(const std::optional<Node> &node = {});
     [[nodiscard]] const std::optional<Node> &getPredecessor();
     void setPredecessor(const std::optional<Node> &node = {});

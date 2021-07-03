@@ -1,5 +1,8 @@
 #include <iostream>
 #include <memory>
+#include <capnp/ez-rpc.h>
+
+#include "peer.capnp.h"
 
 #include "Dht.h"
 

@@ -13,8 +13,8 @@ void Dht::runServer()
     m_peerImpl = *peerImpl;
     ::capnp::EzRpcServer peerServer{
         std::move(peerImpl),
-        m_nodeInformation->getMIp(),
-        m_nodeInformation->getMPort()
+        m_nodeInformation->getIp(),
+        m_nodeInformation->getPort()
     };
     auto &waitScope = peerServer.getWaitScope();
 

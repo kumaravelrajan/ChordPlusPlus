@@ -50,27 +50,27 @@ void NodeInformation::setNode(const Node &node)
 {
     m_node = node;
 }
-std::string NodeInformation::getMIp() const
+std::string NodeInformation::getIp() const
 {
     return m_node.getIp();
 }
-void NodeInformation::setMIp(const std::string &mIp)
+void NodeInformation::setIp(const std::string &mIp)
 {
     m_node.setIp(mIp);
 }
-uint16_t NodeInformation::getMPort() const
+uint16_t NodeInformation::getPort() const
 {
     return m_node.getPort();
 }
-void NodeInformation::setMPort(uint16_t mPort)
+void NodeInformation::setPort(uint16_t mPort)
 {
     m_node.setPort(mPort);
 }
-NodeInformation::id_type NodeInformation::getMSha1NodeId() const
+NodeInformation::id_type NodeInformation::getId() const
 {
     return m_node.getId();
 }
-void NodeInformation::setMSha1NodeId(const id_type &mSha1NodeId)
+void NodeInformation::setId(const id_type &mSha1NodeId)
 {
     m_node.setId(mSha1NodeId);
 }
@@ -88,9 +88,11 @@ void NodeInformation::setFinger(size_t index, const std::optional<Node> &node)
         throw std::out_of_range("index out of bounds");
     m_fingerTable[index] = node;
 }
-const std::optional<NodeInformation::Node> &NodeInformation::getSuccessor()
+std::optional<NodeInformation::Node> &NodeInformation::getSuccessor()
 {
     std::shared_lock f{m_predecessorMutex};
+    for (auto &finger : m_fingerTable)
+        if (finger) return finger;
     return m_fingerTable[0];
 }
 void NodeInformation::setSuccessor(const std::optional<Node> &node)
