@@ -71,11 +71,11 @@ void Dht::setApi(std::unique_ptr<api::Api> api)
 
     // Set Request handlers:
     m_api->on<util::constants::DHT_PUT>(
-        [this](const api::Message_KEY_VALUE &m, std::atomic_bool &cancelled) {
+        [this](const api::Message_DHT_PUT &m, std::atomic_bool &cancelled) {
             return onDhtPut(m, cancelled);
         });
     m_api->on<util::constants::DHT_GET>(
-        [this](const api::Message_KEY &m, std::atomic_bool &cancelled) {
+        [this](const api::Message_DHT_GET &m, std::atomic_bool &cancelled) {
             return onDhtGet(m, cancelled);
         });
 }
@@ -86,11 +86,18 @@ std::optional<NodeInformation::Node> Dht::getSuccessor(NodeInformation::id_type 
     return response;
 }
 
-std::vector<uint8_t> Dht::onDhtPut(const api::Message_KEY_VALUE &message_data, std::atomic_bool &cancelled)
+std::vector<uint8_t> Dht::onDhtPut(const api::Message_DHT_PUT &message_data, std::atomic_bool &cancelled)
 {
     // TODO
 
     std::cout << "[DHT] DHT_PUT" << std::endl;
+
+    std::cout
+        << "[DHT.put] size:        " << std::to_string(message_data.m_header.size) << std::endl
+        << "[DHT.put] type:        " << std::to_string(message_data.m_header.msg_type) << std::endl
+        << "[DHT.put] ttl:         " << std::to_string(message_data.m_headerExtend.ttl) << std::endl
+        << "[DHT.put] replication: " << std::to_string(message_data.m_headerExtend.replication) << std::endl
+        << "[DHT.put] reserved:    " << std::to_string(message_data.m_headerExtend.reserved) << std::endl;
 
     // Hashing received key to convert it into length of 20 bytes
     std::string sKey{message_data.key.begin(), message_data.key.end()};
@@ -108,7 +115,7 @@ std::vector<uint8_t> Dht::onDhtPut(const api::Message_KEY_VALUE &message_data, s
     return message_data.m_bytes;
 }
 
-std::vector<uint8_t> Dht::onDhtGet(const api::Message_KEY &message_data, std::atomic_bool &cancelled)
+std::vector<uint8_t> Dht::onDhtGet(const api::Message_DHT_GET &message_data, std::atomic_bool &cancelled)
 {
     // TODO
 

@@ -96,7 +96,7 @@ constexpr auto operator+(const std::array<T, size> &a, const std::array<T, size>
 {
     std::array<T, size> ret;
     bool carry = false;
-    for (size_t i = size - 1;; --i) {
+    for (int i = size - 1; i >= 0; --i) {
         T sum = 0;
         if (carry) {
             ++sum;
@@ -107,7 +107,6 @@ constexpr auto operator+(const std::array<T, size> &a, const std::array<T, size>
         if (size_t(static_cast<T>(~0ull)) - size_t(sum) < size_t(b[i])) carry = true;
         sum += b[i];
         ret[i] = sum;
-        if (size == 0) break;
     }
     return ret;
 }
