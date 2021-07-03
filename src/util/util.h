@@ -10,7 +10,6 @@
 #include <string>
 #include <optional>
 #include <iostream>
-#include <InfInt.h>
 
 namespace util
 {
@@ -90,16 +89,6 @@ namespace util
             ret[index] = 1 << (exp % 8);
         return ret;
     }
-
-    template<typename T, size_t size, std::enable_if_t<std::is_unsigned_v<T>, int> = 0>
-    InfInt arrToInfInt(const std::array<T, size> &arr)
-    {
-        InfInt ret{0};
-        for (size_t i = 0; i < size; ++i) {
-            ret = (ret * InfInt(1ull << ((sizeof(T) * 4))) * InfInt(1ull << ((sizeof(T) * 4)))) + InfInt(arr[i]);
-        }
-        return ret;
-    }
 } // namespace util
 
 template<typename T, size_t size, std::enable_if_t<std::is_unsigned_v<T>, int> = 0>
@@ -107,7 +96,7 @@ constexpr auto operator+(const std::array<T, size> &a, const std::array<T, size>
 {
     std::array<T, size> ret;
     bool carry = false;
-    for (int i = size - 1; i >= 0; --i) {
+    for (size_t i = size - 1;; --i) {
         T sum = 0;
         if (carry) {
             ++sum;
@@ -118,6 +107,7 @@ constexpr auto operator+(const std::array<T, size> &a, const std::array<T, size>
         if (size_t(static_cast<T>(~0ull)) - size_t(sum) < size_t(b[i])) carry = true;
         sum += b[i];
         ret[i] = sum;
+        if (size == 0) break;
     }
     return ret;
 }
