@@ -51,7 +51,7 @@ namespace dht
 
         [[nodiscard]] std::optional<NodeInformation::Node> getSuccessor(NodeInformation::id_type key);
         std::vector<uint8_t> onDhtPut(const api::Message_DHT_PUT &m, std::atomic_bool &cancelled);
-        std::vector<uint8_t> onDhtGet(const api::Message_DHT_GET &m, std::atomic_bool &cancelled);
+        std::vector<uint8_t> onDhtGet(const api::Message_KEY &m, std::atomic_bool &cancelled);
 
         std::shared_ptr<NodeInformation> m_nodeInformation;
         std::future<void> m_mainLoop;
@@ -66,7 +66,7 @@ namespace dht
          * @throw std::bad_optional_access
          * @return PeerImpl instance
          */
-        auto getPeerImpl()
+        auto &getPeerImpl()
         {
             return m_peerImpl.value().get();
         }

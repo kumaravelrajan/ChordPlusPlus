@@ -40,13 +40,15 @@ public:
 
         void setIp(std::string ip);
         void setPort(uint16_t port);
-        void setId(id_type id) const;
 
         [[nodiscard]] std::string getIp() const;
         [[nodiscard]] uint16_t getPort() const;
         [[nodiscard]] id_type getId() const;
 
         void updateId() const;
+
+        bool operator==(const Node &other) const { return m_ip == other.m_ip && m_port == other.m_port; }
+        bool operator!=(const Node &other) const { return !(*this == other); }
     };
 
 private:
@@ -64,19 +66,18 @@ private:
     std::mutex m_cv_m{};
     std::condition_variable m_cv{};
     /// Bootstrap node details
-    Node m_bootstrapNodeAddress{};
+    std::optional<Node> m_bootstrapNodeAddress{};
 
 public:
     [[nodiscard]] const Node &getNode() const;
     void setNode(const Node &node);
     [[nodiscard]] id_type getId() const;
-    void setId(const id_type &mSha1NodeId);
     [[nodiscard]] std::string getIp() const;
     void setIp(const std::string &mIp);
     [[nodiscard]] uint16_t getPort() const;
     void setPort(uint16_t mPort);
-    [[nodiscard]] Node getBootstrapNodeAddress() const;
-    void setBootstrapNodeAddress(const Node &);
+    [[nodiscard]] std::optional<Node> getBootstrapNodeAddress() const;
+    void setBootstrapNodeAddress(const std::optional<Node> &);
 
     /**
      * @throws std::out_of_range

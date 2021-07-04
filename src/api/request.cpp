@@ -21,7 +21,7 @@ Request::Request(T &&bytes):
     if (header.msg_type == util::constants::DHT_PUT) {
         m_decodedData = std::make_unique<Message_DHT_PUT>(m_rawBytes);
     } else if (header.msg_type == util::constants::DHT_GET) {
-        m_decodedData = std::make_unique<Message_DHT_GET>(m_rawBytes);
+        m_decodedData = std::make_unique<Message_KEY>(m_rawBytes);
     } else {
         throw bad_request("message type incorrect: " + std::to_string(header.msg_type));
     }

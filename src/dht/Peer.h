@@ -45,8 +45,13 @@ namespace dht
         std::optional<NodeInformation::Node> getSuccessor(NodeInformation::id_type id);
         std::optional<NodeInformation::Node> getClosestPreceding(NodeInformation::id_type id);
 
+        std::optional<std::vector<uint8_t>> getData(const NodeInformation::Node &node, const std::vector<uint8_t> &key);
+        void setData(const NodeInformation::Node &node,
+                     const std::vector<uint8_t> &key, const std::vector<uint8_t> &value,
+                     uint16_t ttl);
+
         void create();
-        void join(const Node &node);
+        void join(const NodeInformation::Node &node);
         void stabilize();
         void fixFingers();
         void checkPredecessor();

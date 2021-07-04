@@ -24,7 +24,7 @@ int main()
 
             api::Request request(bytes);
 
-            auto *request_data = request.getData<api::Message_DHT_GET>();
+            auto *request_data = request.getData<api::Message_KEY>();
             assert_null(request.getData<api::Message_DHT_PUT>());
             assert_not_null(request_data, "Data should not be null!");
 
@@ -55,7 +55,7 @@ int main()
             api::Request request(bytes);
 
             auto *request_data = request.getData<api::Message_DHT_PUT>();
-            assert_null(request.getData<api::Message_DHT_GET>());
+            assert_null(request.getData<api::Message_KEY>());
             assert_not_null(request_data, "Data should not be null!");
 
             std::cout << "Key:" << std::endl;
@@ -81,7 +81,7 @@ int main()
 
             auto sizeExpected = sizeof(api::MessageHeader::MessageHeaderRaw) + key.size();
 
-            api::Message_DHT_GET message(util::constants::DHT_GET, key);
+            api::Message_KEY message(util::constants::DHT_GET, key);
 
             auto header = api::MessageHeader(reinterpret_cast<api::MessageHeader::MessageHeaderRaw &>(message.m_bytes[0]));
 
@@ -109,9 +109,11 @@ int main()
             auto key = util::convertToBytes(sKey);
             auto value = util::convertToBytes(sValue);
 
-            auto sizeExpected = sizeof(api::MessageHeader::MessageHeaderRaw) + key.size() + value.size();
+            auto sizeExpected =
+                sizeof(api::MessageHeader::MessageHeaderRaw) +
+                sizeof(api::MessageHeaderExtend::MessageHeaderRaw) + key.size() + value.size();
 
-            api::Message_DHT_PUT message(util::constants::DHT_PUT, key, value);
+            api::Message_DHT_PUT message(key, value);
 
             auto header = api::MessageHeader(reinterpret_cast<api::MessageHeader::MessageHeaderRaw &>(message.m_bytes[0]));
 

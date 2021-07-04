@@ -70,10 +70,6 @@ NodeInformation::id_type NodeInformation::getId() const
 {
     return m_node.getId();
 }
-void NodeInformation::setId(const id_type &mSha1NodeId)
-{
-    m_node.setId(mSha1NodeId);
-}
 const std::optional<NodeInformation::Node> &NodeInformation::getFinger(size_t index)
 {
     std::shared_lock l{m_fingerTableMutex};
@@ -118,16 +114,18 @@ std::optional<std::vector<uint8_t>> NodeInformation::getData(const std::vector<u
 void NodeInformation::setData(const std::vector<uint8_t> &key, const std::vector<uint8_t> &value,
                               std::chrono::system_clock::duration ttl)
 {
+    std::cout << "[Node.setData] setting data, key length: " << key.size() << ", value length: " << value.size()
+              << ", ttl: " << std::chrono::duration_cast<std::chrono::seconds>(ttl).count() << std::endl;
     std::unique_lock l{m_dataMutex};
     m_data[key] = std::make_pair(value, ttl == std::chrono::system_clock::duration::max()
                                         ? std::chrono::system_clock::time_point::max() :
                                         std::chrono::system_clock::now() + ttl);
 }
-NodeInformation::Node NodeInformation::getBootstrapNodeAddress() const
+std::optional<NodeInformation::Node> NodeInformation::getBootstrapNodeAddress() const
 {
     return m_bootstrapNodeAddress;
 }
-void NodeInformation::setBootstrapNodeAddress(const Node &bootstrapNodeAddress)
+void NodeInformation::setBootstrapNodeAddress(const std::optional<Node> &bootstrapNodeAddress)
 {
     m_bootstrapNodeAddress = bootstrapNodeAddress;
 }
@@ -144,11 +142,6 @@ void NodeInformation::Node::setPort(uint16_t port)
     m_port = port;
     id_valid = false;
 }
-void NodeInformation::Node::setId(id_type id) const
-{
-    m_id = id;
-    id_valid = true;
-}
 
 std::string NodeInformation::Node::getIp() const { return m_ip; }
 uint16_t NodeInformation::Node::getPort() const { return m_port; }
@@ -160,5 +153,6 @@ NodeInformation::id_type NodeInformation::Node::getId() const
 
 void NodeInformation::Node::updateId() const
 {
-    setId(hash_sha1(m_ip + ":" + std::to_string(m_port)));
+    id_valid = true;
+    m_id = hash_sha1(m_ip + ":" + std::to_string(m_port));
 }

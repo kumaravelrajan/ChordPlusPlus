@@ -21,5 +21,5 @@ interface Peer {
   getPredecessor @1 () -> (node :Optional(Node));
   notify @2 (node :Node);
   getData @3 (key :Data) -> (data :Optional(Data));
-  setData @4 (key :Data, value :Data, ttl :Int64 = -1);
+  setData @4 (key :Data, value :Data, ttl :UInt16 = 0);
 }

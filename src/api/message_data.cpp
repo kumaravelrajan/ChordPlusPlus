@@ -41,9 +41,12 @@ api::Message_DHT_PUT::Message_DHT_PUT(std::vector<uint8_t> bytes) :
     MessageData(std::move(bytes)),
     m_headerExtend(MessageHeaderExtend(
         reinterpret_cast<MessageHeaderExtend::MessageHeaderRaw &>(m_bytes[sizeof(MessageHeader::MessageHeaderRaw)]))),
-    key(m_bytes.begin() + sizeof(MessageHeader::MessageHeaderRaw),
-        m_bytes.begin() + (sizeof(MessageHeader::MessageHeaderRaw) + 32)),
-    value(m_bytes.begin() + (sizeof(MessageHeader::MessageHeaderRaw) + 32), m_bytes.begin() + m_header.size)
+    key(m_bytes.begin() + sizeof(MessageHeader::MessageHeaderRaw) + sizeof(MessageHeaderExtend::MessageHeaderRaw),
+        m_bytes.begin() +
+        (sizeof(MessageHeader::MessageHeaderRaw) + sizeof(MessageHeaderExtend::MessageHeaderRaw) + 32)),
+    value(m_bytes.begin() +
+          (sizeof(MessageHeader::MessageHeaderRaw) + sizeof(MessageHeaderExtend::MessageHeaderRaw) + 32),
+          m_bytes.begin() + m_header.size)
 {
     if (m_header.size < sizeof(MessageHeader::MessageHeaderRaw) + sizeof(MessageHeaderExtend::MessageHeaderRaw) + 32)
         throw std::runtime_error("Key is too small!");
@@ -51,7 +54,9 @@ api::Message_DHT_PUT::Message_DHT_PUT(std::vector<uint8_t> bytes) :
 
 api::Message_DHT_PUT::Message_DHT_PUT(const std::vector<uint8_t> &key, const std::vector<uint8_t> &value,
                                       uint16_t ttl, uint8_t replication) :
-    MessageData(std::vector<uint8_t>(sizeof(MessageHeader::MessageHeaderRaw) + key.size() + value.size()))
+    MessageData(std::vector<uint8_t>(
+        sizeof(MessageHeader::MessageHeaderRaw) + sizeof(MessageHeaderExtend::MessageHeaderRaw) + key.size() +
+        value.size()))
 {
     m_header = MessageHeader(static_cast<uint16_t>(m_bytes.size()), util::constants::DHT_PUT);
     m_headerExtend = MessageHeaderExtend(ttl, replication, 0);
@@ -73,7 +78,38 @@ api::Message_DHT_PUT::Message_DHT_PUT(const std::vector<uint8_t> &key, const std
     );
 }
 
-api::Message_DHT_GET::Message_DHT_GET(std::vector<uint8_t> bytes) :
+api::Message_DHT_SUCCESS::Message_DHT_SUCCESS(std::vector<uint8_t> bytes) :
+    MessageData(std::move(bytes)),
+    key(m_bytes.begin() + sizeof(MessageHeader::MessageHeaderRaw) + sizeof(MessageHeaderExtend::MessageHeaderRaw),
+        m_bytes.begin() +
+        (sizeof(MessageHeader::MessageHeaderRaw) + sizeof(MessageHeaderExtend::MessageHeaderRaw) + 32)),
+    value(m_bytes.begin() +
+          (sizeof(MessageHeader::MessageHeaderRaw) + sizeof(MessageHeaderExtend::MessageHeaderRaw) + 32),
+          m_bytes.begin() + m_header.size)
+{
+    if (m_header.size < sizeof(MessageHeader::MessageHeaderRaw) + 32)
+        throw std::runtime_error("Key is too small!");
+}
+
+api::Message_DHT_SUCCESS::Message_DHT_SUCCESS(const std::vector<uint8_t> &key, const std::vector<uint8_t> &value) :
+    MessageData(std::vector<uint8_t>(sizeof(MessageHeader::MessageHeaderRaw) + key.size() + value.size()))
+{
+    m_header = MessageHeader(static_cast<uint16_t>(m_bytes.size()), util::constants::DHT_SUCCESS);
+    reinterpret_cast<MessageHeader::MessageHeaderRaw &>(m_bytes[0]) = MessageHeader::MessageHeaderRaw(m_header);
+    std::copy(
+        key.begin(), key.end(),
+        m_bytes.begin() +
+        sizeof(MessageHeader::MessageHeaderRaw)
+    );
+    std::copy(
+        value.begin(), value.end(),
+        m_bytes.begin() +
+        static_cast<int>(sizeof(MessageHeader::MessageHeaderRaw)) +
+        static_cast<int>(key.size())
+    );
+}
+
+api::Message_KEY::Message_KEY(std::vector<uint8_t> bytes) :
     MessageData(std::move(bytes)),
     key(m_bytes.begin() + sizeof(MessageHeader::MessageHeaderRaw),
         m_bytes.begin() + (sizeof(MessageHeader::MessageHeaderRaw) + 32))
@@ -82,7 +118,7 @@ api::Message_DHT_GET::Message_DHT_GET(std::vector<uint8_t> bytes) :
         throw std::runtime_error("Key is too small!");
 }
 
-api::Message_DHT_GET::Message_DHT_GET(uint16_t msg_type, const std::vector<uint8_t> &key) :
+api::Message_KEY::Message_KEY(uint16_t msg_type, const std::vector<uint8_t> &key) :
     MessageData(std::vector<uint8_t>(sizeof(MessageHeader::MessageHeaderRaw) + key.size()))
 {
     m_header = MessageHeader(static_cast<uint16_t>(m_bytes.size()), msg_type);

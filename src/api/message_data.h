@@ -51,9 +51,11 @@ namespace api
         std::vector<uint8_t> m_bytes;
         MessageHeader m_header;
 
-        MessageData(std::vector<uint8_t> bytes);
+        MessageData(std::vector<uint8_t> bytes); // NOLINT
 
         virtual ~MessageData() = default;
+
+        operator std::vector<uint8_t>() const { return m_bytes; } // NOLINT
     };
 
     struct Message_DHT_PUT : MessageData
@@ -62,17 +64,25 @@ namespace api
 
         std::vector<uint8_t> key, value;
 
-        Message_DHT_PUT(std::vector<uint8_t> bytes);
+        Message_DHT_PUT(std::vector<uint8_t> bytes); // NOLINT
         Message_DHT_PUT(const std::vector<uint8_t> &key, const std::vector<uint8_t> &value,
                         uint16_t ttl = 0, uint8_t replication = 0);
     };
 
-    struct Message_DHT_GET : MessageData
+    struct Message_DHT_SUCCESS : MessageData
+    {
+        std::vector<uint8_t> key, value;
+
+        Message_DHT_SUCCESS(std::vector<uint8_t> bytes); // NOLINT
+        Message_DHT_SUCCESS(const std::vector<uint8_t> &key, const std::vector<uint8_t> &value);
+    };
+
+    struct Message_KEY : MessageData
     {
         std::vector<uint8_t> key;
 
-        Message_DHT_GET(std::vector<uint8_t> bytes);
-        Message_DHT_GET(uint16_t msg_type, const std::vector<uint8_t> &key);
+        Message_KEY(std::vector<uint8_t> bytes); // NOLINT
+        Message_KEY(uint16_t msg_type, const std::vector<uint8_t> &key);
     };
 
     template<uint16_t>
@@ -83,7 +93,7 @@ namespace api
     template<>
     struct message_type_from_int<util::constants::DHT_GET>
     {
-        using type = Message_DHT_GET;
+        using type = Message_KEY;
     };
 
     template<>
