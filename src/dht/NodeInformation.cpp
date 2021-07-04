@@ -70,10 +70,6 @@ NodeInformation::id_type NodeInformation::getId() const
 {
     return m_node.getId();
 }
-void NodeInformation::setId(const id_type &mSha1NodeId)
-{
-    m_node.setId(mSha1NodeId);
-}
 const std::optional<NodeInformation::Node> &NodeInformation::getFinger(size_t index)
 {
     std::shared_lock l{m_fingerTableMutex};
@@ -144,11 +140,6 @@ void NodeInformation::Node::setPort(uint16_t port)
     m_port = port;
     id_valid = false;
 }
-void NodeInformation::Node::setId(id_type id) const
-{
-    m_id = id;
-    id_valid = true;
-}
 
 std::string NodeInformation::Node::getIp() const { return m_ip; }
 uint16_t NodeInformation::Node::getPort() const { return m_port; }
@@ -160,5 +151,6 @@ NodeInformation::id_type NodeInformation::Node::getId() const
 
 void NodeInformation::Node::updateId() const
 {
-    setId(hash_sha1(m_ip + ":" + std::to_string(m_port)));
+    id_valid = true;
+    m_id = hash_sha1(m_ip + ":" + std::to_string(m_port));
 }
