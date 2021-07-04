@@ -44,25 +44,25 @@ namespace api
         void on(std::optional<request_handler_specific_t<message_type_from_int_t<request_type>>> requestHandler = {})
         {
             if (requestHandler)
-                requestHandlers[request_type] = [r(requestHandler.value())](const MessageData &message_data, std::atomic_bool &cancelled) {
+                m_requestHandlers[request_type] = [r(requestHandler.value())](const MessageData &message_data, std::atomic_bool &cancelled) {
                     return r(dynamic_cast<const message_type_from_int_t<request_type> &>(message_data), cancelled);
                 };
             else
-                requestHandlers.erase(request_type);
+                m_requestHandlers.erase(request_type);
         }
 
     private:
         void start_accept();
 
-        std::unique_ptr<asio::io_service> service;
-        std::unique_ptr<tcp::acceptor> acceptor;
-        std::future<void> serviceFuture;
+        std::unique_ptr<asio::io_service> m_service;
+        std::unique_ptr<tcp::acceptor> m_acceptor;
+        std::future<void> m_serviceFuture;
 
-        std::vector<std::unique_ptr<Connection>> openConnections;
+        std::vector<std::unique_ptr<Connection>> m_openConnections;
 
-        std::map<uint16_t, request_handler_t> requestHandlers;
+        std::map<uint16_t, request_handler_t> m_requestHandlers;
 
-        bool isRunning = false;
+        std::atomic_bool m_isRunning = false;
 
         friend class Connection;
     };
@@ -80,23 +80,24 @@ namespace api
         Connection &operator=(const Connection &other) = delete;
         Connection &operator=(Connection &&other) = delete;
 
-        void start_read();
         void close();
         [[nodiscard]] bool isDone() const;
 
         ~Connection();
 
     private:
-        std::vector<uint8_t> data = std::vector<uint8_t>((1 << 16) - 1, 0);
+        void start_read();
 
-        tcp::socket socket;
-        const Api &api;
+        std::vector<uint8_t> m_data = std::vector<uint8_t>((1 << 16) - 1, 0);
 
-        bool done = false;
+        tcp::socket m_socket;
+        const Api &m_api;
 
-        std::deque<std::future<std::vector<uint8_t>>> handlerCalls;
-        std::future<void> handlerCallManager;
-        std::mutex handlerCallMutex;
+        std::atomic_bool m_done = false;
+
+        std::deque<std::future<std::vector<uint8_t>>> m_handlerCalls;
+        std::future<void> m_handlerCallManager;
+        std::mutex m_handlerCallMutex;
 
         std::atomic_bool cancellation_token { false };
     };

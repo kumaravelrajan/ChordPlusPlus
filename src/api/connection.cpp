@@ -2,41 +2,41 @@
 #include <cstdint>
 
 api::Connection::Connection(tcp::socket &&sock, const Api &api):
-    socket(std::move(sock)),
-    api(api)
+    m_socket(std::move(sock)),
+    m_api(api)
 {
     start_read();
 
-    handlerCallManager = std::async(std::launch::async, [this]() {
+    m_handlerCallManager = std::async(std::launch::async, [this]() {
         using namespace std::chrono_literals;
 
-        while (socket.is_open()) {
+        while (m_socket.is_open()) {
 
-            if (!handlerCalls.empty() && handlerCalls[0].wait_for(0s) == std::future_status::ready) {
+            if (!m_handlerCalls.empty() && m_handlerCalls[0].wait_for(0s) == std::future_status::ready) {
 
-                handlerCallMutex.lock();
-                auto bytes = handlerCalls.front().get();
-                handlerCalls.pop_front();
-                handlerCallMutex.unlock();
+                m_handlerCallMutex.lock();
+                auto bytes = m_handlerCalls.front().get();
+                m_handlerCalls.pop_front();
+                m_handlerCallMutex.unlock();
 
-                if (socket.is_open() && !bytes.empty()) {
-                    socket.write_some(asio::buffer(bytes));
+                if (m_socket.is_open() && !bytes.empty()) {
+                    m_socket.write_some(asio::buffer(bytes));
                 }
             }
 
             std::this_thread::sleep_for(100ms);
         }
-        done = true;
+        m_done = true;
     });
 }
 
 void api::Connection::start_read()
 {
-    if (!socket.is_open()) {
+    if (!m_socket.is_open()) {
         std::cout << "[API.connection] disconnected!" << std::endl;
         return;
     }
-    socket.async_read_some(asio::buffer(data), [this](const asio::error_code &error, std::size_t length) {
+    m_socket.async_read_some(asio::buffer(m_data), [this](const asio::error_code &error, std::size_t length) {
         start_read();
 
         if (error) {
@@ -46,7 +46,7 @@ void api::Connection::start_read()
 
         if (length > 0ull) {
             std::cout << "Got Data!" << std::endl;
-            auto bytes = util::convertToBytes(data, length);
+            auto bytes = util::convertToBytes(m_data, length);
             util::hexdump(bytes);
 
             std::unique_ptr<Request> request;
@@ -58,14 +58,14 @@ void api::Connection::start_read()
                 std::cerr << e.what() << std::endl;
                 return;
             }
-            if (socket.is_open()) {
+            if (m_socket.is_open()) {
                 auto t = request->getData()->m_header.msg_type;
-                if (api.requestHandlers.contains(t)) {
-                    handlerCallMutex.lock();
-                    handlerCalls.push_back(std::async(std::launch::async, [this, request(std::move(request))]() {
-                        return api.requestHandlers.find(request->getData()->m_header.msg_type)->second(*(request->getData<>()), cancellation_token);
+                if (m_api.m_requestHandlers.contains(t)) {
+                    m_handlerCallMutex.lock();
+                    m_handlerCalls.push_back(std::async(std::launch::async, [this, request(std::move(request))]() {
+                        return m_api.m_requestHandlers.find(request->getData()->m_header.msg_type)->second(*(request->getData<>()), cancellation_token);
                     }));
-                    handlerCallMutex.unlock();
+                    m_handlerCallMutex.unlock();
                 }
             }
         }
@@ -74,12 +74,12 @@ void api::Connection::start_read()
 
 void api::Connection::close()
 {
-    socket.close();
+    m_socket.close();
 }
 
 bool api::Connection::isDone() const
 {
-    return done;
+    return m_done;
 }
 
 api::Connection::~Connection()

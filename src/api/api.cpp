@@ -11,16 +11,16 @@
 using namespace api;
 
 Api::Api(const Options &o):
-    service(std::make_unique<asio::io_service>()),
-    acceptor(std::make_unique<tcp::acceptor>(*service, tcp::endpoint(tcp::v4(), o.port)))
+    m_service(std::make_unique<asio::io_service>()),
+    m_acceptor(std::make_unique<tcp::acceptor>(*m_service, tcp::endpoint(tcp::v4(), o.port)))
 {
-    isRunning = true;
+    m_isRunning = true;
     start_accept();
-    serviceFuture = std::async(std::launch::async, [this]() {
+    m_serviceFuture = std::async(std::launch::async, [this]() {
         std::cout << "[API] run()" << std::endl;
-        while (isRunning) {
+        while (m_isRunning) {
             try {
-                service->run();
+                m_service->run();
             }
             catch (const std::exception &e) {
                 std::cerr << e.what() << std::endl;
@@ -32,19 +32,19 @@ Api::Api(const Options &o):
 
 Api::~Api()
 {
-    isRunning = false;
+    m_isRunning = false;
     std::cout << "[API] closing acceptor" << std::endl;
-    acceptor->close();
+    m_acceptor->close();
     std::cout << "[API] stopping service" << std::endl;
-    service->stop();
+    m_service->stop();
     std::cout << "[API] awaiting service future" << std::endl;
-    serviceFuture.get();
+    m_serviceFuture.get();
 
-    for (const auto &connection: openConnections) {
+    for (const auto &connection: m_openConnections) {
         connection->close();
     }
 
-    openConnections.clear();
+    m_openConnections.clear();
 
     std::cout << "[API] stopped!" << std::endl;
 }
@@ -52,18 +52,18 @@ Api::~Api()
 void Api::start_accept()
 {
     std::cout << "[API] start_accept()" << std::endl;
-    if (!isRunning) {
+    if (!m_isRunning) {
         std::cout << "[API.start_accept] acceptor is closed" << std::endl;
         return;
     }
-    acceptor->async_accept([this](const asio::error_code &error, tcp::socket socket) {
+    m_acceptor->async_accept([this](const asio::error_code &error, tcp::socket socket) {
         start_accept();
         if (error)
             std::cerr << "[API.async_accept] " << error.message() << std::endl;
         else
-            openConnections.push_back(std::make_unique<Connection>(std::move(socket), *this));
+            m_openConnections.push_back(std::make_unique<Connection>(std::move(socket), *this));
     });
-    openConnections.erase(
-        std::remove_if(openConnections.begin(), openConnections.end(), [](const std::unique_ptr<Connection> &connection) { return connection->isDone(); }),
-        openConnections.end());
+    m_openConnections.erase(
+        std::remove_if(m_openConnections.begin(), m_openConnections.end(), [](const std::unique_ptr<Connection> &connection) { return connection->isDone(); }),
+        m_openConnections.end());
 }
