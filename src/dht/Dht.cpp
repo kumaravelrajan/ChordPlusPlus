@@ -81,7 +81,7 @@ void Dht::setApi(std::unique_ptr<api::Api> api)
             return onDhtPut(m, cancelled);
         });
     m_api->on<util::constants::DHT_GET>(
-        [this](const api::Message_DHT_GET &m, std::atomic_bool &cancelled) {
+        [this](const api::Message_KEY &m, std::atomic_bool &cancelled) {
             return onDhtGet(m, cancelled);
         });
 }
@@ -127,7 +127,7 @@ std::vector<uint8_t> Dht::onDhtPut(const api::Message_DHT_PUT &message_data, std
     return message_data.m_bytes;
 }
 
-std::vector<uint8_t> Dht::onDhtGet(const api::Message_DHT_GET &message_data, std::atomic_bool &cancelled)
+std::vector<uint8_t> Dht::onDhtGet(const api::Message_KEY &message_data, std::atomic_bool &cancelled)
 {
     // TODO
 
@@ -151,10 +151,9 @@ std::vector<uint8_t> Dht::onDhtGet(const api::Message_DHT_GET &message_data, std
         std::cout << "[DHT.get] No Successor got!" << std::endl;
     }
 
-    if (response)
-        return *response;
-
-    for (uint8_t i{0}; !cancelled && i < 10; ++i)
-        std::this_thread::sleep_for(1s);
-    return message_data.m_bytes;
+    if (response) {
+        return api::Message_DHT_SUCCESS(message_data.key, *response);
+    } else {
+        return api::Message_KEY(util::constants::DHT_FAILURE, message_data.key);
+    }
 }

@@ -53,7 +53,7 @@ namespace dht
 
         [[nodiscard]] std::optional<NodeInformation::Node> getSuccessor(NodeInformation::id_type key);
         std::vector<uint8_t> onDhtPut(const api::Message_DHT_PUT &m, std::atomic_bool &cancelled);
-        std::vector<uint8_t> onDhtGet(const api::Message_DHT_GET &m, std::atomic_bool &cancelled);
+        std::vector<uint8_t> onDhtGet(const api::Message_KEY &m, std::atomic_bool &cancelled);
 
         std::future<void> m_mainLoop;
         std::unique_ptr<api::Api> m_api;

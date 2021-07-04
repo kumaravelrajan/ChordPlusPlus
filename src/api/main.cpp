@@ -28,7 +28,7 @@ int main()
         auto api = std::make_unique<Api>();
 
         // This is a placeholder request handler, it just echoes the request back, as long as it has the correct format.
-        api->on<DHT_GET>([](const Message_DHT_GET &message_data, auto &cancelled) {
+        api->on<DHT_GET>([](const Message_KEY &message_data, auto &cancelled) {
             std::cout << "[apiMain] DHT_GET" << std::endl;
             for (uint8_t i { 0 }; !cancelled && i < 10; ++i)
                 std::this_thread::sleep_for(1s);
