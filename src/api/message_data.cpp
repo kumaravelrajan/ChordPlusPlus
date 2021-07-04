@@ -41,9 +41,12 @@ api::Message_DHT_PUT::Message_DHT_PUT(std::vector<uint8_t> bytes) :
     MessageData(std::move(bytes)),
     m_headerExtend(MessageHeaderExtend(
         reinterpret_cast<MessageHeaderExtend::MessageHeaderRaw &>(m_bytes[sizeof(MessageHeader::MessageHeaderRaw)]))),
-    key(m_bytes.begin() + sizeof(MessageHeader::MessageHeaderRaw),
-        m_bytes.begin() + (sizeof(MessageHeader::MessageHeaderRaw) + 32)),
-    value(m_bytes.begin() + (sizeof(MessageHeader::MessageHeaderRaw) + 32), m_bytes.begin() + m_header.size)
+    key(m_bytes.begin() + sizeof(MessageHeader::MessageHeaderRaw) + sizeof(MessageHeaderExtend::MessageHeaderRaw),
+        m_bytes.begin() +
+        (sizeof(MessageHeader::MessageHeaderRaw) + sizeof(MessageHeaderExtend::MessageHeaderRaw) + 32)),
+    value(m_bytes.begin() +
+          (sizeof(MessageHeader::MessageHeaderRaw) + sizeof(MessageHeaderExtend::MessageHeaderRaw) + 32),
+          m_bytes.begin() + m_header.size)
 {
     if (m_header.size < sizeof(MessageHeader::MessageHeaderRaw) + sizeof(MessageHeaderExtend::MessageHeaderRaw) + 32)
         throw std::runtime_error("Key is too small!");

@@ -67,7 +67,7 @@ namespace dht
          * @throw std::bad_optional_access
          * @return PeerImpl instance
          */
-        auto getPeerImpl()
+        auto &getPeerImpl()
         {
             return m_peerImpl.value().get();
         }

@@ -73,7 +73,7 @@ namespace util
         const T &value, const U &min_value, const V &max_value,
         bool include_min = true, bool include_max = false)
     {
-        return (min_value <= max_value) ?
+        return (min_value <= max_value && (min_value != max_value || (include_min && include_max))) ?
                ((include_min ? (value >= min_value) : (value > min_value)) &&
                 (include_max ? (value <= max_value) : (value < max_value))) :
                ((include_min ? (value >= min_value) : (value > min_value)) ||

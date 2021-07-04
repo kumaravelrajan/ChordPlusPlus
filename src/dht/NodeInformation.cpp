@@ -114,16 +114,18 @@ std::optional<std::vector<uint8_t>> NodeInformation::getData(const std::vector<u
 void NodeInformation::setData(const std::vector<uint8_t> &key, const std::vector<uint8_t> &value,
                               std::chrono::system_clock::duration ttl)
 {
+    std::cout << "[Node.setData] setting data, key length: " << key.size() << ", value length: " << value.size()
+              << ", ttl: " << std::chrono::duration_cast<std::chrono::seconds>(ttl).count() << std::endl;
     std::unique_lock l{m_dataMutex};
     m_data[key] = std::make_pair(value, ttl == std::chrono::system_clock::duration::max()
                                         ? std::chrono::system_clock::time_point::max() :
                                         std::chrono::system_clock::now() + ttl);
 }
-NodeInformation::Node NodeInformation::getBootstrapNodeAddress() const
+std::optional<NodeInformation::Node> NodeInformation::getBootstrapNodeAddress() const
 {
     return m_bootstrapNodeAddress;
 }
-void NodeInformation::setBootstrapNodeAddress(const Node &bootstrapNodeAddress)
+void NodeInformation::setBootstrapNodeAddress(const std::optional<Node> &bootstrapNodeAddress)
 {
     m_bootstrapNodeAddress = bootstrapNodeAddress;
 }

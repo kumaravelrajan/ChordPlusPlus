@@ -42,16 +42,22 @@ void Dht::mainLoop()
 
     std::cout << "[DHT] Main Loop Entered" << std::endl;
 
-    // TODO: get bootstrap node
-    // TODO: getPeerImpl().join(entryNode);
-
     while (true) {
         if (!m_dhtRunning) break;
-        m_executor.value().get().executeSync([this] { getPeerImpl().stabilize(); });
+        if (!m_nodeInformation->getSuccessor()) {
+            if (m_nodeInformation->getBootstrapNodeAddress()) {
+                getPeerImpl().join(*m_nodeInformation->getBootstrapNodeAddress());
+            } else {
+                getPeerImpl().create();
+            }
+        }
+
         if (!m_dhtRunning) break;
-        m_executor.value().get().executeSync([this] { getPeerImpl().fixFingers(); });
+        getPeerImpl().stabilize();
         if (!m_dhtRunning) break;
-        m_executor.value().get().executeSync([this] { getPeerImpl().checkPredecessor(); });
+        getPeerImpl().fixFingers();
+        if (!m_dhtRunning) break;
+        getPeerImpl().checkPredecessor();
         if (!m_dhtRunning) break;
 
         // Wait one second
@@ -103,12 +109,18 @@ std::vector<uint8_t> Dht::onDhtPut(const api::Message_DHT_PUT &message_data, std
     std::string sKey{message_data.key.begin(), message_data.key.end()};
     NodeInformation::id_type finalHashedKey = NodeInformation::hash_sha1(sKey);
 
-    std::cout << "[DHT] getSuccessor" << std::endl;
+    auto ttl = message_data.m_headerExtend.ttl > 0
+               ? std::chrono::seconds(message_data.m_headerExtend.ttl)
+               : std::chrono::system_clock::duration::max();
+
+    std::cout << "[DHT.put] getSuccessor" << std::endl;
     auto successor = getSuccessor(finalHashedKey);
-    if (successor)
-        std::cout << "[DHT] Successor got: \"" << successor.value().getIp() << "\"" << std::endl;
-    else
-        std::cout << "[DHT] No Successor got!" << std::endl;
+    if (successor) {
+        std::cout << "[DHT.put] Successor got: \"" << successor.value().getIp() << "\"" << std::endl;
+        getPeerImpl().setData(*successor, message_data.key, message_data.value, message_data.m_headerExtend.ttl);
+    } else {
+        std::cout << "[DHT.put] No Successor got!" << std::endl;
+    }
 
     for (uint8_t i{0}; !cancelled && i < 10; ++i)
         std::this_thread::sleep_for(1s);
@@ -119,10 +131,30 @@ std::vector<uint8_t> Dht::onDhtGet(const api::Message_DHT_GET &message_data, std
 {
     // TODO
 
-    // vvv can be removed
     std::cout << "[DHT] DHT_GET" << std::endl;
+
+    std::cout
+        << "[DHT.get] size:        " << std::to_string(message_data.m_header.size) << std::endl
+        << "[DHT.get] type:        " << std::to_string(message_data.m_header.msg_type) << std::endl;
+
+    // Hashing received key to convert it into length of 20 bytes
+    std::string sKey{message_data.key.begin(), message_data.key.end()};
+    NodeInformation::id_type finalHashedKey = NodeInformation::hash_sha1(sKey);
+
+    std::cout << "[DHT.get] getSuccessor" << std::endl;
+    auto successor = getSuccessor(finalHashedKey);
+    std::optional<std::vector<uint8_t>> response{};
+    if (successor) {
+        std::cout << "[DHT.get] Successor got: " << successor->getIp() << ":" << successor->getPort() << std::endl;
+        response = getPeerImpl().getData(*successor, message_data.key);
+    } else {
+        std::cout << "[DHT.get] No Successor got!" << std::endl;
+    }
+
+    if (response)
+        return *response;
+
     for (uint8_t i{0}; !cancelled && i < 10; ++i)
         std::this_thread::sleep_for(1s);
     return message_data.m_bytes;
-    // ^^^ can be removed
 }

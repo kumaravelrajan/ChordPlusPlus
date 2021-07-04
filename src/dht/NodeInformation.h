@@ -66,7 +66,7 @@ private:
     std::mutex m_cv_m{};
     std::condition_variable m_cv{};
     /// Bootstrap node details
-    Node m_bootstrapNodeAddress{};
+    std::optional<Node> m_bootstrapNodeAddress{};
 
 public:
     [[nodiscard]] const Node &getNode() const;
@@ -76,8 +76,8 @@ public:
     void setIp(const std::string &mIp);
     [[nodiscard]] uint16_t getPort() const;
     void setPort(uint16_t mPort);
-    [[nodiscard]] Node getBootstrapNodeAddress() const;
-    void setBootstrapNodeAddress(const Node &);
+    [[nodiscard]] std::optional<Node> getBootstrapNodeAddress() const;
+    void setBootstrapNodeAddress(const std::optional<Node> &);
 
     /**
      * @throws std::out_of_range
