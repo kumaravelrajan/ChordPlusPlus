@@ -4,6 +4,31 @@
 ---
 
 ### Architecture of modules
+
+#### Folder Structure
+
+```
+.
+├── cmake
+│   └── CPM.cmake
+├── docs
+├── src
+│   ├── api
+│   │   └── CMakeLists.txt
+│   ├── config
+│   │   └── CMakeLists.txt
+│   ├── dht
+│   │   └── CMakeLists.txt
+│   ├── util
+│   │   └── CMakeLists.txt
+│   ├── dht-4.cpp
+│   └── CMakeLists.txt
+├── test
+│   └── CMakeLists.txt
+├── CMakeLists.txt
+├── config.ini
+└── README.md
+```
 ---
 
 ##### Logical structure (classes, ...)
