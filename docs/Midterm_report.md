@@ -1,17 +1,22 @@
 # Midterm report DHT-4
-
 ## Changes to assumptions in initial report
-TODO
+### Available libraries
+These libraries are downloaded and updated using [cpm-cmake/CPM.cmake](https://github.com/cpm-cmake/CPM.cmake).
+- [mcmtroffaes/inipp](https://github.com/mcmtroffaes/inipp) instead of inih
+- [cap'n proto](https://capnproto.org/)
+- [asio standalone](https://think-async.com/Asio/asio-1.18.2/doc/)
+- [jarro2783/cxxopts](https://github.com/jarro2783/cxxopts)
+- [gabime/spdlog](https://github.com/gabime/spdlog)
+- [janbar/openssl-cmake](https://github.com/janbar/openssl-cmake)
 
 ---
-
 ## Architecture of modules
 The Project is separated into libraries, which speeds up compilation, makes unit testing easier, and reduces the risk of merge conflicts. Said libraries are:
 - api
   - Responsible for inter-module communication.
   - Uses libasio for cross-platform networking.
 - config
-  - Uses inih to parse the configuration file.
+  - Uses inipp to parse the configuration file.
 - dht
   - The actual distributed hash table.
   - Responsible for p2p communication, maintaining the finger table, and storing/retrieving data.
@@ -46,9 +51,7 @@ The Project is separated into libraries, which speeds up compilation, makes unit
 ```
 
 ---
-
 ### Logical structure
-
 #### API
 ![api uml diagram](./assets/UML_API.png)
 
@@ -68,16 +71,15 @@ The `Dht` class sets up the interface with the api by defining request handlers.
 The interface between peers is defined using a CapnProto schema, and the server-side of that is implemented in `PeerImpl`. This is where most of the actual dht logic takes place.
 
 ---
-
 ### Process architecture
 The entire program takes place in one process, but using multithreading for asynchronicity. This is realized with `<future>` and `std::async`.
 Most of the synchronized access happens within `NodeInformation`, which uses `std::shared_mutex`, `std::unique_lock`, and `std::shared_lock` for read-write locking. In some cases, a simple `std::atomic_bool` suffices.
 
 ---
-
 ### Networking
 This project has two network interfaces: The Api for module-module communication using libasio standalone, and the Dht CapnProto interface for peer-peer communication, which uses ez-rpc for now.
 
+---
 ### Security measures
 Right now, there are no security measures apart from the ones supplied by CapnProto, which includes the following:
 
@@ -85,10 +87,8 @@ Right now, there are no security measures apart from the ones supplied by CapnPr
 - Only the pre-defined interface methods can be called from a peer, and all of them can assume the peer to be malicious.
 - There is no malicious intent expected on the api side of things, but it would make sense to only allow incoming requests from the same device the dht runs on, as the api is meant for inter-process communication. This can be achieved with a firewall, however.
 
-
-## The peer-to-peer protocol(s) that is present in the implementation
 ---
-
+## The peer-to-peer protocol that is present in the implementation
 ### Message formats
 
 #### DHT PUT
@@ -117,9 +117,11 @@ DHT FAILURE: 0x028d
 ### Reasoning why the messages are needed
 The messages are defined in the specification. As for the CapnProto Schema, all of the interface methods are required by the Chord algorithm.
 
+---
 ### Exception handling (Churn, connection breaks, corrupted data, ...)
 Chord usually fixes itself in cases of Churn or Connection breaks. The only problem would be if a lot of nodes in the finger table suddenly go offline, but in that case the dht tries to re-join using the bootstrapping node. Corrupted data is dealt with in part by CapnProto, but since the underlaying protocol is TCP, we can assume to some extent that the data coming from the tcp layer is valid.
 
+---
 ## Future Work
 - The DHT is currently in the testing and bugfixing phase, which still poses a lot of work.
 - A more advanced logging system (spdlog)
@@ -132,7 +134,6 @@ Chord usually fixes itself in cases of Churn or Connection breaks. The only prob
 - This is also important, because corrupted data can not only be caused by transmission errors, but because it is unknown whether the source of the data is trustworthy. It can be intentionally incorrect data to destabilize the dht.
 
 ---
-
 ## Workload Distribution — Who did what
 ---
 ## Effort spent for the project (please specify individual effort)
