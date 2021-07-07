@@ -106,18 +106,6 @@ CPMAddPackage(
 # pull spdlog from github:
 CPMAddPackage("gh:gabime/spdlog@1.8.5")
 
-# pull gmp from github:
-CPMAddPackage(
-        NAME infint
-        VERSION 1.0.0
-        GITHUB_REPOSITORY sercantutar/infint
-        GIT_TAG master
-)
-if (infint_ADDED)
-    add_library(infint INTERFACE)
-    target_include_directories(infint INTERFACE ${infint_SOURCE_DIR})
-endif ()
-
 add_subdirectory(src)
 add_subdirectory(src/config)
 add_subdirectory(src/dht)
