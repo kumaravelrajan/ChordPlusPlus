@@ -135,8 +135,25 @@ Chord usually fixes itself in cases of Churn or Connection breaks. The only prob
 
 ---
 ## Workload Distribution — Who did what
+- Maxi Barmetler
+  - CMake Project and Library Selection
+  - Api to let other Modules interface with the Dht
+  - Dht Logic
+  - Networking and Thread Management
+- Kumaravel Rajan
+  - Gitlab Issues for Workload Planning and Distribution
+  - Parse Configuration File and Command-line Arguments
+  - Dht Logic
+  - Main Entry Point
+
 ---
 ## Effort spent for the project (please specify individual effort)
+
+- Maxi Barmetler
+  - At first about 15hrs/week, but project setup and boilerplate code is more time-consuming than complicated
+  - Then between 5 and 10hrs/week, excluding time spent on research
+- Kumaravel Rajan
+  - // TODO
 ---
 
 
