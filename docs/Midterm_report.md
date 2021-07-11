@@ -155,7 +155,8 @@ Chord usually fixes itself in cases of Churn or Connection breaks. The only prob
   - At first about 15hrs/week, but project setup and boilerplate code is more time-consuming than complicated
   - Then between 5 and 10hrs/week, excluding time spent on research
 - Kumaravel Rajan
-  - // TODO
+  - At the start around 20 hours/week to brush up on multithreading and synchronization concepts in C++ apart from setting the project up.
+  - Later around 10 hrs / week excluding time spent on looking at sample implementations for reference and other research. 
 ---
 
 
