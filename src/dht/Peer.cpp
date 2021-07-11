@@ -274,8 +274,21 @@ void PeerImpl::join(const NodeInformation::Node &node)
 {
     std::cout << "[PEER.join]" << std::endl;
     m_nodeInformation->setPredecessor();
-    auto successor = getSuccessor(m_nodeInformation->getId());
-    m_nodeInformation->setSuccessor(successor);
+
+    capnp::EzRpcClient client{node.getIp(), node.getPort()};
+    auto &waitScope = client.getWaitScope();
+    auto cap = client.getMain<Peer>();
+    auto req = cap.getSuccessorRequest();
+    req.setId(capnp::Data::Builder(
+        kj::heapArray<kj::byte>(m_nodeInformation->getId().begin(), m_nodeInformation->getId().end())));
+    try {
+        auto response = req.send().wait(waitScope);
+        std::cout << "[PEER.join] got response" << std::endl;
+        auto successor = nodeFromReader(response.getNode());
+        m_nodeInformation->setSuccessor(successor);
+    } catch (const kj::Exception &e) {
+        std::cout << "[PEER.join] Exception in request" << std::endl;
+    }
 }
 
 void PeerImpl::stabilize()
