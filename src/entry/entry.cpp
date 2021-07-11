@@ -1,7 +1,7 @@
 #include "entry.h"
-#include <iostream>
 #include <spdlog/fmt/fmt.h>
 
+using entry::Command;
 using entry::Entry;
 
 Entry::Entry(const config::Configuration &conf)
@@ -53,8 +53,65 @@ Entry::~Entry()
 
 int Entry::mainLoop()
 {
-    // TODO: command line interface
-    std::cin.get();
+    std::string line;
+
+    while (true) {
+        std::cout << "$ ";
+        std::getline(std::cin, line);
+        std::istringstream iss{line};
+        std::vector<std::string> tokens{std::istream_iterator<std::string>{iss}, std::istream_iterator<std::string>{}};
+        if (tokens.empty()) continue;
+
+        std::string cmd = tokens.front();
+        tokens.erase(tokens.begin());
+
+        if (Entry::commands.contains(cmd)) {
+            const auto &command = Entry::commands.at(cmd);
+            command.execute(tokens, std::cout);
+        } else {
+            std::cout << "Command \"" << cmd << "\" not found!" << std::endl;
+        }
+        std::cout << std::endl;
+
+        if (line == "exit") break;
+    }
+
     return 0;
 }
 
+const std::unordered_map<std::string, Command> Entry::commands{ // NOLINT
+    {
+        "help",
+        {
+            .brief="Print help for a command",
+            .usage="Usage:\n"
+                   "help [COMMAND]",
+            .execute=[](const std::vector<std::string> &args, std::ostream &os) {
+                if (args.empty()) {
+                    os << "Commands:\n";
+                    for (const auto &item : Entry::commands) {
+                        os << fmt::format("{:<12} : {}", item.first, item.second.brief) << std::endl;
+                    }
+                } else {
+                    if (Entry::commands.contains(args[0])) {
+                        const auto &cmd = Entry::commands.at(args[0]);
+                        os << cmd.brief << std::endl << std::endl << cmd.usage << std::endl;
+                    } else {
+                        os << "Command \"" << args[0] << "\" not found!" << std::endl;
+                    }
+                }
+            }
+        }
+    },
+    {
+        "exit",
+        {
+            .brief="Exit the program",
+            .usage="Usage:\n"
+                   "exit",
+            .execute=[](const std::vector<std::string> &, std::ostream &os) {
+                os << "Shutting down...";
+            }
+        }
+    }
+};
