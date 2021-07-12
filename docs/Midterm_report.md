@@ -75,6 +75,8 @@ The interface between peers is defined using a CapnProto schema, and the server-
 The entire program takes place in one process, but using multithreading for asynchronicity. This is realized with `<future>` and `std::async`.
 Most of the synchronized access happens within `NodeInformation`, which uses `std::shared_mutex`, `std::unique_lock`, and `std::shared_lock` for read-write locking. In some cases, a simple `std::atomic_bool` suffices.
 
+![activity diagram](./assets/Activity-Diagram.png)
+
 ---
 ### Networking
 This project has two network interfaces: The Api for module-module communication using libasio standalone, and the Dht CapnProto interface for peer-peer communication, which uses ez-rpc for now.
@@ -153,7 +155,8 @@ Chord usually fixes itself in cases of Churn or Connection breaks. The only prob
   - At first about 15hrs/week, but project setup and boilerplate code is more time-consuming than complicated
   - Then between 5 and 10hrs/week, excluding time spent on research
 - Kumaravel Rajan
-  - // TODO
+  - At the start around 20 hours/week to brush up on multithreading and synchronization concepts in C++ apart from setting the project up.
+  - Later around 10 hrs / week excluding time spent on looking at sample implementations for reference and other research. 
 ---
 
 
