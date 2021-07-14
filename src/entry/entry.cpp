@@ -1,10 +1,11 @@
 #include "entry.h"
 #include <spdlog/fmt/fmt.h>
 
+using namespace std::literals;
 using entry::Command;
 using entry::Entry;
 
-Entry::Entry(const config::Configuration &conf)
+Entry::Entry(const config::Configuration &conf) : Entry()
 {
     uint16_t dht_port = conf.p2p_port;
     uint16_t api_port = conf.api_port;
@@ -53,24 +54,22 @@ Entry::~Entry()
 
 int Entry::mainLoop()
 {
+    // TODO: Maybe make the streams configurable
+    std::istream &is = std::cin;
+    std::ostream &os = std::cout;
+    // std::ostream &err = std::cerr;
+    std::ostream &err = std::cout;
+
     std::string line;
 
     while (true) {
         std::cout << "$ ";
-        std::getline(std::cin, line);
+        std::getline(is, line);
         std::istringstream iss{line};
         std::vector<std::string> tokens{std::istream_iterator<std::string>{iss}, std::istream_iterator<std::string>{}};
         if (tokens.empty()) continue;
 
-        std::string cmd = tokens.front();
-        tokens.erase(tokens.begin());
-
-        if (Entry::commands.contains(cmd)) {
-            const auto &command = Entry::commands.at(cmd);
-            command.execute(tokens, std::cout);
-        } else {
-            std::cout << "Command \"" << cmd << "\" not found!" << std::endl;
-        }
+        execute(tokens, os, err);
         std::cout << std::endl;
 
         if (line == "exit") break;
@@ -79,25 +78,46 @@ int Entry::mainLoop()
     return 0;
 }
 
-const std::unordered_map<std::string, Command> Entry::commands{ // NOLINT
+void Entry::execute(std::vector<std::string> args, std::ostream &os, std::ostream &err)
+{
+    std::string cmd = args.front();
+    args.erase(args.begin());
+
+    if (Entry::commands.contains(cmd)) {
+        const auto &command = Entry::commands.at(cmd);
+        try {
+            command.execute(args, os, err);
+        } catch (const std::exception &e) {
+            err << e.what() << std::endl;
+        }
+    } else {
+        if (auto pos = cmd.find('.'); pos != std::string::npos)
+            cmd.replace(pos, 1, " ");
+        err << "Command \"" << cmd << "\" not found!" << std::endl;
+    }
+}
+
+Entry::Entry() : commands{
     {
         "help",
         {
             .brief="Print help for a command",
-            .usage="Usage:\n"
-                   "help [COMMAND]",
-            .execute=[](const std::vector<std::string> &args, std::ostream &os) {
+            .usage="help [COMMAND]",
+            .execute=
+            [this](const std::vector<std::string> &args, std::ostream &os, std::ostream &) {
                 if (args.empty()) {
                     os << "Commands:\n";
-                    for (const auto &item : Entry::commands) {
+                    for (const auto &item : commands) {
+                        if (item.first.find(".") != std::string::npos) continue;
                         os << fmt::format("{:<12} : {}", item.first, item.second.brief) << std::endl;
                     }
                 } else {
-                    if (Entry::commands.contains(args[0])) {
-                        const auto &cmd = Entry::commands.at(args[0]);
-                        os << cmd.brief << std::endl << std::endl << cmd.usage << std::endl;
+                    std::string str = util::join(args, ".");
+                    if (commands.contains(str)) {
+                        const auto &cmd = commands.at(str);
+                        os << cmd.brief << "\n\nUsage:\n" << cmd.usage << std::endl;
                     } else {
-                        os << "Command \"" << args[0] << "\" not found!" << std::endl;
+                        throw std::invalid_argument("Command \"" + str + "\" not found!");
                     }
                 }
             }
@@ -107,11 +127,47 @@ const std::unordered_map<std::string, Command> Entry::commands{ // NOLINT
         "exit",
         {
             .brief="Exit the program",
-            .usage="Usage:\n"
-                   "exit",
-            .execute=[](const std::vector<std::string> &, std::ostream &os) {
-                os << "Shutting down...";
+            .usage="exit",
+            .execute=
+            [](const std::vector<std::string> &, std::ostream &os, std::ostream &) {
+                os << "Shutting down..." << std::endl;
+            }
+        }
+    },
+    {
+        "show",
+        {
+            .brief="Show data depending on arguments",
+            .usage="show WHAT [ARGS...]",
+            .execute=
+            [this](const std::vector<std::string> &args, std::ostream &os, std::ostream &err) {
+                if (args.empty())
+                    throw std::invalid_argument("Argument required: WHAT");
+                std::string what = util::to_lower(args[0]);
+                std::vector<std::string> new_args{args.begin(), args.end()};
+                new_args[0] = "show." + what;
+                execute(new_args, os, err);
+            }
+        }
+    },
+
+
+    // Show-Commands
+    {
+        "show.nodes",
+        {
+            .brief="List all Nodes",
+            .usage="show nodes",
+            .execute=
+            [this](const std::vector<std::string> &args, std::ostream &os, std::ostream &) {
+                for (size_t i = 0; i < vListOfNodeInformationObj.size(); ++i) {
+                    os << fmt::format(
+                        "[{:>03}] : {}:{:>4}",
+                        i, vListOfNodeInformationObj[i]->getIp(), vListOfNodeInformationObj[i]->getPort()
+                    ) << std::endl;
+                }
+                os << "show nodes" << std::endl;
             }
         }
     }
-};
+} {}

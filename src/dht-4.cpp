@@ -42,7 +42,7 @@ int main(int argc, char *argv[])
         << "bootstrapNode_address : " << conf.bootstrapNode_address << "\n"
         << "bootstrapNode_port    : " << conf.bootstrapNode_port << std::endl;
 
-    int ret = 0;
+    int ret;
     {
         entry::Entry e{conf};
         ret = e.mainLoop();

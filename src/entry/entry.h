@@ -12,25 +12,30 @@
 
 namespace entry
 {
+    class Entry;
+
     struct Command
     {
         std::string brief;
         std::string usage;
-        std::function<void(const std::vector<std::string> &args, std::ostream &os)> execute;
+        std::function<void(const std::vector<std::string> &args, std::ostream &os, std::ostream &err)> execute;
     };
 
     class Entry
     {
     public:
+        Entry();
         explicit Entry(const config::Configuration &conf);
         ~Entry();
 
         int mainLoop();
 
+        void execute(std::vector<std::string> args, std::ostream &os = std::cout, std::ostream &err = std::cerr);
+
     private:
         std::vector<std::unique_ptr<dht::Dht>> vListOfDhtNodes{};
         std::vector<std::shared_ptr<NodeInformation>> vListOfNodeInformationObj{};
-        static const std::unordered_map<std::string, Command> commands;
+        const std::unordered_map<std::string, Command> commands;
     };
 }
 

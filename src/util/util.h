@@ -10,6 +10,7 @@
 #include <string>
 #include <optional>
 #include <iostream>
+#include <cctype>
 
 namespace util
 {
@@ -83,10 +84,31 @@ namespace util
     template<typename T, size_t size, std::enable_if_t<std::is_unsigned_v<T>, int> = 0>
     constexpr auto pow2(size_t exp)
     {
-        std::array<T, size> ret{0};
+        std::array<T, size> ret{T{0}};
         int64_t index = size - 1 - exp / 8;
         if (index < size && index >= 0)
             ret[index] = 1 << (exp % 8);
+        return ret;
+    }
+
+    template<typename Char>
+    auto to_lower(const std::basic_string<Char> &str)
+    {
+        std::basic_string<Char> ret;
+        std::transform(str.begin(), str.end(), std::back_inserter(ret), [](Char c) { return std::tolower(c); });
+        return ret;
+    }
+
+    template<typename Char>
+    auto join(const std::vector<std::basic_string<Char>> &str, const std::string &delimiter)
+    {
+        std::basic_string<Char> ret;
+        for (auto it = str.begin(); it != str.end(); ++it) {
+            if (it == str.begin())
+                ret = *it;
+            else
+                ret = ret + delimiter + *it;
+        }
         return ret;
     }
 } // namespace util
