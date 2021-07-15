@@ -133,7 +133,9 @@ Entry::Entry() : commands{
             .brief="Exit the program",
             .usage="exit",
             .execute=
-            [](const std::vector<std::string> &, std::ostream &os, std::ostream &) {
+            [](const std::vector<std::string> &args, std::ostream &os, std::ostream &) {
+                if (!args.empty())
+                    throw std::invalid_argument("No arguments expected!");
                 os << "Shutting down..." << std::endl;
             }
         }
@@ -160,17 +162,34 @@ Entry::Entry() : commands{
     {
         "show.nodes",
         {
-            .brief="List all Nodes",
-            .usage="show nodes",
+            .brief="List all Nodes, or information of one Node",
+            .usage="show nodes [INDEX]",
             .execute=
             [this](const std::vector<std::string> &args, std::ostream &os, std::ostream &) {
-                for (size_t i = 0; i < vListOfNodeInformationObj.size(); ++i) {
-                    os << fmt::format(
-                        "[{:>03}] : {}:{:>4}",
-                        i, vListOfNodeInformationObj[i]->getIp(), vListOfNodeInformationObj[i]->getPort()
-                    ) << std::endl;
+                std::optional<uint32_t> index{};
+                if (!args.empty()) {
+                    std::smatch match;
+                    std::regex_match(args[0], match,
+                                     std::regex(R"((\d|\.\')+|\[((?:\d|\.\')+)\])"));
+                    std::string result = match[1].str() + match[2].str();
+                    if (!result.empty()) {
+                        uint32_t i;
+                        std::istringstream ss{result};
+                        ss >> i;
+                        index = i;
+                    }
                 }
-                os << "show nodes" << std::endl;
+
+                if (index) {
+                    os << "show nodes " << *index << std::endl;
+                } else {
+                    for (size_t i = 0; i < vListOfNodeInformationObj.size(); ++i) {
+                        os << fmt::format(
+                            "[{:>03}] : {}:{:>4}",
+                            i, vListOfNodeInformationObj[i]->getIp(), vListOfNodeInformationObj[i]->getPort()
+                        ) << std::endl;
+                    }
+                }
             }
         }
     }
