@@ -1,4 +1,5 @@
 #include "entry.h"
+#include <regex>
 #include <spdlog/fmt/fmt.h>
 
 using namespace std::literals;
@@ -65,8 +66,11 @@ int Entry::mainLoop()
     while (true) {
         std::cout << "$ ";
         std::getline(is, line);
-        std::istringstream iss{line};
-        std::vector<std::string> tokens{std::istream_iterator<std::string>{iss}, std::istream_iterator<std::string>{}};
+        std::regex re{R"(\[[^\]]*\]|[^ \n\r\t\[\]]+)"};
+        std::vector<std::string> tokens{};
+        std::transform(
+            std::sregex_iterator{line.begin(), line.end(), re}, std::sregex_iterator{},
+            std::back_inserter(tokens), [](const std::smatch &match) { return match.str(); });
         if (tokens.empty()) continue;
 
         execute(tokens, os, err);
