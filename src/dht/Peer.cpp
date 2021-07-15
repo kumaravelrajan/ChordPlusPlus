@@ -52,7 +52,7 @@ PeerImpl::PeerImpl(std::shared_ptr<NodeInformation> nodeInformation) :
 
 ::kj::Promise<void> PeerImpl::notify(NotifyContext context)
 {
-    std::cout << "[PEER] notifyRequest" << std::endl;
+    // std::cout << "[PEER] notifyRequest" << std::endl;
 
     auto node = nodeFromReader(context.getParams().getNode());
 
@@ -327,6 +327,19 @@ void PeerImpl::stabilize()
     )) {
         successor = predOfSuccessor;
         capnp::EzRpcClient client2{predOfSuccessor->getIp(), predOfSuccessor->getPort()};
+        auto &waitScope2 = client2.getWaitScope();
+        auto cap2 = client2.getMain<Peer>();
+        auto req2 = cap2.notifyRequest();
+        buildNode(req2.getNode(), m_nodeInformation->getNode());
+        try {
+            // std::cout << "[PEER.stabilize] before response" << std::endl;
+            req2.send().wait(waitScope2);
+            // std::cout << "[PEER.stabilize] got response" << std::endl;
+        } catch (const kj::Exception &e) {
+            // std::cout << "[PEER.stabilize] connection issue predecessor of successor" << std::endl;
+        }
+    } else {
+        capnp::EzRpcClient client2{successor->getIp(), successor->getPort()};
         auto &waitScope2 = client2.getWaitScope();
         auto cap2 = client2.getMain<Peer>();
         auto req2 = cap2.notifyRequest();

@@ -10726,7 +10726,7 @@
 							"_parent": {
 								"$ref": "AAAAAAF6ce9wmI2fo0g="
 							},
-							"name": "getBootstrapNodeAddress",
+							"name": "getBootstrapNode",
 							"parameters": [
 								{
 									"_type": "UMLParameter",

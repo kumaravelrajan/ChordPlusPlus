@@ -6,6 +6,31 @@ using namespace std::literals;
 using entry::Command;
 using entry::Entry;
 
+namespace entry
+{
+    std::optional<uint32_t> get_index(const std::string &str)
+    {
+        std::smatch match;
+        std::regex_match(str, match,
+                         std::regex(R"((\d|\.\')+|\[((?:\d|\.\')+)\])"));
+        std::string result = match[1].str() + match[2].str();
+        return
+            !result.empty()
+            ? util::from_string<uint32_t>(result)
+            : std::optional<uint32_t>{};
+    }
+
+    std::string format_node(const NodeInformation::Node &node)
+    {
+        return fmt::format("{}:{:>04}", node.getIp(), node.getPort());
+    }
+
+    std::string format_node(const std::optional<NodeInformation::Node> &node)
+    {
+        return node ? format_node(*node) : "<null>";
+    }
+}
+
 Entry::Entry(const config::Configuration &conf) : Entry()
 {
     uint16_t dht_port = conf.p2p_port;
@@ -16,7 +41,7 @@ Entry::Entry(const config::Configuration &conf) : Entry()
             vListOfNodeInformationObj.push_back(std::make_shared<NodeInformation>("127.0.0.1", dht_port));
 
             // Set bootstrap node details parsed from config file
-            vListOfNodeInformationObj[i]->setBootstrapNodeAddress(
+            vListOfNodeInformationObj[i]->setBootstrapNode(
                 NodeInformation::Node(conf.bootstrapNode_address, conf.bootstrapNode_port)
             );
 
@@ -167,26 +192,35 @@ Entry::Entry() : commands{
             .execute=
             [this](const std::vector<std::string> &args, std::ostream &os, std::ostream &) {
                 std::optional<uint32_t> index{};
-                if (!args.empty()) {
-                    std::smatch match;
-                    std::regex_match(args[0], match,
-                                     std::regex(R"((\d|\.\')+|\[((?:\d|\.\')+)\])"));
-                    std::string result = match[1].str() + match[2].str();
-                    if (!result.empty()) {
-                        uint32_t i;
-                        std::istringstream ss{result};
-                        ss >> i;
-                        index = i;
-                    }
-                }
+                if (!args.empty())
+                    index = get_index(args[0]);
 
                 if (index) {
+                    if (index >= vListOfNodeInformationObj.size()) {
+                        throw std::invalid_argument("Index [" + util::to_string(*index) + "] out of bounds!");
+                    }
+                    auto &node = *vListOfNodeInformationObj[*index];
+                    os << fmt::format(
+                        ""
+                        "nodes[{:>03}]    : {}"            "\n"
+                        "  id          : {}"               "\n"
+                        "  successor   : {}"               "\n"
+                        "  predecessor : {}"               "\n"
+                        "  bootstrap   : {}"               "\n"
+                        /* == == == == */,
+                        *index,
+                        format_node(node.getNode()),
+                        util::hexdump(node.getId(), 20, false, false),
+                        format_node(node.getSuccessor()),
+                        format_node(node.getPredecessor()),
+                        format_node(node.getBootstrapNode())
+                    ) << std::endl;
                     os << "show nodes " << *index << std::endl;
                 } else {
                     for (size_t i = 0; i < vListOfNodeInformationObj.size(); ++i) {
                         os << fmt::format(
-                            "[{:>03}] : {}:{:>4}",
-                            i, vListOfNodeInformationObj[i]->getIp(), vListOfNodeInformationObj[i]->getPort()
+                            "[{:>03}] : {}",
+                            i, format_node(vListOfNodeInformationObj[i]->getNode())
                         ) << std::endl;
                     }
                 }

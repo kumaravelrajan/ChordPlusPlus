@@ -54,16 +54,16 @@ public:
 private:
     Node m_node;
     std::vector<std::optional<Node>> m_fingerTable{key_bits}; // m = number of bits in the id
-    std::shared_mutex m_fingerTableMutex{};
+    mutable std::shared_mutex m_fingerTableMutex{};
     std::optional<Node> m_predecessor{};
-    std::shared_mutex m_predecessorMutex{};
+    mutable std::shared_mutex m_predecessorMutex{};
     /// Stores data along with the expiry date.
     std::map<std::vector<uint8_t>, std::pair<std::vector<uint8_t>, std::chrono::system_clock::time_point>> m_data{};
-    std::shared_mutex m_dataMutex{};
+    mutable std::shared_mutex m_dataMutex{};
     /// Asynchronously removes expired data entries.
     std::future<void> m_dataCleaner{};
     std::atomic_bool m_destroyed{false};
-    std::mutex m_cv_m{};
+    mutable std::mutex m_cv_m{};
     std::condition_variable m_cv{};
     /// Bootstrap node details
     std::optional<Node> m_bootstrapNodeAddress{};
@@ -76,13 +76,13 @@ public:
     void setIp(const std::string &mIp);
     [[nodiscard]] uint16_t getPort() const;
     void setPort(uint16_t mPort);
-    [[nodiscard]] std::optional<Node> getBootstrapNodeAddress() const;
-    void setBootstrapNodeAddress(const std::optional<Node> &);
+    [[nodiscard]] std::optional<Node> getBootstrapNode() const;
+    void setBootstrapNode(const std::optional<Node> &);
 
     /**
      * @throws std::out_of_range
      */
-    [[nodiscard]] const std::optional<Node> &getFinger(size_t index);
+    [[nodiscard]] const std::optional<Node> &getFinger(size_t index) const;
     /**
      * @throws std::out_of_range
      */
@@ -90,10 +90,10 @@ public:
 
     [[nodiscard]] std::optional<Node> &getSuccessor();
     void setSuccessor(const std::optional<Node> &node = {});
-    [[nodiscard]] const std::optional<Node> &getPredecessor();
+    [[nodiscard]] const std::optional<Node> &getPredecessor() const;
     void setPredecessor(const std::optional<Node> &node = {});
 
-    [[nodiscard]] std::optional<std::vector<uint8_t>> getData(const std::vector<uint8_t> &key);
+    [[nodiscard]] std::optional<std::vector<uint8_t>> getData(const std::vector<uint8_t> &key) const;
     void setData(const std::vector<uint8_t> &key, const std::vector<uint8_t> &value,
                  std::chrono::system_clock::duration ttl = std::chrono::system_clock::duration::max());
 

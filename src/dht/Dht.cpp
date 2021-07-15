@@ -45,9 +45,9 @@ void Dht::mainLoop()
     while (true) {
         if (!m_dhtRunning) break;
         if (!m_nodeInformation->getSuccessor()) {
-            if (m_nodeInformation->getBootstrapNodeAddress() &&
-                m_nodeInformation->getBootstrapNodeAddress() != m_nodeInformation->getNode()) {
-                getPeerImpl().join(*m_nodeInformation->getBootstrapNodeAddress());
+            if (m_nodeInformation->getBootstrapNode() &&
+                m_nodeInformation->getBootstrapNode() != m_nodeInformation->getNode()) {
+                getPeerImpl().join(*m_nodeInformation->getBootstrapNode());
             } else {
                 getPeerImpl().create();
             }

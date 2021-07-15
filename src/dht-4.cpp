@@ -16,7 +16,7 @@ int main(int argc, char *argv[])
         (
             "t,testCreateNodes",
             "Create multiple nodes on localhost for testing.\n0 for no extra nodes.",
-            cxxopts::value<int>()->default_value("0")
+            cxxopts::value<uint64_t>()->default_value("0")
         );
     auto args = options.parse(argc, argv);
 
