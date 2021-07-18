@@ -64,7 +64,7 @@ PeerImpl::PeerImpl(std::shared_ptr<NodeInformation> nodeInformation) :
             m_nodeInformation->getId(),
             false, false
         )) {
-        std::cout << "[PEER.notify] update predecessor" << std::endl;
+        // std::cout << "[PEER.notify] update predecessor" << std::endl;
         m_nodeInformation->setPredecessor(node);
     }
     return kj::READY_NOW;
