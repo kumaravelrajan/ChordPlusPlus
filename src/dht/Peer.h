@@ -4,6 +4,7 @@
 #include <capnp/capability.h>
 #include <peer.capnp.h>
 #include <memory>
+#include <atomic>
 #include "NodeInformation.h"
 
 namespace dht
@@ -42,7 +43,7 @@ namespace dht
         static std::optional<NodeInformation::Node> nodeFromReader(Optional<Node>::Reader node);
         static void buildNode(Node::Builder builder, const NodeInformation::Node &node);
 
-        std::optional<NodeInformation::Node> getSuccessor(NodeInformation::id_type id);
+        ::kj::Promise<std::optional<NodeInformation::Node>> getSuccessor(NodeInformation::id_type id);
         std::optional<NodeInformation::Node> getClosestPreceding(NodeInformation::id_type id);
 
         std::optional<std::vector<uint8_t>> getData(const NodeInformation::Node &node, const std::vector<uint8_t> &key);
@@ -50,17 +51,8 @@ namespace dht
                      const std::vector<uint8_t> &key, const std::vector<uint8_t> &value,
                      uint16_t ttl);
 
-        void create();
-        void join(const NodeInformation::Node &node);
-        void stabilize();
-        void fixFingers();
-        void checkPredecessor();
-
     private:
         std::shared_ptr<NodeInformation> m_nodeInformation;
-        capnp::Orphanage m_orphanage{};
-
-        size_t nextFinger{0};
     };
 }
 

@@ -12,7 +12,7 @@ namespace entry
     {
         std::smatch match;
         std::regex_match(str, match,
-                         std::regex(R"((\d|\.\')+|\[((?:\d|\.\')+)\])"));
+                         std::regex(R"(((?:\d|\.\')+)|\[((?:\d|\.\')+)\])"));
         std::string result = match[1].str() + match[2].str();
         return
             !result.empty()
@@ -38,20 +38,6 @@ Entry::Entry(const config::Configuration &conf) : Entry()
 
     for (size_t i = 0; i <= conf.extra_debug_nodes; i++) {
         {
-            vListOfNodeInformationObj.push_back(std::make_shared<NodeInformation>("127.0.0.1", dht_port));
-
-            // Set bootstrap node details parsed from config file
-            vListOfNodeInformationObj[i]->setBootstrapNode(
-                NodeInformation::Node(conf.bootstrapNode_address, conf.bootstrapNode_port)
-            );
-
-            // The constructor of Dht starts mainLoop asynchronously.
-            vListOfDhtNodes.push_back(std::make_unique<dht::Dht>(vListOfNodeInformationObj[i]));
-
-            vListOfDhtNodes[i]->setApi(std::make_unique<api::Api>(api::Options{
-                .port= api_port,
-            }));
-
             std::cout << "=================================================================================="
                       << std::endl;
             std::cout << fmt::format(
@@ -64,6 +50,20 @@ Entry::Entry(const config::Configuration &conf) : Entry()
             std::cout << "=================================================================================="
                       << std::endl;
 
+            nodes.push_back(std::make_shared<NodeInformation>("127.0.0.1", dht_port));
+
+            // Set bootstrap node details parsed from config file
+            nodes[i]->setBootstrapNode(
+                NodeInformation::Node(conf.bootstrapNode_address, conf.bootstrapNode_port)
+            );
+
+            // The constructor of Dht starts mainLoop asynchronously.
+            DHTs.push_back(std::make_unique<dht::Dht>(nodes[i]));
+
+            DHTs[i]->setApi(std::make_unique<api::Api>(api::Options{
+                .port= api_port,
+            }));
+
             ++dht_port;
             ++api_port;
         }
@@ -73,8 +73,8 @@ Entry::Entry(const config::Configuration &conf) : Entry()
 Entry::~Entry()
 {
     std::cout << "[ENTRY] exiting..." << std::endl;
-    vListOfDhtNodes.clear();
-    vListOfNodeInformationObj.clear();
+    DHTs.clear();
+    nodes.clear();
     std::cout << "[ENTRY] Dht Stopped." << std::endl;
 }
 
@@ -120,7 +120,7 @@ void Entry::execute(std::vector<std::string> args, std::ostream &os, std::ostrea
             err << e.what() << std::endl;
         }
     } else {
-        if (auto pos = cmd.find('.'); pos != std::string::npos)
+        if (auto pos = cmd.find(':'); pos != std::string::npos)
             cmd.replace(pos, 1, " ");
         err << "Command \"" << cmd << "\" not found!" << std::endl;
     }
@@ -137,11 +137,11 @@ Entry::Entry() : commands{
                 if (args.empty()) {
                     os << "Commands:\n";
                     for (const auto &item : commands) {
-                        if (item.first.find(".") != std::string::npos) continue;
+                        if (item.first.find(":") != std::string::npos) continue;
                         os << fmt::format("{:<12} : {}", item.first, item.second.brief) << std::endl;
                     }
                 } else {
-                    std::string str = util::join(args, ".");
+                    std::string str = util::join(args, ":");
                     if (commands.contains(str)) {
                         const auto &cmd = commands.at(str);
                         os << cmd.brief << "\n\nUsage:\n" << cmd.usage << std::endl;
@@ -169,14 +169,14 @@ Entry::Entry() : commands{
         "show",
         {
             .brief="Show data depending on arguments",
-            .usage="show WHAT [ARGS...]",
+            .usage="show <WHAT> [ARGS...]",
             .execute=
             [this](const std::vector<std::string> &args, std::ostream &os, std::ostream &err) {
                 if (args.empty())
                     throw std::invalid_argument("Argument required: WHAT");
                 std::string what = util::to_lower(args[0]);
                 std::vector<std::string> new_args{args.begin(), args.end()};
-                new_args[0] = "show." + what;
+                new_args[0] = "show:" + what;
                 execute(new_args, os, err);
             }
         }
@@ -185,7 +185,7 @@ Entry::Entry() : commands{
 
     // Show-Commands
     {
-        "show.nodes",
+        "show:nodes",
         {
             .brief="List all Nodes, or information of one Node",
             .usage="show nodes [INDEX]",
@@ -196,10 +196,11 @@ Entry::Entry() : commands{
                     index = get_index(args[0]);
 
                 if (index) {
-                    if (index >= vListOfNodeInformationObj.size()) {
+                    if (index >= nodes.size()) {
                         throw std::invalid_argument("Index [" + util::to_string(*index) + "] out of bounds!");
                     }
-                    auto &node = *vListOfNodeInformationObj[*index];
+                    auto &node = *nodes[*index];
+
                     os << fmt::format(
                         ""
                         "nodes[{:>03}]    : {}"            "\n"
@@ -217,12 +218,49 @@ Entry::Entry() : commands{
                     ) << std::endl;
                     os << "show nodes " << *index << std::endl;
                 } else {
-                    for (size_t i = 0; i < vListOfNodeInformationObj.size(); ++i) {
+                    for (size_t i = 0; i < nodes.size(); ++i) {
                         os << fmt::format(
                             "[{:>03}] : {}",
-                            i, format_node(vListOfNodeInformationObj[i]->getNode())
+                            i, format_node(nodes[i]->getNode())
                         ) << std::endl;
                     }
+                }
+            }
+        }
+    },
+    {
+        "show:fingers",
+        {
+            .brief= "Show finger table of a node",
+            .usage= "show fingers <INDEX>",
+            .execute=
+            [this](const std::vector<std::string> &args, std::ostream &os, std::ostream &) {
+                std::optional<uint32_t> index{};
+                if (!args.empty())
+                    index = get_index(args[0]);
+                if (!index)
+                    throw std::invalid_argument("INDEX required!");
+
+                const auto &node = *nodes[*index];
+
+                const std::optional<NodeInformation::Node> *last_finger = nullptr;
+                bool printed_star = false;
+                for (size_t i = 0; i < NodeInformation::key_bits; ++i) {
+                    const auto &finger = node.getFinger(i);
+                    const auto *next_finger = (i < NodeInformation::key_bits - 1) ? &node.getFinger(i + 1) : nullptr;
+                    if (next_finger && last_finger && *last_finger == finger && *next_finger == finger) {
+                        if (!printed_star) {
+                            os << "*\n";
+                            printed_star = true;
+                        }
+                    } else {
+                        os << fmt::format(
+                            "[{:>03}] : {}",
+                            i, format_node(finger)
+                        ) << '\n';
+                        printed_star = false;
+                    }
+                    last_finger = &finger;
                 }
             }
         }
