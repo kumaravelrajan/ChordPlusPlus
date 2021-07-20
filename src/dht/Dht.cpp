@@ -261,7 +261,7 @@ void Dht::stabilize()
         }, [](const kj::Exception &e) {
             std::cout << "[PEER.stabilize] connection issue with successor" << std::endl
                       << e.getDescription().cStr() << std::endl;
-        }).wait(client.getWaitScope());
+        }).wait(client2.getWaitScope());
     }
 }
 
