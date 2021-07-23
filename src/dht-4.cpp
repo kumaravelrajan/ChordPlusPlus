@@ -68,7 +68,7 @@ int main(int argc, char *argv[])
         (
             "t,testCreateNodes",
             "Create multiple nodes on localhost for testing.",
-            cxxopts::value<int>()->default_value("1")
+            cxxopts::value<size_t>()->default_value("1")
         );
     auto args = options.parse(argc, argv);
 
@@ -78,9 +78,7 @@ int main(int argc, char *argv[])
     }
 
     // Get user input nodes to create
-    if (args.count("testCreateNodes")) {
-        dhtNodesToCreate = args["testCreateNodes"].as<size_t>();
-    }
+    dhtNodesToCreate = args["testCreateNodes"].as<size_t>();
 
     std::cout << "Config path: " << args["config"].as<std::string>() << std::endl;
 
