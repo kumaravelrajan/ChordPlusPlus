@@ -3,6 +3,8 @@
 #include <capnp/message.h>
 #include <capnp/serialize-packed.h>
 #include <capnp/ez-rpc.h>
+#include <spdlog/spdlog.h>
+#include "spdlog/sinks/basic_file_sink.h"
 
 using dht::Dht;
 using namespace std::chrono_literals;
@@ -40,7 +42,7 @@ void Dht::mainLoop()
      * (No blocking function calls in here, at least not for too long)
      */
 
-    std::cout << "[DHT] Main Loop Entered" << std::endl;
+    SPDLOG_INFO("[DHT] Main Loop Entered");
 
     while (true) {
         if (!m_dhtRunning) break;
@@ -65,7 +67,7 @@ void Dht::mainLoop()
         // std::cout << "Main loop, m_dhtRunning: " << m_dhtRunning << std::endl;
     }
 
-    std::cout << "[DHT] Exiting Main Loop" << std::endl;
+    SPDLOG_INFO("[DHT] Exiting Main Loop");
 }
 
 void Dht::setApi(std::unique_ptr<api::Api> api)

@@ -7,6 +7,10 @@
 #include "Dht.h"
 #include "api.h"
 #include "NodeInformation.h"
+#include "spdlog/spdlog.h"
+#include "spdlog/async.h"
+#include "spdlog/sinks/basic_file_sink.h"
+#include "spdlog/sinks/stdout_color_sinks.h"
 
 using namespace std::chrono_literals;
 
@@ -35,12 +39,10 @@ void StartDHT(size_t dhtNodesToCreate, uint16_t startPortForDhtNodes, const conf
                 .port= portinLocalHost,
             }));
 
-            std::cout << "=================================================================================="
-                      << std::endl;
-            printf("1. Node number %lu \n2. Node port %hu \n3. Node API port %hu\n", i,
+            SPDLOG_INFO("\n==================================================================================\n"
+                "1. Node number {} \n2. Node port {} \n3. Node API port {}\n"
+                "==================================================================================\n", i,
                    vListOfNodeInformationObj[i]->getPort(), portinLocalHost);
-            std::cout << "=================================================================================="
-                      << std::endl;
 
             ++portinLocalHost;
         }
@@ -54,8 +56,31 @@ void StartDHT(size_t dhtNodesToCreate, uint16_t startPortForDhtNodes, const conf
     std::cout << "[DHT main] dht destroyed!" << std::endl;
 }
 
+void SetSpdlogParams()
+{
+    spdlog::init_thread_pool(8192, 1);
+
+    auto stderr_sink = std::make_shared<spdlog::sinks::stderr_color_sink_mt >();
+    stderr_sink->set_level(spdlog::level::warn);
+
+    auto basic_file_sink = std::make_shared<spdlog::sinks::basic_file_sink_mt> ("./async_log.txt", true);
+    basic_file_sink->set_level(spdlog::level::trace);
+
+    std::vector<spdlog::sink_ptr> sinks {stderr_sink, basic_file_sink};
+
+    auto async_file_logger = std::make_shared<spdlog::async_logger>("async_file_logger", sinks.begin(), sinks.end(), spdlog::thread_pool(), spdlog::async_overflow_policy::block);
+    async_file_logger->set_pattern("[%Y-%m-%d %H:%M:%S.%e] %^[%l] [%s::%!()-#%#] %v%$");
+    spdlog::set_default_logger(async_file_logger);
+
+    spdlog::flush_every(std::chrono::seconds(5));
+
+    SPDLOG_ERROR("spdlog initialized.");
+}
+
 int main(int argc, char *argv[])
 {
+    SetSpdlogParams();
+
     size_t dhtNodesToCreate = 0;
 
     cxxopts::Options options("dht-4", "DHT module for the VoidPhone project");
