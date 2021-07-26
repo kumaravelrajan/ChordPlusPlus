@@ -36,9 +36,9 @@ void StartDHT(size_t dhtNodesToCreate, uint16_t startPortForDhtNodes, const conf
                 .port= portinLocalHost,
             }));
 
-            SPDLOG_INFO("\n==================================================================================\n"
-                "1. Node number {} \n2. Node port {} \n3. Node API port {}\n"
-                "==================================================================================\n", i,
+            SPDLOG_INFO("\n\t\t=================================================================================="
+                "\n\t\t1. Node number {} \n\t\t2. Node port {} \n\t\t3. Node API port {}"
+                "\n\t\t==================================================================================", i,
                    vListOfNodeInformationObj[i]->getPort(), portinLocalHost);
 
             ++portinLocalHost;
@@ -77,7 +77,6 @@ void InitSpdlog()
 
 int main(int argc, char *argv[])
 {
-
     InitSpdlog();
 
     size_t dhtNodesToCreate = 0;
@@ -108,12 +107,14 @@ int main(int argc, char *argv[])
 
     const auto conf = config::parseConfigFile(args["config"].as<std::string>());
 
-    SPDLOG_INFO("\np2p_address: {}\n"
-        "p2p_port: {}\n"
-        "api_address: {}\n"
-        "api_port: {}\n"
-        "bootstrapNode_address: {}\n"
-        "bootstrapNode_port: {}\n", conf.p2p_address, conf.p2p_port, conf.api_address, conf.api_port, conf.bootstrapNode_address, conf.bootstrapNode_port);
+    SPDLOG_INFO("\n\t\t=================================================================================="
+        "\n\t\tp2p_address: {}"
+        "\n\t\tp2p_port: {}"
+        "\n\t\tapi_address: {}"
+        "\n\t\tapi_port: {}"
+        "\n\t\tbootstrapNode_address: {}"
+        "\n\t\tbootstrapNode_port: {}"
+        "\n\t\t==================================================================================", conf.p2p_address, conf.p2p_port, conf.api_address, conf.api_port, conf.bootstrapNode_address, conf.bootstrapNode_port);
 
     // Note: Starting DHT (and implicitly API as well) at port portForDhtNode.
 
