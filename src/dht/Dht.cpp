@@ -3,8 +3,7 @@
 #include <capnp/message.h>
 #include <capnp/serialize-packed.h>
 #include <capnp/ez-rpc.h>
-#include <spdlog/spdlog.h>
-#include "spdlog/sinks/basic_file_sink.h"
+#include "centralLogControl.h"
 
 using dht::Dht;
 using namespace std::chrono_literals;

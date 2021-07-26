@@ -7,10 +7,7 @@
 #include "Dht.h"
 #include "api.h"
 #include "NodeInformation.h"
-#include "spdlog/spdlog.h"
-#include "spdlog/async.h"
-#include "spdlog/sinks/basic_file_sink.h"
-#include "spdlog/sinks/stdout_color_sinks.h"
+#include "centralLogControl.h"
 
 using namespace std::chrono_literals;
 
@@ -51,22 +48,23 @@ void StartDHT(size_t dhtNodesToCreate, uint16_t startPortForDhtNodes, const conf
     // Wait for input:
     std::cin.get();
 
-    std::cout << "[DHT main] destroying dht..." << std::endl;
+    SPDLOG_INFO("[DHT main] destroying dht...");
     vListOfDhtNodes.clear();
-    std::cout << "[DHT main] dht destroyed!" << std::endl;
+    SPDLOG_INFO("[DHT main] dht destroyed!");
 }
 
-void SetSpdlogParams()
+void InitSpdlog()
 {
     spdlog::init_thread_pool(8192, 1);
 
-    auto stderr_sink = std::make_shared<spdlog::sinks::stderr_color_sink_mt >();
-    stderr_sink->set_level(spdlog::level::warn);
+    auto stdout_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt >();
+    stdout_sink->set_level(spdlog::level::warn);
+    stdout_sink->set_color_mode(spdlog::color_mode::always);
 
     auto basic_file_sink = std::make_shared<spdlog::sinks::basic_file_sink_mt> ("./async_log.txt", true);
     basic_file_sink->set_level(spdlog::level::trace);
 
-    std::vector<spdlog::sink_ptr> sinks {stderr_sink, basic_file_sink};
+    std::vector<spdlog::sink_ptr> sinks {stdout_sink, basic_file_sink};
 
     auto async_file_logger = std::make_shared<spdlog::async_logger>("async_file_logger", sinks.begin(), sinks.end(), spdlog::thread_pool(), spdlog::async_overflow_policy::block);
     async_file_logger->set_pattern("[%Y-%m-%d %H:%M:%S.%e] %^[%l] [%s::%!()-#%#] %v%$");
@@ -74,12 +72,13 @@ void SetSpdlogParams()
 
     spdlog::flush_every(std::chrono::seconds(5));
 
-    SPDLOG_ERROR("spdlog initialized.");
+    SPDLOG_INFO("spdlog initialized.");
 }
 
 int main(int argc, char *argv[])
 {
-    SetSpdlogParams();
+
+    InitSpdlog();
 
     size_t dhtNodesToCreate = 0;
 
@@ -105,17 +104,16 @@ int main(int argc, char *argv[])
     // Get user input nodes to create
     dhtNodesToCreate = args["testCreateNodes"].as<size_t>();
 
-    std::cout << "Config path: " << args["config"].as<std::string>() << std::endl;
+    SPDLOG_INFO("Config path: {}", args["config"].as<std::string>());
 
     const auto conf = config::parseConfigFile(args["config"].as<std::string>());
 
-    std::cout
-        << "p2p_address: " << conf.p2p_address << "\n"
-        << "p2p_port:    " << conf.p2p_port << "\n"
-        << "api_address: " << conf.api_address << "\n"
-        << "api_port:    " << conf.api_port << "\n"
-        << "bootstrapNode_address:    " << conf.bootstrapNode_address << "\n"
-        << "bootstrapNode_port:    " << conf.bootstrapNode_port << std::endl;
+    SPDLOG_INFO("\np2p_address: {}\n"
+        "p2p_port: {}\n"
+        "api_address: {}\n"
+        "api_port: {}\n"
+        "bootstrapNode_address: {}\n"
+        "bootstrapNode_port: {}\n", conf.p2p_address, conf.p2p_port, conf.api_address, conf.api_port, conf.bootstrapNode_address, conf.bootstrapNode_port);
 
     // Note: Starting DHT (and implicitly API as well) at port portForDhtNode.
 
