@@ -53,12 +53,18 @@ void StartDHT(size_t dhtNodesToCreate, uint16_t startPortForDhtNodes, const conf
     SPDLOG_INFO("[DHT main] dht destroyed!");
 }
 
-void InitSpdlog()
+void InitSpdlog(int &consoleLogLevel)
 {
     spdlog::init_thread_pool(8192, 1);
 
     auto stdout_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt >();
-    stdout_sink->set_level(spdlog::level::warn);
+
+    if(consoleLogLevel >= spdlog::level::trace || consoleLogLevel <= spdlog::level::off) {
+        stdout_sink->set_level((spdlog::level::level_enum)consoleLogLevel);
+    } else {
+        stdout_sink->set_level(spdlog::level::warn);
+    }
+
     stdout_sink->set_color_mode(spdlog::color_mode::always);
 
     auto basic_file_sink = std::make_shared<spdlog::sinks::basic_file_sink_mt> ("./async_log.txt", true);
@@ -77,9 +83,8 @@ void InitSpdlog()
 
 int main(int argc, char *argv[])
 {
-    InitSpdlog();
-
     size_t dhtNodesToCreate = 0;
+    int consoleLogLevel = 0;
 
     cxxopts::Options options("dht-4", "DHT module for the VoidPhone project");
     options.add_options()
@@ -92,6 +97,11 @@ int main(int argc, char *argv[])
             "t,testCreateNodes",
             "Create multiple nodes on localhost for testing.",
             cxxopts::value<size_t>()->default_value("1")
+        )
+        (
+            "l,logMode",
+            "Set console log mode visibility (int): 1 - trace; 2 - debug; 3 - info; 4 - warning; 5 - error; 6 - critical; 7 - off\n(Complete logs are present in ./async-log.txt)",
+            cxxopts::value<int>()->default_value("3")
         );
     auto args = options.parse(argc, argv);
 
@@ -102,6 +112,12 @@ int main(int argc, char *argv[])
 
     // Get user input nodes to create
     dhtNodesToCreate = args["testCreateNodes"].as<size_t>();
+
+    // Get user set console log level
+    consoleLogLevel = args["logMode"].as<int>();
+
+    // Initialize spdlog
+    InitSpdlog(consoleLogLevel);
 
     SPDLOG_INFO("Config path: {}", args["config"].as<std::string>());
 
