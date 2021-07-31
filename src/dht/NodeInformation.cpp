@@ -84,7 +84,7 @@ void NodeInformation::setFinger(size_t index, const std::optional<Node> &node)
         throw std::out_of_range("index out of bounds");
     m_fingerTable[index] = node;
 }
-std::optional<NodeInformation::Node> &NodeInformation::getSuccessor()
+const std::optional<NodeInformation::Node> &NodeInformation::getSuccessor()
 {
     std::shared_lock f{m_fingerTableMutex};
     for (auto &finger : m_fingerTable)

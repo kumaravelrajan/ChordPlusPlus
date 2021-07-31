@@ -88,7 +88,7 @@ public:
      */
     void setFinger(size_t index, const std::optional<Node> &node = {});
 
-    [[nodiscard]] std::optional<Node> &getSuccessor();
+    [[nodiscard]] const std::optional<Node> &getSuccessor();
     void setSuccessor(const std::optional<Node> &node = {});
     [[nodiscard]] const std::optional<Node> &getPredecessor() const;
     void setPredecessor(const std::optional<Node> &node = {});
