@@ -1,12 +1,6 @@
 #include "api.h"
-#include "message_data.h"
 #include <iostream>
-#include <chrono>
-#include <memory>
-#include <cstdlib>
 #include <utility>
-#include <algorithm>
-#include <util.h>
 
 using namespace api;
 
@@ -17,7 +11,7 @@ Api::Api(const Options &o):
     m_isRunning = true;
     start_accept();
     m_serviceFuture = std::async(std::launch::async, [this]() {
-        std::cout << "[API] run()" << std::endl;
+        SPDLOG_INFO("run()");
         while (m_isRunning) {
             try {
                 m_service->run();
@@ -26,7 +20,7 @@ Api::Api(const Options &o):
                 std::cerr << e.what() << std::endl;
             }
         }
-        std::cout << "[API] run() returned" << std::endl;
+        SPDLOG_INFO("run() returned");
     });
 }
 

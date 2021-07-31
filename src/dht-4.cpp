@@ -4,7 +4,7 @@
 #include <config.h>
 #include <entry.h>
 #include <memory>
-#include <centralLogControl.h>
+#include <logging/centralLogControl.h>
 
 using namespace std::literals;
 

@@ -11,6 +11,7 @@
 #include <functional>
 #include <type_traits>
 #include <map>
+#include <centralLogControl.h>
 #include "message_data.h"
 #include "request.h"
 
@@ -54,13 +55,13 @@ namespace api
     private:
         void start_accept();
 
-        std::unique_ptr<asio::io_service> m_service;
-        std::unique_ptr<tcp::acceptor> m_acceptor;
+        std::unique_ptr<asio::io_service> m_service{};
+        std::unique_ptr<tcp::acceptor> m_acceptor{};
         std::future<void> m_serviceFuture;
 
-        std::vector<std::unique_ptr<Connection>> m_openConnections;
+        std::vector<std::unique_ptr<Connection>> m_openConnections{};
 
-        std::map<uint16_t, request_handler_t> m_requestHandlers;
+        std::map<uint16_t, request_handler_t> m_requestHandlers{};
 
         std::atomic_bool m_isRunning = false;
 

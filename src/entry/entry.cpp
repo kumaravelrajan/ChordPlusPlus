@@ -1,6 +1,6 @@
 #include "entry.h"
 #include <regex>
-#include <centralLogControl.h>
+#include "../logging/centralLogControl.h"
 
 using namespace std::literals;
 using entry::Command;
@@ -75,6 +75,7 @@ Entry::~Entry()
     // Asynchronously delete dht objects
     std::vector<std::future<void>> deletions(DHTs.size());
     std::transform(DHTs.begin(), DHTs.end(), deletions.begin(), [](std::unique_ptr<dht::Dht> &dht) {
+        std::this_thread::sleep_for(50ms);
         return std::async(std::launch::async, [&dht] { dht = nullptr; });
     });
     deletions.clear(); // await deletions

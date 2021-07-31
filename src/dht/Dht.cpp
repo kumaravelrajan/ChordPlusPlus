@@ -3,7 +3,7 @@
 #include <capnp/message.h>
 #include <capnp/serialize-packed.h>
 #include <capnp/ez-rpc.h>
-#include "config/centralLogControl.h"
+#include "logging/centralLogControl.h"
 
 using dht::Dht;
 using namespace std::chrono_literals;

@@ -107,10 +107,11 @@ CPMAddPackage(
 CPMAddPackage("gh:gabime/spdlog@1.8.5")
 
 add_subdirectory(src)
+add_subdirectory(src/api)
 add_subdirectory(src/config)
 add_subdirectory(src/dht)
-add_subdirectory(src/api)
-add_subdirectory(src/util)
 add_subdirectory(src/entry)
+add_subdirectory(src/logging)
+add_subdirectory(src/util)
 
 add_subdirectory(test)
