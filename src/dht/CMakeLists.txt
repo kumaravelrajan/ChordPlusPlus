@@ -1,6 +1,6 @@
 set(LIBRARY_NAME dht)
 
-set(MODULE_HEADERS Dht.h)
+set(MODULE_HEADERS Dht.h ${CMAKE_SOURCE_DIR}/src/centralLogControl.h)
 
 set(MODULE_SOURCES Dht.cpp NodeInformation.cpp Peer.cpp)
 
@@ -11,6 +11,8 @@ add_library(lib::${LIBRARY_NAME} ALIAS ${LIBRARY_NAME})
 
 target_include_directories(
 	${LIBRARY_NAME} PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>)
+target_include_directories(
+        ${LIBRARY_NAME} PRIVATE ${CMAKE_SOURCE_DIR}/src)
 
 target_compile_features(${LIBRARY_NAME} PUBLIC cxx_std_20)
 

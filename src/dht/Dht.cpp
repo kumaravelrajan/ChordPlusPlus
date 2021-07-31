@@ -3,6 +3,7 @@
 #include <capnp/message.h>
 #include <capnp/serialize-packed.h>
 #include <capnp/ez-rpc.h>
+#include "centralLogControl.h"
 
 using dht::Dht;
 using namespace std::chrono_literals;
@@ -40,10 +41,7 @@ void Dht::mainLoop()
      * (No blocking function calls in here, at least not for too long)
      */
 
-    std::this_thread::sleep_for(5s);
-
-    std::cout << "[DHT] Main Loop Entered" << std::endl;
-
+    SPDLOG_INFO("[DHT] Main Loop Entered");
 
     while (true) {
         if (!m_dhtRunning) break;
@@ -69,7 +67,7 @@ void Dht::mainLoop()
         // std::cout << "Main loop, m_dhtRunning: " << m_dhtRunning << std::endl;
     }
 
-    std::cout << "[DHT] Exiting Main Loop" << std::endl;
+    SPDLOG_INFO("[DHT] Exiting Main Loop");
 }
 
 void Dht::setApi(std::unique_ptr<api::Api> api)
@@ -135,6 +133,7 @@ std::vector<uint8_t> Dht::onDhtPut(const api::Message_DHT_PUT &message_data, std
     } else {
         std::cout << "[DHT.put] No Successor got!" << std::endl;
     }
+
     for (uint8_t i{0}; !cancelled && i < 10; ++i)
         std::this_thread::sleep_for(1s);
     return message_data.m_bytes;
