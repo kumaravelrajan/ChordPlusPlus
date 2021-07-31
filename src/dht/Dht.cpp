@@ -43,6 +43,8 @@ void Dht::mainLoop()
 
     SPDLOG_INFO("[DHT] Main Loop Entered");
 
+    std::this_thread::sleep_for(5s);
+
     while (true) {
         if (!m_dhtRunning) break;
         if (!m_nodeInformation->getSuccessor()) {

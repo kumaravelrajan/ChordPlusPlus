@@ -44,7 +44,7 @@ Entry::Entry(const config::Configuration &conf) : Entry()
                 "\t\t1. Node number   : {}\n"
                 "\t\t2. Node port     : {}\n"
                 "\t\t3. Node API port : {}\n"
-                "\t\t==================================================================================\n",
+                "\t\t==================================================================================",
                 i, dht_port, api_port
             );
 
@@ -70,10 +70,17 @@ Entry::Entry(const config::Configuration &conf) : Entry()
 
 Entry::~Entry()
 {
-    SPDLOG_INFO("[ENTRY] exiting...\n");
+    SPDLOG_INFO("[ENTRY] exiting...");
+
+    // Asynchronously delete dht objects
+    std::vector<std::future<void>> deletions(DHTs.size());
+    std::transform(DHTs.begin(), DHTs.end(), deletions.begin(), [](std::unique_ptr<dht::Dht> &dht) {
+        return std::async(std::launch::async, [&dht] { dht = nullptr; });
+    });
+    deletions.clear(); // await deletions
     DHTs.clear();
     nodes.clear();
-    SPDLOG_INFO("[ENTRY] Dht Stopped.\n");
+    SPDLOG_INFO("[ENTRY] Dht Stopped.");
 }
 
 int Entry::mainLoop()

@@ -6,13 +6,15 @@
 #include <memory>
 #include <centralLogControl.h>
 
-void InitSpdlog(int &consoleLogLevel)
+using namespace std::literals;
+
+void InitSpdlog(const int &consoleLogLevel, const std::string &logfilePath)
 {
     spdlog::init_thread_pool(8192, 1);
 
     auto stdout_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
 
-    if (consoleLogLevel >= spdlog::level::trace || consoleLogLevel <= spdlog::level::off) {
+    if (consoleLogLevel >= 0 && consoleLogLevel < spdlog::level::n_levels) {
         stdout_sink->set_level((spdlog::level::level_enum) consoleLogLevel);
     } else {
         stdout_sink->set_level(spdlog::level::warn);
@@ -20,7 +22,7 @@ void InitSpdlog(int &consoleLogLevel)
 
     stdout_sink->set_color_mode(spdlog::color_mode::always);
 
-    auto basic_file_sink = std::make_shared<spdlog::sinks::basic_file_sink_mt>("./async_log.txt", true);
+    auto basic_file_sink = std::make_shared<spdlog::sinks::basic_file_sink_mt>(logfilePath, true);
     basic_file_sink->set_level(spdlog::level::trace);
 
     std::vector<spdlog::sink_ptr> sinks{stdout_sink, basic_file_sink};
@@ -31,15 +33,13 @@ void InitSpdlog(int &consoleLogLevel)
     async_file_logger->set_pattern("[%Y-%m-%d %H:%M:%S.%e] %^[%l] [%s::%!()-#%#] %v%$");
     spdlog::set_default_logger(async_file_logger);
 
-    spdlog::flush_every(std::chrono::seconds(5));
+    spdlog::flush_every(5s);
 
     SPDLOG_INFO("spdlog initialized.");
 }
 
 int main(int argc, char *argv[])
 {
-    int consoleLogLevel = 0;
-
     cxxopts::Options options("dht-4", "DHT module for the VoidPhone project");
     options.add_options()
         (
@@ -48,14 +48,20 @@ int main(int argc, char *argv[])
         )
         ("h,help", "Print usage")
         (
-            "t,testCreateNodes",
+            "n,testNodeAmount",
             "Create multiple nodes on localhost for testing.\n0 means no extra nodes.",
             cxxopts::value<uint64_t>()->default_value("0")
         )
         (
             "l,logMode",
-            "Set console log mode visibility (int): 1 - trace; 2 - debug; 3 - info; 4 - warning; 5 - error; 6 - critical; 7 - off\n(Complete logs are present in ./async-log.txt)",
+            "Set console log mode visibility (int): 0 - trace; 1 - debug; 2 - info; 3 - warning; 4 - error; 5 - critical; 6 - off"
+            "\n(Complete logs are present in ./async-log.txt)",
             cxxopts::value<int>()->default_value("3")
+        )
+        (
+            "o,logOutput",
+            "Specify path for log file.\nDefault: ./log.txt",
+            cxxopts::value<std::string>()->default_value("./log.txt")
         );
     auto args = options.parse(argc, argv);
 
@@ -69,15 +75,12 @@ int main(int argc, char *argv[])
     auto conf = config::parseConfigFile(args["config"].as<std::string>());
 
     // Get user input nodes to create
-    if (args.count("testCreateNodes")) {
-        conf.extra_debug_nodes = args["testCreateNodes"].as<uint64_t>();
+    if (args.count("testNodeAmount")) {
+        conf.extra_debug_nodes = args["testNodeAmount"].as<uint64_t>();
     }
 
-    // Get user set console log level
-    consoleLogLevel = args["logMode"].as<int>();
-
     // Initialize spdlog
-    InitSpdlog(consoleLogLevel);
+    InitSpdlog(args["logMode"].as<int>(), args["logOutput"].as<std::string>());
 
     SPDLOG_INFO("Config path: {}", args["config"].as<std::string>());
 
