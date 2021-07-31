@@ -1,6 +1,6 @@
 set(LIBRARY_NAME dht)
 
-set(MODULE_HEADERS Dht.h ${CMAKE_SOURCE_DIR}/src/centralLogControl.h)
+set(MODULE_HEADERS Dht.h)
 
 set(MODULE_SOURCES Dht.cpp NodeInformation.cpp Peer.cpp)
 
@@ -19,6 +19,7 @@ target_compile_features(${LIBRARY_NAME} PUBLIC cxx_std_20)
 set_target_properties(${LIBRARY_NAME} PROPERTIES LINKER_LANGUAGE CXX)
 
 target_link_libraries(${LIBRARY_NAME} lib::api)
+target_link_libraries(${LIBRARY_NAME} lib::util)
 target_link_libraries(${LIBRARY_NAME} spdlog::spdlog)
 target_link_libraries(${LIBRARY_NAME} CapnProto::capnp-rpc)
 target_link_libraries(${LIBRARY_NAME} CapnProto::kj)

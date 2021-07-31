@@ -1,6 +1,6 @@
 #include "entry.h"
 #include <regex>
-#include <spdlog/fmt/fmt.h>
+#include <centralLogControl.h>
 
 using namespace std::literals;
 using entry::Command;
@@ -38,17 +38,15 @@ Entry::Entry(const config::Configuration &conf) : Entry()
 
     for (size_t i = 0; i <= conf.extra_debug_nodes; i++) {
         {
-            std::cout << "=================================================================================="
-                      << std::endl;
-            std::cout << fmt::format(
-                ""
-                "1. Node number   : {}\n"
-                "2. Node port     : {}\n"
-                "3. Node API port : {}",
+            SPDLOG_INFO(
+                "\n"
+                "\t\t==================================================================================\n"
+                "\t\t1. Node number   : {}\n"
+                "\t\t2. Node port     : {}\n"
+                "\t\t3. Node API port : {}\n"
+                "\t\t==================================================================================\n",
                 i, dht_port, api_port
-            ) << std::endl;
-            std::cout << "=================================================================================="
-                      << std::endl;
+            );
 
             nodes.push_back(std::make_shared<NodeInformation>("127.0.0.1", dht_port));
 
@@ -72,10 +70,10 @@ Entry::Entry(const config::Configuration &conf) : Entry()
 
 Entry::~Entry()
 {
-    std::cout << "[ENTRY] exiting..." << std::endl;
+    SPDLOG_INFO("[ENTRY] exiting...\n");
     DHTs.clear();
     nodes.clear();
-    std::cout << "[ENTRY] Dht Stopped." << std::endl;
+    SPDLOG_INFO("[ENTRY] Dht Stopped.\n");
 }
 
 int Entry::mainLoop()

@@ -1,6 +1,6 @@
 set(LIBRARY_NAME config)
 
-set(MODULE_HEADERS config.h)
+set(MODULE_HEADERS config.h centralLogControl.h)
 
 set(MODULE_SOURCES config.cpp)
 
