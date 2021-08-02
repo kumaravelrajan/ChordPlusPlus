@@ -5,6 +5,10 @@
 #include <capnp/ez-rpc.h>
 #include "logging/centralLogControl.h"
 
+#ifndef LOG_ERR
+#define LOG_ERR(e) LOG_WARN("Exception in request:\n\t\t{}", e.getDescription().cStr())
+#endif
+
 using dht::Dht;
 using namespace std::chrono_literals;
 
@@ -26,7 +30,7 @@ void Dht::runServer()
         mainLoop();
     });
 
-    while (m_dhtRunning) {
+    while (!m_mainLoopExited) {
         waitScope.poll();
     }
 
@@ -41,12 +45,12 @@ void Dht::mainLoop()
      * (No blocking function calls in here, at least not for too long)
      */
 
-    SPDLOG_INFO("[DHT] Main Loop Entered");
+    SPDLOG_INFO("Main Loop Entered");
 
     std::this_thread::sleep_for(5s);
 
     while (true) {
-        if (!m_dhtRunning) break;
+        if (m_dhtCancelled) break;
         if (!m_nodeInformation->getSuccessor()) {
             if (m_nodeInformation->getBootstrapNode() &&
                 m_nodeInformation->getBootstrapNode() != m_nodeInformation->getNode()) {
@@ -56,20 +60,20 @@ void Dht::mainLoop()
             }
         }
 
-        if (!m_dhtRunning) break;
+        if (m_dhtCancelled) break;
         stabilize();
-        if (!m_dhtRunning) break;
+        if (m_dhtCancelled) break;
         fixFingers();
-        if (!m_dhtRunning) break;
+        if (m_dhtCancelled) break;
         checkPredecessor();
-        if (!m_dhtRunning) break;
+        if (m_dhtCancelled) break;
 
         // Wait one second
         std::this_thread::sleep_for(1s);
-        // std::cout << "Main loop, m_dhtRunning: " << m_dhtRunning << std::endl;
     }
 
-    SPDLOG_INFO("[DHT] Exiting Main Loop");
+    SPDLOG_INFO("Exiting Main Loop");
+    m_mainLoopExited = true;
 }
 
 void Dht::setApi(std::unique_ptr<api::Api> api)
@@ -106,16 +110,19 @@ std::optional<NodeInformation::Node> Dht::getSuccessor(NodeInformation::id_type 
 
 std::vector<uint8_t> Dht::onDhtPut(const api::Message_DHT_PUT &message_data, std::atomic_bool &cancelled)
 {
-    // TODO
-
-    std::cout << "[DHT] DHT_PUT" << std::endl;
-
-    std::cout
-        << "[DHT.put] size:        " << std::to_string(message_data.m_header.size) << std::endl
-        << "[DHT.put] type:        " << std::to_string(message_data.m_header.msg_type) << std::endl
-        << "[DHT.put] ttl:         " << std::to_string(message_data.m_headerExtend.ttl) << std::endl
-        << "[DHT.put] replication: " << std::to_string(message_data.m_headerExtend.replication) << std::endl
-        << "[DHT.put] reserved:    " << std::to_string(message_data.m_headerExtend.reserved) << std::endl;
+    SPDLOG_INFO(
+        "DHT PUT\n"
+        "\t\tsize:        {}\n"
+        "\t\ttype:        {}\n"
+        "\t\tttl:         {}\n"
+        "\t\treplication: {}\n"
+        "\t\treserved:    {}",
+        std::to_string(message_data.m_header.size),
+        std::to_string(message_data.m_header.msg_type),
+        std::to_string(message_data.m_headerExtend.ttl),
+        std::to_string(message_data.m_headerExtend.replication),
+        std::to_string(message_data.m_headerExtend.reserved)
+    );
 
     // Hashing received key to convert it into length of 20 bytes
     std::string sKey{message_data.key.begin(), message_data.key.end()};
@@ -125,15 +132,14 @@ std::vector<uint8_t> Dht::onDhtPut(const api::Message_DHT_PUT &message_data, std
                ? std::chrono::seconds(message_data.m_headerExtend.ttl)
                : std::chrono::system_clock::duration::max();
 
-    std::cout << "[DHT.put] getSuccessor" << std::endl;
     auto successor = getSuccessor(finalHashedKey);
 
     if (successor) {
-        std::cout << "[DHT.put] Successor got: \"" << successor.value().getIp() << "\"" << std::endl;
+        SPDLOG_INFO("Successor found: {}:{}", successor->getIp(), successor->getPort());
         getPeerImpl().setData(*successor, message_data.key, message_data.value,
                               message_data.m_headerExtend.ttl);
     } else {
-        std::cout << "[DHT.put] No Successor got!" << std::endl;
+        SPDLOG_INFO("No Successor found!");
     }
 
     for (uint8_t i{0}; !cancelled && i < 10; ++i)
@@ -143,31 +149,29 @@ std::vector<uint8_t> Dht::onDhtPut(const api::Message_DHT_PUT &message_data, std
 
 std::vector<uint8_t> Dht::onDhtGet(const api::Message_KEY &message_data, std::atomic_bool &cancelled)
 {
-    // TODO
-
     (void) cancelled;
 
-    std::cout << "[DHT] DHT_GET" << std::endl;
-
-    std::cout
-        << "[DHT.get] size:        " << std::to_string(message_data.m_header.size) << std::endl
-        << "[DHT.get] type:        " << std::to_string(message_data.m_header.msg_type) << std::endl;
+    SPDLOG_INFO(
+        "DHT GET\n"
+        "\t\tsize:        {}\n"
+        "\t\ttype:        {}",
+        std::to_string(message_data.m_header.size),
+        std::to_string(message_data.m_header.msg_type)
+    );
 
     // Hashing received key to convert it into length of 20 bytes
     std::string sKey{message_data.key.begin(), message_data.key.end()};
     NodeInformation::id_type finalHashedKey = NodeInformation::hash_sha1(sKey);
 
-    std::cout << "[DHT.get] getSuccessor" << std::endl;
     auto successor = getSuccessor(finalHashedKey);
 
     std::optional<std::vector<uint8_t>> response{};
 
     if (successor) {
-        std::cout << "[DHT.get] Successor got: " << successor->getIp() << ":" << successor->getPort()
-                  << std::endl;
+        SPDLOG_INFO("Successor found: {}:{}", successor->getIp(), successor->getPort());
         response = getPeerImpl().getData(*successor, message_data.key);
     } else {
-        std::cout << "[DHT.get] No Successor got!" << std::endl;
+        SPDLOG_INFO("No Successor found!");
     }
 
     if (response) {
@@ -178,25 +182,21 @@ std::vector<uint8_t> Dht::onDhtGet(const api::Message_KEY &message_data, std::at
 }
 
 
-/*
- *
- *
- *
- */
-
-
+// ===============================
+// ======[ DHT MAINTENANCE ]======
+// ===============================
 
 
 void Dht::create()
 {
-    std::cout << "[PEER.create]" << std::endl;
+    SPDLOG_INFO("");
     m_nodeInformation->setPredecessor();
     m_nodeInformation->setSuccessor(m_nodeInformation->getNode());
 }
 
 void Dht::join(const NodeInformation::Node &node)
 {
-    std::cout << "[PEER.join]" << std::endl;
+    LOG_GET
     m_nodeInformation->setPredecessor();
 
     capnp::EzRpcClient client{node.getIp(), node.getPort()};
@@ -205,20 +205,21 @@ void Dht::join(const NodeInformation::Node &node)
     req.setId(capnp::Data::Builder(
         kj::heapArray<kj::byte>(m_nodeInformation->getId().begin(), m_nodeInformation->getId().end())));
 
-    return req.send().then([this](capnp::Response<Peer::GetSuccessorResults> &&response) {
-        std::cout << "[PEER.join] got response" << std::endl;
+    return req.send().then([LOG_CAPTURE, this](capnp::Response<Peer::GetSuccessorResults> &&response) {
+        LOG_INFO("got response from node");
         auto successor = PeerImpl::nodeFromReader(response.getNode());
         m_nodeInformation->setSuccessor(successor);
-    }, [](const kj::Exception &e) {
-        std::cout << "[PEER.join] Exception in request" << std::endl << e.getDescription().cStr() << std::endl;
+    }, [LOG_CAPTURE](const kj::Exception &e) {
+        LOG_ERR(e);
     }).wait(client.getWaitScope());
 }
 
 void Dht::stabilize()
 {
+    LOG_GET
     auto successor = m_nodeInformation->getSuccessor();
     if (!successor) {
-        // std::cout << "[PEER.stabilize] no successor" << std::endl;
+        LOG_INFO("no successor");
         return;
     }
 
@@ -226,14 +227,14 @@ void Dht::stabilize()
     auto cap = client.getMain<Peer>();
     auto req = cap.getPredecessorRequest();
 
-    auto predOfSuccessor = req.send().then([](capnp::Response<Peer::GetPredecessorResults> &&response) {
+    auto predOfSuccessor = req.send().then([LOG_CAPTURE](capnp::Response<Peer::GetPredecessorResults> &&response) {
         auto predOfSuccessor = PeerImpl::nodeFromReader(response.getNode());
         if (!predOfSuccessor) {
-            // std::cout << "[PEER.stabilize] closest preceding empty response" << std::endl;
+            LOG_INFO("closest preceding empty response");
         }
         return predOfSuccessor;
-    }, [](const kj::Exception &e) {
-        std::cout << "[PEER.stabilize] Exception in request" << std::endl << e.getDescription().cStr() << std::endl;
+    }, [LOG_CAPTURE](const kj::Exception &e) {
+        LOG_WARN("connection issue with successor\n\t\t{}", e.getDescription().cStr());
         return std::optional<NodeInformation::Node>{};
     }).wait(client.getWaitScope());
 
@@ -246,22 +247,20 @@ void Dht::stabilize()
         auto cap2 = client2.getMain<Peer>();
         auto req2 = cap2.notifyRequest();
         PeerImpl::buildNode(req2.getNode(), m_nodeInformation->getNode());
-        return req2.send().then([](capnp::Response<Peer::NotifyResults> &&) {
-            // std::cout << "[PEER.stabilize] got response" << std::endl;
-        }, [](const kj::Exception &e) {
-            std::cout << "[PEER.stabilize] connection issue with predecessor of successor" << std::endl
-                      << e.getDescription().cStr() << std::endl;
+        return req2.send().then([LOG_CAPTURE](capnp::Response<Peer::NotifyResults> &&) {
+            LOG_INFO("got response from predecessor of successor");
+        }, [LOG_CAPTURE](const kj::Exception &e) {
+            LOG_WARN("connection issue with predecessor of successor\n\t\t{}", e.getDescription().cStr());
         }).wait(client2.getWaitScope());
     } else {
         capnp::EzRpcClient client2{successor->getIp(), successor->getPort()};
         auto cap2 = client2.getMain<Peer>();
         auto req2 = cap2.notifyRequest();
         PeerImpl::buildNode(req2.getNode(), m_nodeInformation->getNode());
-        return req2.send().then([](capnp::Response<Peer::NotifyResults> &&) {
-            // std::cout << "[PEER.stabilize] got response" << std::endl;
-        }, [](const kj::Exception &e) {
-            std::cout << "[PEER.stabilize] connection issue with successor" << std::endl
-                      << e.getDescription().cStr() << std::endl;
+        return req2.send().then([LOG_CAPTURE](capnp::Response<Peer::NotifyResults> &&) {
+            LOG_INFO("got response from successor");
+        }, [LOG_CAPTURE](const kj::Exception &e) {
+            LOG_WARN("connection issue with successor\n\t\t{}", e.getDescription().cStr());
         }).wait(client2.getWaitScope());
     }
 }
@@ -278,6 +277,7 @@ void Dht::fixFingers()
 
 void Dht::checkPredecessor()
 {
+    LOG_GET
     if (!m_nodeInformation->getPredecessor())
         return;
 
@@ -286,10 +286,10 @@ void Dht::checkPredecessor()
     };
     auto cap = client.getMain<Peer>();
     auto req = cap.getPredecessorRequest(); // This request doesn't matter, it is used as a ping
-    return req.send().then([](capnp::Response<Peer::GetPredecessorResults> &&) {
-        // std::cout << "[PEER.checkPredecessor] got response" << std::endl;
-    }, [this](const kj::Exception &) {
-        // std::cout << "[PEER.checkPredecessor] Exception in request" << std::endl << e.getDescription().cStr() << std::endl;
+    return req.send().then([LOG_CAPTURE](capnp::Response<Peer::GetPredecessorResults> &&) {
+        LOG_INFO("got response from predecessor");
+    }, [LOG_CAPTURE, this](const kj::Exception &e) {
+        LOG_ERR(e);
         // Delete predecessor
         m_nodeInformation->setPredecessor();
     }).wait(client.getWaitScope());

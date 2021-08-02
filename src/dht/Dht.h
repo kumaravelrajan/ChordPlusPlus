@@ -26,7 +26,7 @@ namespace dht
         {}
         ~Dht()
         {
-            m_dhtRunning = false;
+            m_dhtCancelled = true;
             m_api = nullptr;
             m_mainLoop.wait(); // This happens after the destructor anyway, but this way it is clearer
         };
@@ -64,7 +64,8 @@ namespace dht
         std::shared_ptr<NodeInformation> m_nodeInformation;
         std::future<void> m_mainLoop;
         std::unique_ptr<api::Api> m_api;
-        std::atomic_bool m_dhtRunning{true};
+        std::atomic_bool m_dhtCancelled{false};
+        std::atomic_bool m_mainLoopExited{false};
         std::optional<std::reference_wrapper<PeerImpl>> m_peerImpl;
         std::optional<std::reference_wrapper<const kj::Executor>> m_executor;
         std::atomic<size_t> nextFinger{0};
