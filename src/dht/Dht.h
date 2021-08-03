@@ -26,7 +26,7 @@ namespace dht
         {}
         ~Dht()
         {
-            m_dhtRunning = false;
+            m_dhtCancelled = true;
             m_api = nullptr;
             m_mainLoop.wait(); // This happens after the destructor anyway, but this way it is clearer
         };
@@ -49,6 +49,14 @@ namespace dht
          */
         void mainLoop();
 
+        void create();
+        void join(const NodeInformation::Node &node);
+        void stabilize();
+        void fixFingers();
+        void checkPredecessor();
+
+
+
         [[nodiscard]] std::optional<NodeInformation::Node> getSuccessor(NodeInformation::id_type key);
         std::vector<uint8_t> onDhtPut(const api::Message_DHT_PUT &m, std::atomic_bool &cancelled);
         std::vector<uint8_t> onDhtGet(const api::Message_KEY &m, std::atomic_bool &cancelled);
@@ -56,9 +64,11 @@ namespace dht
         std::shared_ptr<NodeInformation> m_nodeInformation;
         std::future<void> m_mainLoop;
         std::unique_ptr<api::Api> m_api;
-        std::atomic_bool m_dhtRunning{true};
+        std::atomic_bool m_dhtCancelled{false};
+        std::atomic_bool m_mainLoopExited{false};
         std::optional<std::reference_wrapper<PeerImpl>> m_peerImpl;
         std::optional<std::reference_wrapper<const kj::Executor>> m_executor;
+        std::atomic<size_t> nextFinger{0};
 
         // Getters
 

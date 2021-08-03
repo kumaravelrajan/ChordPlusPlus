@@ -1,4 +1,5 @@
 #include "NodeInformation.h"
+#include <centralLogControl.h>
 
 using namespace std::chrono_literals;
 
@@ -70,7 +71,7 @@ NodeInformation::id_type NodeInformation::getId() const
 {
     return m_node.getId();
 }
-const std::optional<NodeInformation::Node> &NodeInformation::getFinger(size_t index)
+const std::optional<NodeInformation::Node> &NodeInformation::getFinger(size_t index) const
 {
     std::shared_lock l{m_fingerTableMutex};
     if (index >= m_fingerTable.size())
@@ -84,7 +85,7 @@ void NodeInformation::setFinger(size_t index, const std::optional<Node> &node)
         throw std::out_of_range("index out of bounds");
     m_fingerTable[index] = node;
 }
-std::optional<NodeInformation::Node> &NodeInformation::getSuccessor()
+const std::optional<NodeInformation::Node> &NodeInformation::getSuccessor()
 {
     std::shared_lock f{m_fingerTableMutex};
     for (auto &finger : m_fingerTable)
@@ -96,7 +97,7 @@ void NodeInformation::setSuccessor(const std::optional<Node> &node)
     std::unique_lock f{m_fingerTableMutex};
     m_fingerTable[0] = node;
 }
-const std::optional<NodeInformation::Node> &NodeInformation::getPredecessor()
+const std::optional<NodeInformation::Node> &NodeInformation::getPredecessor() const
 {
     std::shared_lock f{m_predecessorMutex};
     return m_predecessor;
@@ -106,26 +107,28 @@ void NodeInformation::setPredecessor(const std::optional<Node> &node)
     std::unique_lock f{m_predecessorMutex};
     m_predecessor = node;
 }
-std::optional<std::vector<uint8_t>> NodeInformation::getData(const std::vector<uint8_t> &key)
+std::optional<std::vector<uint8_t>> NodeInformation::getData(const std::vector<uint8_t> &key) const
 {
     std::shared_lock l{m_dataMutex};
-    return m_data.contains(key) ? m_data[key].first : std::optional<std::vector<uint8_t>>{};
+    return m_data.contains(key) ? m_data.at(key).first : std::optional<std::vector<uint8_t>>{};
 }
 void NodeInformation::setData(const std::vector<uint8_t> &key, const std::vector<uint8_t> &value,
                               std::chrono::system_clock::duration ttl)
 {
-    std::cout << "[Node.setData] setting data, key length: " << key.size() << ", value length: " << value.size()
-              << ", ttl: " << std::chrono::duration_cast<std::chrono::seconds>(ttl).count() << std::endl;
+    SPDLOG_INFO(
+        "setting data, key length: {}, value length: {}, ttl: {}",
+        key.size(), value.size(), std::chrono::duration_cast<std::chrono::seconds>(ttl).count()
+    );
     std::unique_lock l{m_dataMutex};
     m_data[key] = std::make_pair(value, ttl == std::chrono::system_clock::duration::max()
                                         ? std::chrono::system_clock::time_point::max() :
                                         std::chrono::system_clock::now() + ttl);
 }
-std::optional<NodeInformation::Node> NodeInformation::getBootstrapNodeAddress() const
+std::optional<NodeInformation::Node> NodeInformation::getBootstrapNode() const
 {
     return m_bootstrapNodeAddress;
 }
-void NodeInformation::setBootstrapNodeAddress(const std::optional<Node> &bootstrapNodeAddress)
+void NodeInformation::setBootstrapNode(const std::optional<Node> &bootstrapNodeAddress)
 {
     m_bootstrapNodeAddress = bootstrapNodeAddress;
 }

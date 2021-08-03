@@ -1,5 +1,5 @@
 #include "api.h"
-#include <cstdint>
+#include <centralLogControl.h>
 
 api::Connection::Connection(tcp::socket &&sock, const Api &api):
     m_socket(std::move(sock)),
@@ -32,30 +32,29 @@ api::Connection::Connection(tcp::socket &&sock, const Api &api):
 
 void api::Connection::start_read()
 {
+    LOG_GET
     if (!m_socket.is_open()) {
-        std::cout << "[API.connection] disconnected!" << std::endl;
+        LOG_INFO("disconnected!");
         return;
     }
-    m_socket.async_read_some(asio::buffer(m_data), [this](const asio::error_code &error, std::size_t length) {
+    m_socket.async_read_some(asio::buffer(m_data), [LOG_CAPTURE, this](const asio::error_code &error, std::size_t length) {
         start_read();
 
         if (error) {
-            std::cerr << "[API.connection] " << error.message() << std::endl;
+            LOG_INFO("{}", error.message());
             return;
         }
 
         if (length > 0ull) {
-            std::cout << "Got Data!" << std::endl;
             auto bytes = util::convertToBytes(m_data, length);
-            util::hexdump(bytes);
+            LOG_INFO("Got Data!\n{}\n", util::hexdump(bytes, 16, true, true));
 
             std::unique_ptr<Request> request;
             try {
                 request = std::make_unique<Request>(bytes);
             }
             catch (const std::exception &e) {
-                std::cerr << "[API.connection] Exception thrown when parsing request:\n";
-                std::cerr << e.what() << std::endl;
+                LOG_WARN("Exception thrown when parsing request:\n\t\t{}", e.what());
                 return;
             }
             if (m_socket.is_open()) {

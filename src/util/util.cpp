@@ -3,23 +3,23 @@
 #include <iostream>
 #include <iomanip>
 
-void util::hexdump(const std::vector<uint8_t> &bytes, size_t stride)
+void util::hexdump(const std::vector<uint8_t> &bytes, size_t stride, std::ostream &os)
 {
     size_t i, j;
-    auto old = std::cout.flags();
-    std::cout << std::setfill('0') << std::right << std::hex;
+    auto old = os.flags();
+    os << std::setfill('0') << std::right << std::hex;
     for (i = 0; i < bytes.size(); i += stride) {
-        std::cout << std::setw(6) << i << ": ";
+        os << std::setw(6) << i << ": ";
         for (j = 0; j < stride; j++)
             if (i + j < bytes.size())
-                std::cout << std::setw(2) << static_cast<unsigned>(bytes[i + j]) << " ";
+                os << std::setw(2) << static_cast<unsigned>(bytes[i + j]) << " ";
             else
-                std::cout << "   ";
-        std::cout << " ";
+                os << "   ";
+        os << " ";
         for (j = 0; j < stride; j++)
             if (i + j < bytes.size())
-                std::cout << (std::isprint(static_cast<int>(bytes[i + j])) ? static_cast<char>(bytes[i + j]) : '.');
-        std::cout << std::endl;
+                os << (std::isprint(static_cast<int>(bytes[i + j])) ? static_cast<char>(bytes[i + j]) : '.');
+        os << std::endl;
     }
-    std::cout.flags(old);
+    os.flags(old);
 }

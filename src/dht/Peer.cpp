@@ -4,6 +4,7 @@
 #include <utility>
 #include <capnp/ez-rpc.h>
 #include <util.h>
+#include <centralLogControl.h>
 
 using dht::PeerImpl;
 using dht::Peer;
@@ -17,27 +18,28 @@ PeerImpl::PeerImpl(std::shared_ptr<NodeInformation> nodeInformation) :
 
 ::kj::Promise<void> PeerImpl::getSuccessor(GetSuccessorContext context)
 {
-    std::cout << "[PEER] getSuccessorRequest" << std::endl;
+    SPDLOG_TRACE("received getSuccessor request");
     auto id_ = context.getParams().getId();
     NodeInformation::id_type id{};
     std::copy_n(id_.begin(),
                 std::min(id_.size(), static_cast<size_t>(SHA_DIGEST_LENGTH)),
                 id.begin());
-    auto successor = getSuccessor(id);
-    if (!successor) {
-        context.getResults().getNode().setEmpty();
-    } else {
-        auto node = context.getResults().getNode().getValue();
-        node.setIp(successor->getIp());
-        node.setPort(successor->getPort());
-        node.setId(capnp::Data::Builder(kj::heapArray<kj::byte>(successor->getId().begin(), successor->getId().end())));
-    }
-    return kj::READY_NOW;
+    return getSuccessor(id).then([KJ_CPCAP(context)](const std::optional<NodeInformation::Node> &successor) mutable {
+        if (!successor) {
+            context.getResults().getNode().setEmpty();
+        } else {
+            auto node = context.getResults().getNode().getValue();
+            node.setIp(successor->getIp());
+            node.setPort(successor->getPort());
+            node.setId(
+                capnp::Data::Builder(kj::heapArray<kj::byte>(successor->getId().begin(), successor->getId().end())));
+        }
+    });
 }
 
 ::kj::Promise<void> PeerImpl::getPredecessor(GetPredecessorContext context)
 {
-    // std::cout << "[PEER] getPredecessorRequest" << std::endl;
+    SPDLOG_TRACE("received getPredecessor request");
     auto pred = m_nodeInformation->getPredecessor();
     if (pred) {
         auto node = context.getResults().getNode().getValue();
@@ -52,7 +54,7 @@ PeerImpl::PeerImpl(std::shared_ptr<NodeInformation> nodeInformation) :
 
 ::kj::Promise<void> PeerImpl::notify(NotifyContext context)
 {
-    std::cout << "[PEER] notifyRequest" << std::endl;
+    SPDLOG_TRACE("received notify request");
 
     auto node = nodeFromReader(context.getParams().getNode());
 
@@ -63,7 +65,7 @@ PeerImpl::PeerImpl(std::shared_ptr<NodeInformation> nodeInformation) :
             m_nodeInformation->getId(),
             false, false
         )) {
-        std::cout << "[PEER.notify] update predecessor" << std::endl;
+        // std::cout << "[PEER.notify] update predecessor" << std::endl;
         m_nodeInformation->setPredecessor(node);
     }
     return kj::READY_NOW;
@@ -71,6 +73,8 @@ PeerImpl::PeerImpl(std::shared_ptr<NodeInformation> nodeInformation) :
 
 ::kj::Promise<void> PeerImpl::getData(GetDataContext context)
 {
+    SPDLOG_TRACE("received getData request");
+
     std::vector<uint8_t> key{context.getParams().getKey().begin(), context.getParams().getKey().end()};
     auto value = m_nodeInformation->getData(key);
     if (value) {
@@ -84,6 +88,8 @@ PeerImpl::PeerImpl(std::shared_ptr<NodeInformation> nodeInformation) :
 
 ::kj::Promise<void> PeerImpl::setData(SetDataContext context)
 {
+    SPDLOG_TRACE("received setData request");
+
     // TODO: only store if this node is responsible for the key.
     //       But we'll deal with hardening against attacks later.
     auto ttl_ = context.getParams().getTtl();
@@ -133,10 +139,9 @@ void PeerImpl::buildNode(Node::Builder builder, const NodeInformation::Node &nod
 
 // Interface
 
-std::optional<NodeInformation::Node> PeerImpl::getSuccessor(NodeInformation::id_type id)
+::kj::Promise<std::optional<NodeInformation::Node>> PeerImpl::getSuccessor(NodeInformation::id_type id)
 {
-    // std::cout << "[PEER.getSuccessor]" << std::endl;
-
+    LOG_GET
     // If this node is requested
     if (m_nodeInformation->getPredecessor() &&
         util::is_in_range_loop(
@@ -144,8 +149,7 @@ std::optional<NodeInformation::Node> PeerImpl::getSuccessor(NodeInformation::id_
             m_nodeInformation->getPredecessor()->getId(), m_nodeInformation->getId(),
             false, true
         )) {
-        // std::cout << "[PEER.getSuccessor] requested this node" << std::endl;
-        return m_nodeInformation->getNode();
+        return std::optional<NodeInformation::Node>{m_nodeInformation->getNode()};
     }
 
     // If next node is requested
@@ -155,7 +159,6 @@ std::optional<NodeInformation::Node> PeerImpl::getSuccessor(NodeInformation::id_
             m_nodeInformation->getId(), m_nodeInformation->getSuccessor()->getId(),
             false, true
         )) {
-        // std::cout << "[PEER.getSuccessor] requested successor" << std::endl;
         return m_nodeInformation->getFinger(0);
     }
 
@@ -163,34 +166,23 @@ std::optional<NodeInformation::Node> PeerImpl::getSuccessor(NodeInformation::id_
     auto closest_preceding = getClosestPreceding(id);
 
     if (!closest_preceding) {
-        // std::cout << "[PEER.getSuccessor] didn't get closest preceding" << std::endl;
-        return {};
+        return std::optional<NodeInformation::Node>{};
     }
 
-    capnp::EzRpcClient client{closest_preceding->getIp(), closest_preceding->getPort()};
-    auto &waitScope = client.getWaitScope();
-    auto cap = client.getMain<Peer>();
+    auto client = kj::heap<capnp::EzRpcClient>(closest_preceding->getIp(), closest_preceding->getPort());
+    auto cap = client->getMain<Peer>();
     auto req = cap.getSuccessorRequest();
     req.setId(capnp::Data::Builder{kj::heapArray<kj::byte>(id.begin(), id.end())});
-    // std::cout << "[PEER.getSuccessor] before response" << std::endl;
-    try {
-        auto response = req.send().wait(waitScope).getNode();
-        // std::cout << "[PEER.getSuccessor] got response" << std::endl;
-
-        auto node = nodeFromReader(response);
-        if (!node) {
-            // std::cout << "[PEER.getSuccessor] closest preceding empty response" << std::endl;
-        }
-        return node;
-    } catch (const kj::Exception &e) {
-        std::cout << "[PEER.getSuccessor] Exception in request" << std::endl;
-        return {};
-    }
+    return req.send().then([client = kj::mv(client)](capnp::Response<Peer::GetSuccessorResults> &&response) {
+        return nodeFromReader(response.getNode());
+    }, [LOG_CAPTURE](const kj::Exception &e) {
+        LOG_DEBUG("Exception in request\n\t\t{}", e.getDescription().cStr());
+        return std::optional<NodeInformation::Node>{};
+    });
 }
 
 std::optional<NodeInformation::Node> PeerImpl::getClosestPreceding(NodeInformation::id_type id)
 {
-    // std::cout << "[PEER.getClosestPreceding]" << std::endl;
     for (size_t i = NodeInformation::key_bits; i >= 1ull; --i) {
         if (m_nodeInformation->getFinger(i - 1) && util::is_in_range_loop(
             m_nodeInformation->getFinger(i - 1)->getId(), m_nodeInformation->getId(), id,
@@ -204,31 +196,27 @@ std::optional<NodeInformation::Node> PeerImpl::getClosestPreceding(NodeInformati
 std::optional<std::vector<uint8_t>>
 PeerImpl::getData(const NodeInformation::Node &node, const std::vector<uint8_t> &key)
 {
+    LOG_GET
     if (node == m_nodeInformation->getNode()) {
-        std::cout << "[PEER.getData] Get from this node" << std::endl;
+        LOG_TRACE("Get from this node");
         return m_nodeInformation->getData(key);
     } else {
         capnp::EzRpcClient client{node.getIp(), node.getPort()};
-        auto &waitScope = client.getWaitScope();
         auto cap = client.getMain<Peer>();
         auto req = cap.getDataRequest();
         req.setKey(capnp::Data::Builder(kj::heapArray<kj::byte>(key.begin(), key.end())));
-        std::cout << "[PEER.getData] before response" << std::endl;
-        try {
-            auto response = req.send().wait(waitScope).getData();
-            std::cout << "[PEER.getData] got response" << std::endl;
+        return req.send().then([LOG_CAPTURE](capnp::Response<Peer::GetDataResults> &&response) {
+            auto data = response.getData();
 
-            if (response.which() == Optional<capnp::Data>::EMPTY) {
-                std::cout << "[PEER.getData] Empty response" << std::endl;
-                return {};
+            if (data.which() == Optional<capnp::Data>::EMPTY) {
+                return std::optional<std::vector<uint8_t>>{};
             }
-            std::cout << "[PEER.getData] Got data" << std::endl;
-            return std::vector<uint8_t>{response.getValue().begin(), response.getValue().end()};
-
-        } catch (const kj::Exception &e) {
-            std::cout << "[PEER.getData] Exception in request" << std::endl;
-            return {};
-        }
+            LOG_TRACE("Got Data");
+            return std::optional<std::vector<uint8_t>>{{data.getValue().begin(), data.getValue().end()}};
+        }, [LOG_CAPTURE](const kj::Exception &e) {
+            LOG_DEBUG("Exception in request\n\t\t{}", e.getDescription().cStr());
+            return std::optional<std::vector<uint8_t>>{};
+        }).wait(client.getWaitScope());
     }
 }
 
@@ -237,129 +225,27 @@ void PeerImpl::setData(
     const std::vector<uint8_t> &key, const std::vector<uint8_t> &value,
     uint16_t ttl)
 {
-    auto ttls = ttl > 0
-                ? std::chrono::seconds(ttl)
-                : std::chrono::system_clock::duration::max();
+    LOG_GET
+    auto ttl_seconds = ttl > 0
+                       ? std::chrono::seconds(ttl)
+                       : std::chrono::system_clock::duration::max();
 
     if (node == m_nodeInformation->getNode()) {
-        std::cout << "[PEER.setData] Store in this node" << std::endl;
-        m_nodeInformation->setData(key, value, ttls);
+        LOG_TRACE("Store in this node");
+        m_nodeInformation->setData(key, value, ttl_seconds);
     } else {
         capnp::EzRpcClient client{node.getIp(), node.getPort()};
-        auto &waitScope = client.getWaitScope();
         auto cap = client.getMain<Peer>();
         auto req = cap.setDataRequest();
         req.setKey(capnp::Data::Builder(kj::heapArray<kj::byte>(key.begin(), key.end())));
         req.setValue(capnp::Data::Builder(kj::heapArray<kj::byte>(value.begin(), value.end())));
         req.setTtl(ttl);
-        std::cout << "[PEER.setData] before response" << std::endl;
-        try {
-            auto response = req.send().wait(waitScope);
-            std::cout << "[PEER.setData] got response" << std::endl;
-        } catch (const kj::Exception &e) {
-            std::cout << "[PEER.setData] Exception in request" << std::endl;
-        }
+        return req.send().then([LOG_CAPTURE](capnp::Response<Peer::SetDataResults> &&) {
+            LOG_TRACE("got response");
+        }, [LOG_CAPTURE](const kj::Exception &e) {
+            LOG_DEBUG("Exception in request\n\t\t{}", e.getDescription().cStr());
+        }).wait(client.getWaitScope());
     }
 }
 
 
-void PeerImpl::create()
-{
-    std::cout << "[PEER.create]" << std::endl;
-    m_nodeInformation->setPredecessor();
-    m_nodeInformation->setSuccessor(m_nodeInformation->getNode());
-}
-
-void PeerImpl::join(const NodeInformation::Node &node)
-{
-    std::cout << "[PEER.join]" << std::endl;
-    m_nodeInformation->setPredecessor();
-    auto successor = getSuccessor(m_nodeInformation->getId());
-    m_nodeInformation->setSuccessor(successor);
-}
-
-void PeerImpl::stabilize()
-{
-    auto &successor = m_nodeInformation->getSuccessor();
-    if (!successor) {
-        // std::cout << "[PEER.stabilize] no successor" << std::endl;
-        return;
-    }
-
-    std::optional<NodeInformation::Node> predOfSuccessor{};
-
-    capnp::EzRpcClient client{successor->getIp(), successor->getPort()};
-    auto &waitScope = client.getWaitScope();
-    auto cap = client.getMain<Peer>();
-    auto req = cap.getPredecessorRequest();
-    try {
-        // std::cout << "[PEER.stabilize] before response" << std::endl;
-        auto response = req.send().wait(waitScope).getNode();
-        // std::cout << "[PEER.stabilize] got response" << std::endl;
-
-        predOfSuccessor = nodeFromReader(response);
-        if (!predOfSuccessor) {
-            // std::cout << "[PEER.stabilize] closest preceding empty response" << std::endl;
-        }
-    } catch (const kj::Exception &e) {
-        std::cout << "[PEER.stabilize] connection issue with successor" << std::endl;
-        // Delete successor from finger table:
-        successor = {};
-        return;
-    }
-
-    if (predOfSuccessor && util::is_in_range_loop(
-        predOfSuccessor->getId(), m_nodeInformation->getId(), successor->getId(),
-        false, false
-    )) {
-        successor = predOfSuccessor;
-        capnp::EzRpcClient client2{predOfSuccessor->getIp(), predOfSuccessor->getPort()};
-        auto &waitScope2 = client2.getWaitScope();
-        auto cap2 = client2.getMain<Peer>();
-        auto req2 = cap2.notifyRequest();
-        buildNode(req2.getNode(), m_nodeInformation->getNode());
-        try {
-            // std::cout << "[PEER.stabilize] before response" << std::endl;
-            req2.send().wait(waitScope2);
-            // std::cout << "[PEER.stabilize] got response" << std::endl;
-        } catch (const kj::Exception &e) {
-            // std::cout << "[PEER.stabilize] connection issue predecessor of successor" << std::endl;
-        }
-    }
-}
-
-void PeerImpl::fixFingers()
-{
-    // TODO
-
-    m_nodeInformation->setFinger(
-        nextFinger,
-        getSuccessor(m_nodeInformation->getId() +
-                     util::pow2<uint8_t, SHA_DIGEST_LENGTH>(nextFinger)));
-
-    nextFinger = (nextFinger + 1) % NodeInformation::key_bits;
-}
-
-void PeerImpl::checkPredecessor()
-{
-    // TODO:
-
-    if (!m_nodeInformation->getPredecessor())
-        return;
-
-    capnp::EzRpcClient client{
-        m_nodeInformation->getPredecessor()->getIp(), m_nodeInformation->getPredecessor()->getPort()
-    };
-    auto &waitScope = client.getWaitScope();
-    auto cap = client.getMain<Peer>();
-    auto req = cap.getPredecessorRequest(); // This request doesn't matter, it is used as a ping
-    try {
-        // std::cout << "[PEER.checkPredecessor] before response" << std::endl;
-        req.send().wait(waitScope).getNode();
-        // std::cout << "[PEER.checkPredecessor] got response" << std::endl;
-    } catch (const kj::Exception &e) {
-        // std::cout << "[PEER.checkPredecessor] connection issue with predecessor" << std::endl;
-        // Delete predecessor
-        m_nodeInformation->setPredecessor();
-    }
-}

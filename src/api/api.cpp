@@ -1,12 +1,5 @@
 #include "api.h"
-#include "message_data.h"
-#include <iostream>
-#include <chrono>
-#include <memory>
-#include <cstdlib>
 #include <utility>
-#include <algorithm>
-#include <util.h>
 
 using namespace api;
 
@@ -14,30 +7,31 @@ Api::Api(const Options &o):
     m_service(std::make_unique<asio::io_service>()),
     m_acceptor(std::make_unique<tcp::acceptor>(*m_service, tcp::endpoint(tcp::v4(), o.port)))
 {
+    LOG_GET
     m_isRunning = true;
     start_accept();
-    m_serviceFuture = std::async(std::launch::async, [this]() {
-        std::cout << "[API] run()" << std::endl;
+    m_serviceFuture = std::async(std::launch::async, [LOG_CAPTURE, this]() {
+        LOG_TRACE("run()");
         while (m_isRunning) {
             try {
                 m_service->run();
             }
             catch (const std::exception &e) {
-                std::cerr << e.what() << std::endl;
+                LOG_WARN("{}", e.what());
             }
         }
-        std::cout << "[API] run() returned" << std::endl;
+        LOG_TRACE("run() returned");
     });
 }
 
 Api::~Api()
 {
     m_isRunning = false;
-    std::cout << "[API] closing acceptor" << std::endl;
+    SPDLOG_TRACE("closing acceptor");
     m_acceptor->close();
-    std::cout << "[API] stopping service" << std::endl;
+    SPDLOG_TRACE("stopping service");
     m_service->stop();
-    std::cout << "[API] awaiting service future" << std::endl;
+    SPDLOG_TRACE("awaiting service future");
     m_serviceFuture.get();
 
     for (const auto &connection: m_openConnections) {
@@ -46,20 +40,21 @@ Api::~Api()
 
     m_openConnections.clear();
 
-    std::cout << "[API] stopped!" << std::endl;
+    SPDLOG_TRACE("api stopped!");
 }
 
 void Api::start_accept()
 {
-    std::cout << "[API] start_accept()" << std::endl;
+    LOG_GET
+    LOG_TRACE("");
     if (!m_isRunning) {
-        std::cout << "[API.start_accept] acceptor is closed" << std::endl;
+        LOG_INFO("acceptor is closed");
         return;
     }
-    m_acceptor->async_accept([this](const asio::error_code &error, tcp::socket socket) {
+    m_acceptor->async_accept([LOG_CAPTURE, this](const asio::error_code &error, tcp::socket socket) {
         start_accept();
         if (error)
-            std::cerr << "[API.async_accept] " << error.message() << std::endl;
+            LOG_WARN("{}", error.message());
         else
             m_openConnections.push_back(std::make_unique<Connection>(std::move(socket), *this));
     });

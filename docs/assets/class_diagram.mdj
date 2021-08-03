@@ -6137,7 +6137,7 @@
 											"top": 107,
 											"width": 454.48583984375,
 											"height": 13,
-											"text": "-m_dhtRunning: atomic_bool",
+											"text": "-m_dhtCancelled: atomic_bool",
 											"horizontalAlignment": 0
 										},
 										{
@@ -10055,7 +10055,7 @@
 							"_parent": {
 								"$ref": "AAAAAAF6ce85do11020="
 							},
-							"name": "m_dhtRunning",
+							"name": "m_dhtCancelled",
 							"visibility": "private",
 							"type": "atomic_bool"
 						},
@@ -10726,7 +10726,7 @@
 							"_parent": {
 								"$ref": "AAAAAAF6ce9wmI2fo0g="
 							},
-							"name": "getBootstrapNodeAddress",
+							"name": "getBootstrapNode",
 							"parameters": [
 								{
 									"_type": "UMLParameter",
