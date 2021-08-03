@@ -1,4 +1,5 @@
 #include "NodeInformation.h"
+#include <centralLogControl.h>
 
 using namespace std::chrono_literals;
 
@@ -114,8 +115,10 @@ std::optional<std::vector<uint8_t>> NodeInformation::getData(const std::vector<u
 void NodeInformation::setData(const std::vector<uint8_t> &key, const std::vector<uint8_t> &value,
                               std::chrono::system_clock::duration ttl)
 {
-    std::cout << "[Node.setData] setting data, key length: " << key.size() << ", value length: " << value.size()
-              << ", ttl: " << std::chrono::duration_cast<std::chrono::seconds>(ttl).count() << std::endl;
+    SPDLOG_INFO(
+        "setting data, key length: {}, value length: {}, ttl: {}",
+        key.size(), value.size(), std::chrono::duration_cast<std::chrono::seconds>(ttl).count()
+    );
     std::unique_lock l{m_dataMutex};
     m_data[key] = std::make_pair(value, ttl == std::chrono::system_clock::duration::max()
                                         ? std::chrono::system_clock::time_point::max() :

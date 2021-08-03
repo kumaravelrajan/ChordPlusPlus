@@ -45,7 +45,7 @@ void Dht::mainLoop()
      * (No blocking function calls in here, at least not for too long)
      */
 
-    SPDLOG_INFO("Main Loop Entered");
+    SPDLOG_TRACE("Main Loop Entered");
 
     std::this_thread::sleep_for(5s);
 
@@ -72,7 +72,7 @@ void Dht::mainLoop()
         std::this_thread::sleep_for(1s);
     }
 
-    SPDLOG_INFO("Exiting Main Loop");
+    SPDLOG_TRACE("Exiting Main Loop");
     m_mainLoopExited = true;
 }
 
@@ -219,7 +219,7 @@ void Dht::stabilize()
     LOG_GET
     auto successor = m_nodeInformation->getSuccessor();
     if (!successor) {
-        LOG_INFO("no successor");
+        LOG_TRACE("no successor");
         return;
     }
 
@@ -230,11 +230,11 @@ void Dht::stabilize()
     auto predOfSuccessor = req.send().then([LOG_CAPTURE](capnp::Response<Peer::GetPredecessorResults> &&response) {
         auto predOfSuccessor = PeerImpl::nodeFromReader(response.getNode());
         if (!predOfSuccessor) {
-            LOG_INFO("closest preceding empty response");
+            LOG_TRACE("closest preceding empty response");
         }
         return predOfSuccessor;
     }, [LOG_CAPTURE](const kj::Exception &e) {
-        LOG_WARN("connection issue with successor\n\t\t{}", e.getDescription().cStr());
+        LOG_INFO("connection issue with successor\n\t\t{}", e.getDescription().cStr());
         return std::optional<NodeInformation::Node>{};
     }).wait(client.getWaitScope());
 
@@ -248,9 +248,9 @@ void Dht::stabilize()
         auto req2 = cap2.notifyRequest();
         PeerImpl::buildNode(req2.getNode(), m_nodeInformation->getNode());
         return req2.send().then([LOG_CAPTURE](capnp::Response<Peer::NotifyResults> &&) {
-            LOG_INFO("got response from predecessor of successor");
+            LOG_TRACE("got response from predecessor of successor");
         }, [LOG_CAPTURE](const kj::Exception &e) {
-            LOG_WARN("connection issue with predecessor of successor\n\t\t{}", e.getDescription().cStr());
+            LOG_INFO("connection issue with predecessor of successor\n\t\t{}", e.getDescription().cStr());
         }).wait(client2.getWaitScope());
     } else {
         capnp::EzRpcClient client2{successor->getIp(), successor->getPort()};
@@ -258,9 +258,9 @@ void Dht::stabilize()
         auto req2 = cap2.notifyRequest();
         PeerImpl::buildNode(req2.getNode(), m_nodeInformation->getNode());
         return req2.send().then([LOG_CAPTURE](capnp::Response<Peer::NotifyResults> &&) {
-            LOG_INFO("got response from successor");
+            LOG_TRACE("got response from successor");
         }, [LOG_CAPTURE](const kj::Exception &e) {
-            LOG_WARN("connection issue with successor\n\t\t{}", e.getDescription().cStr());
+            LOG_INFO("connection issue with successor\n\t\t{}", e.getDescription().cStr());
         }).wait(client2.getWaitScope());
     }
 }
@@ -287,7 +287,7 @@ void Dht::checkPredecessor()
     auto cap = client.getMain<Peer>();
     auto req = cap.getPredecessorRequest(); // This request doesn't matter, it is used as a ping
     return req.send().then([LOG_CAPTURE](capnp::Response<Peer::GetPredecessorResults> &&) {
-        LOG_INFO("got response from predecessor");
+        LOG_TRACE("got response from predecessor");
     }, [LOG_CAPTURE, this](const kj::Exception &e) {
         LOG_ERR(e);
         // Delete predecessor

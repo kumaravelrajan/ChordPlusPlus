@@ -4,6 +4,7 @@
 #include <utility>
 #include <capnp/ez-rpc.h>
 #include <util.h>
+#include <centralLogControl.h>
 
 using dht::PeerImpl;
 using dht::Peer;
@@ -17,7 +18,7 @@ PeerImpl::PeerImpl(std::shared_ptr<NodeInformation> nodeInformation) :
 
 ::kj::Promise<void> PeerImpl::getSuccessor(GetSuccessorContext context)
 {
-    // std::cout << "[PEER] getSuccessorRequest" << std::endl;
+    SPDLOG_TRACE("received getSuccessor request");
     auto id_ = context.getParams().getId();
     NodeInformation::id_type id{};
     std::copy_n(id_.begin(),
@@ -38,7 +39,7 @@ PeerImpl::PeerImpl(std::shared_ptr<NodeInformation> nodeInformation) :
 
 ::kj::Promise<void> PeerImpl::getPredecessor(GetPredecessorContext context)
 {
-    // std::cout << "[PEER] getPredecessorRequest" << std::endl;
+    SPDLOG_TRACE("received getPredecessor request");
     auto pred = m_nodeInformation->getPredecessor();
     if (pred) {
         auto node = context.getResults().getNode().getValue();
@@ -53,7 +54,7 @@ PeerImpl::PeerImpl(std::shared_ptr<NodeInformation> nodeInformation) :
 
 ::kj::Promise<void> PeerImpl::notify(NotifyContext context)
 {
-    // std::cout << "[PEER] notifyRequest" << std::endl;
+    SPDLOG_TRACE("received notify request");
 
     auto node = nodeFromReader(context.getParams().getNode());
 
@@ -72,6 +73,8 @@ PeerImpl::PeerImpl(std::shared_ptr<NodeInformation> nodeInformation) :
 
 ::kj::Promise<void> PeerImpl::getData(GetDataContext context)
 {
+    SPDLOG_TRACE("received getData request");
+
     std::vector<uint8_t> key{context.getParams().getKey().begin(), context.getParams().getKey().end()};
     auto value = m_nodeInformation->getData(key);
     if (value) {
@@ -85,6 +88,8 @@ PeerImpl::PeerImpl(std::shared_ptr<NodeInformation> nodeInformation) :
 
 ::kj::Promise<void> PeerImpl::setData(SetDataContext context)
 {
+    SPDLOG_TRACE("received setData request");
+
     // TODO: only store if this node is responsible for the key.
     //       But we'll deal with hardening against attacks later.
     auto ttl_ = context.getParams().getTtl();
@@ -136,8 +141,7 @@ void PeerImpl::buildNode(Node::Builder builder, const NodeInformation::Node &nod
 
 ::kj::Promise<std::optional<NodeInformation::Node>> PeerImpl::getSuccessor(NodeInformation::id_type id)
 {
-    // std::cout << "[PEER.getSuccessor]" << std::endl;
-
+    LOG_GET
     // If this node is requested
     if (m_nodeInformation->getPredecessor() &&
         util::is_in_range_loop(
@@ -145,7 +149,6 @@ void PeerImpl::buildNode(Node::Builder builder, const NodeInformation::Node &nod
             m_nodeInformation->getPredecessor()->getId(), m_nodeInformation->getId(),
             false, true
         )) {
-        // std::cout << "[PEER.getSuccessor] requested this node" << std::endl;
         return std::optional<NodeInformation::Node>{m_nodeInformation->getNode()};
     }
 
@@ -156,7 +159,6 @@ void PeerImpl::buildNode(Node::Builder builder, const NodeInformation::Node &nod
             m_nodeInformation->getId(), m_nodeInformation->getSuccessor()->getId(),
             false, true
         )) {
-        // std::cout << "[PEER.getSuccessor] requested successor" << std::endl;
         return m_nodeInformation->getFinger(0);
     }
 
@@ -164,7 +166,6 @@ void PeerImpl::buildNode(Node::Builder builder, const NodeInformation::Node &nod
     auto closest_preceding = getClosestPreceding(id);
 
     if (!closest_preceding) {
-        // std::cout << "[PEER.getSuccessor] didn't get closest preceding" << std::endl;
         return std::optional<NodeInformation::Node>{};
     }
 
@@ -172,18 +173,16 @@ void PeerImpl::buildNode(Node::Builder builder, const NodeInformation::Node &nod
     auto cap = client->getMain<Peer>();
     auto req = cap.getSuccessorRequest();
     req.setId(capnp::Data::Builder{kj::heapArray<kj::byte>(id.begin(), id.end())});
-    // std::cout << "[PEER.getSuccessor] before response" << std::endl;
     return req.send().then([client = kj::mv(client)](capnp::Response<Peer::GetSuccessorResults> &&response) {
         return nodeFromReader(response.getNode());
-    }, [](const kj::Exception &e) {
-        std::cout << "[PEER.getSuccessor] Exception in request" << std::endl << e.getDescription().cStr() << std::endl;
+    }, [LOG_CAPTURE](const kj::Exception &e) {
+        LOG_INFO("Exception in request\n\t\t{}", e.getDescription().cStr());
         return std::optional<NodeInformation::Node>{};
     });
 }
 
 std::optional<NodeInformation::Node> PeerImpl::getClosestPreceding(NodeInformation::id_type id)
 {
-    // std::cout << "[PEER.getClosestPreceding]" << std::endl;
     for (size_t i = NodeInformation::key_bits; i >= 1ull; --i) {
         if (m_nodeInformation->getFinger(i - 1) && util::is_in_range_loop(
             m_nodeInformation->getFinger(i - 1)->getId(), m_nodeInformation->getId(), id,
@@ -197,26 +196,25 @@ std::optional<NodeInformation::Node> PeerImpl::getClosestPreceding(NodeInformati
 std::optional<std::vector<uint8_t>>
 PeerImpl::getData(const NodeInformation::Node &node, const std::vector<uint8_t> &key)
 {
+    LOG_GET
     if (node == m_nodeInformation->getNode()) {
-        std::cout << "[PEER.getData] Get from this node" << std::endl;
+        LOG_TRACE("Get from this node");
         return m_nodeInformation->getData(key);
     } else {
         capnp::EzRpcClient client{node.getIp(), node.getPort()};
         auto cap = client.getMain<Peer>();
         auto req = cap.getDataRequest();
         req.setKey(capnp::Data::Builder(kj::heapArray<kj::byte>(key.begin(), key.end())));
-        return req.send().then([](capnp::Response<Peer::GetDataResults> &&response) {
+        return req.send().then([LOG_CAPTURE](capnp::Response<Peer::GetDataResults> &&response) {
             auto data = response.getData();
-            std::cout << "[PEER.getData] got response" << std::endl;
 
             if (data.which() == Optional<capnp::Data>::EMPTY) {
-                std::cout << "[PEER.getData] Empty response" << std::endl;
                 return std::optional<std::vector<uint8_t>>{};
             }
-            std::cout << "[PEER.getData] Got data" << std::endl;
+            LOG_TRACE("Got Data");
             return std::optional<std::vector<uint8_t>>{{data.getValue().begin(), data.getValue().end()}};
-        }, [](const kj::Exception &e) {
-            std::cout << "[PEER.getData] Exception in request" << std::endl << e.getDescription().cStr() << std::endl;
+        }, [LOG_CAPTURE](const kj::Exception &e) {
+            LOG_INFO("Exception in request\n\t\t{}", e.getDescription().cStr());
             return std::optional<std::vector<uint8_t>>{};
         }).wait(client.getWaitScope());
     }
@@ -227,12 +225,13 @@ void PeerImpl::setData(
     const std::vector<uint8_t> &key, const std::vector<uint8_t> &value,
     uint16_t ttl)
 {
+    LOG_GET
     auto ttl_seconds = ttl > 0
                        ? std::chrono::seconds(ttl)
                        : std::chrono::system_clock::duration::max();
 
     if (node == m_nodeInformation->getNode()) {
-        std::cout << "[PEER.setData] Store in this node" << std::endl;
+        LOG_TRACE("Store in this node");
         m_nodeInformation->setData(key, value, ttl_seconds);
     } else {
         capnp::EzRpcClient client{node.getIp(), node.getPort()};
@@ -241,11 +240,10 @@ void PeerImpl::setData(
         req.setKey(capnp::Data::Builder(kj::heapArray<kj::byte>(key.begin(), key.end())));
         req.setValue(capnp::Data::Builder(kj::heapArray<kj::byte>(value.begin(), value.end())));
         req.setTtl(ttl);
-        std::cout << "[PEER.setData] before response" << std::endl;
-        return req.send().then([](capnp::Response<Peer::SetDataResults> &&) {
-            std::cout << "[PEER.setData] got response" << std::endl;
-        }, [](const kj::Exception &e) {
-            std::cout << "[PEER.setData] Exception in request" << std::endl << e.getDescription().cStr() << std::endl;
+        return req.send().then([LOG_CAPTURE](capnp::Response<Peer::SetDataResults> &&) {
+            LOG_TRACE("got response");
+        }, [LOG_CAPTURE](const kj::Exception &e) {
+            LOG_INFO("Exception in request\n\t\t{}", e.getDescription().cStr());
         }).wait(client.getWaitScope());
     }
 }
