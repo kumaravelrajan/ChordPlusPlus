@@ -75,7 +75,7 @@ namespace util
         return ret;
     }
 
-    void hexdump(const std::vector<uint8_t> &bytes, std::size_t stride = 16);
+    void hexdump(const std::vector<uint8_t> &bytes, std::size_t stride = 16, std::ostream &os = std::cout);
 
     template<typename F, typename... Ts>
     struct is_one_of

@@ -176,7 +176,7 @@ void PeerImpl::buildNode(Node::Builder builder, const NodeInformation::Node &nod
     return req.send().then([client = kj::mv(client)](capnp::Response<Peer::GetSuccessorResults> &&response) {
         return nodeFromReader(response.getNode());
     }, [LOG_CAPTURE](const kj::Exception &e) {
-        LOG_INFO("Exception in request\n\t\t{}", e.getDescription().cStr());
+        LOG_DEBUG("Exception in request\n\t\t{}", e.getDescription().cStr());
         return std::optional<NodeInformation::Node>{};
     });
 }
@@ -214,7 +214,7 @@ PeerImpl::getData(const NodeInformation::Node &node, const std::vector<uint8_t> 
             LOG_TRACE("Got Data");
             return std::optional<std::vector<uint8_t>>{{data.getValue().begin(), data.getValue().end()}};
         }, [LOG_CAPTURE](const kj::Exception &e) {
-            LOG_INFO("Exception in request\n\t\t{}", e.getDescription().cStr());
+            LOG_DEBUG("Exception in request\n\t\t{}", e.getDescription().cStr());
             return std::optional<std::vector<uint8_t>>{};
         }).wait(client.getWaitScope());
     }
@@ -243,7 +243,7 @@ void PeerImpl::setData(
         return req.send().then([LOG_CAPTURE](capnp::Response<Peer::SetDataResults> &&) {
             LOG_TRACE("got response");
         }, [LOG_CAPTURE](const kj::Exception &e) {
-            LOG_INFO("Exception in request\n\t\t{}", e.getDescription().cStr());
+            LOG_DEBUG("Exception in request\n\t\t{}", e.getDescription().cStr());
         }).wait(client.getWaitScope());
     }
 }

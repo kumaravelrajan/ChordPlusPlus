@@ -46,9 +46,8 @@ void api::Connection::start_read()
         }
 
         if (length > 0ull) {
-            LOG_INFO("Got Data!");
             auto bytes = util::convertToBytes(m_data, length);
-            util::hexdump(bytes);
+            LOG_INFO("Got Data!\n{}\n", util::hexdump(bytes, 16, true, true));
 
             std::unique_ptr<Request> request;
             try {

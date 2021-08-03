@@ -38,7 +38,7 @@ Entry::Entry(const config::Configuration &conf) : Entry()
 
     for (size_t i = 0; i <= conf.extra_debug_nodes; i++) {
         {
-            SPDLOG_INFO(
+            SPDLOG_DEBUG(
                 "\n"
                 "\t\t==================================================================================\n"
                 "\t\t1. Node number   : {}\n"
@@ -70,7 +70,7 @@ Entry::Entry(const config::Configuration &conf) : Entry()
 
 Entry::~Entry()
 {
-    SPDLOG_INFO("[ENTRY] exiting...");
+    SPDLOG_TRACE("[ENTRY] exiting...");
 
     // Asynchronously delete dht objects
     std::vector<std::future<void>> deletions(DHTs.size());
@@ -81,7 +81,7 @@ Entry::~Entry()
     deletions.clear(); // await deletions
     DHTs.clear();
     nodes.clear();
-    SPDLOG_INFO("[ENTRY] Dht Stopped.");
+    SPDLOG_TRACE("[ENTRY] Dht Stopped.");
 }
 
 int Entry::mainLoop()

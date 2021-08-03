@@ -17,7 +17,7 @@ Api::Api(const Options &o):
                 m_service->run();
             }
             catch (const std::exception &e) {
-                std::cerr << e.what() << std::endl;
+                LOG_WARN("{}", e.what());
             }
         }
         LOG_TRACE("run() returned");

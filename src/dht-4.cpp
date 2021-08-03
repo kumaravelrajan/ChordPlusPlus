@@ -35,7 +35,7 @@ void InitSpdlog(const int &consoleLogLevel, const std::string &logfilePath)
 
     spdlog::flush_every(5s);
 
-    SPDLOG_INFO("spdlog initialized.");
+    SPDLOG_DEBUG("spdlog initialized.");
 }
 
 int main(int argc, char *argv[])
@@ -82,17 +82,17 @@ int main(int argc, char *argv[])
     // Initialize spdlog
     InitSpdlog(args["logMode"].as<int>(), args["logOutput"].as<std::string>());
 
-    SPDLOG_INFO("Config path: {}", args["config"].as<std::string>());
+    SPDLOG_DEBUG("Config path: {}", args["config"].as<std::string>());
 
     SPDLOG_INFO(
-        "\n\t\t=================================================================================="
+        "\n\t=================================================================================="
         "\n\t\tp2p_address: {}"
         "\n\t\tp2p_port: {}"
         "\n\t\tapi_address: {}"
         "\n\t\tapi_port: {}"
         "\n\t\tbootstrapNode_address: {}"
         "\n\t\tbootstrapNode_port: {}"
-        "\n\t\t==================================================================================",
+        "\n\t==================================================================================",
         conf.p2p_address, conf.p2p_port, conf.api_address, conf.api_port, conf.bootstrapNode_address,
         conf.bootstrapNode_port
     );
