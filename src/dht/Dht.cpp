@@ -23,6 +23,9 @@ void Dht::runServer()
     };
     auto &waitScope = peerServer.getWaitScope();
 
+    // from kj/async.h - Use `kj::getCurrentThreadExecutor()` to get an executor that schedules calls on the current
+    // thread's event loop.
+    // Here we make sure every node runs on its own thread which has its own event loop.
     m_executor.emplace(kj::getCurrentThreadExecutor());
 
     // It seems like promises are atomic in the event loop. So no *actual* asynchronous execution... Threads it is then
