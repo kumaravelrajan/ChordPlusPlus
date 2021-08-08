@@ -48,17 +48,17 @@ Entry::Entry(const config::Configuration &conf) : Entry()
                 i, dht_port, api_port
             );
 
-            nodes.push_back(std::make_shared<NodeInformation>("127.0.0.1", dht_port));
+            m_nodes.push_back(std::make_shared<NodeInformation>(conf.p2p_address, dht_port));
 
             // Set bootstrap node details parsed from config file
-            nodes[i]->setBootstrapNode(
+            m_nodes[i]->setBootstrapNode(
                 NodeInformation::Node(conf.bootstrapNode_address, conf.bootstrapNode_port)
             );
 
             // The constructor of Dht starts mainLoop asynchronously.
-            DHTs.push_back(std::make_unique<dht::Dht>(nodes[i]));
+            m_DHTs.push_back(std::make_unique<dht::Dht>(m_nodes[i]));
 
-            DHTs[i]->setApi(std::make_unique<api::Api>(api::Options{
+            m_DHTs[i]->setApi(std::make_unique<api::Api>(api::Options{
                 .port= api_port,
             }));
 
@@ -73,14 +73,14 @@ Entry::~Entry()
     SPDLOG_TRACE("[ENTRY] exiting...");
 
     // Asynchronously delete dht objects
-    std::vector<std::future<void>> deletions(DHTs.size());
-    std::transform(DHTs.begin(), DHTs.end(), deletions.begin(), [](std::unique_ptr<dht::Dht> &dht) {
+    std::vector<std::future<void>> deletions(m_DHTs.size());
+    std::transform(m_DHTs.begin(), m_DHTs.end(), deletions.begin(), [](std::unique_ptr<dht::Dht> &dht) {
         std::this_thread::sleep_for(50ms);
         return std::async(std::launch::async, [&dht] { dht = nullptr; });
     });
     deletions.clear(); // await deletions
-    DHTs.clear();
-    nodes.clear();
+    m_DHTs.clear();
+    m_nodes.clear();
     SPDLOG_TRACE("[ENTRY] Dht Stopped.");
 }
 
@@ -118,8 +118,8 @@ void Entry::execute(std::vector<std::string> args, std::ostream &os, std::ostrea
     std::string cmd = args.front();
     args.erase(args.begin());
 
-    if (Entry::commands.contains(cmd)) {
-        const auto &command = Entry::commands.at(cmd);
+    if (Entry::m_commands.contains(cmd)) {
+        const auto &command = Entry::m_commands.at(cmd);
         try {
             command.execute(args, os, err);
         } catch (const std::exception &e) {
@@ -132,7 +132,7 @@ void Entry::execute(std::vector<std::string> args, std::ostream &os, std::ostrea
     }
 }
 
-Entry::Entry() : commands{
+Entry::Entry() : m_commands{
     {
         "help",
         {
@@ -142,14 +142,14 @@ Entry::Entry() : commands{
             [this](const std::vector<std::string> &args, std::ostream &os, std::ostream &) {
                 if (args.empty()) {
                     os << "Commands:\n";
-                    for (const auto &item : commands) {
+                    for (const auto &item : m_commands) {
                         if (item.first.find(":") != std::string::npos) continue;
                         os << fmt::format("{:<12} : {}", item.first, item.second.brief) << std::endl;
                     }
                 } else {
                     std::string str = util::join(args, ":");
-                    if (commands.contains(str)) {
-                        const auto &cmd = commands.at(str);
+                    if (m_commands.contains(str)) {
+                        const auto &cmd = m_commands.at(str);
                         os << cmd.brief << "\n\nUsage:\n" << cmd.usage << std::endl;
                     } else {
                         throw std::invalid_argument("Command \"" + str + "\" not found!");
@@ -202,10 +202,10 @@ Entry::Entry() : commands{
                     index = get_index(args[0]);
 
                 if (index) {
-                    if (index >= nodes.size()) {
+                    if (index >= m_nodes.size()) {
                         throw std::invalid_argument("Index [" + util::to_string(*index) + "] out of bounds!");
                     }
-                    auto &node = *nodes[*index];
+                    auto &node = *m_nodes[*index];
 
                     os << fmt::format(
                         ""
@@ -224,10 +224,10 @@ Entry::Entry() : commands{
                     ) << std::endl;
                     os << "show nodes " << *index << std::endl;
                 } else {
-                    for (size_t i = 0; i < nodes.size(); ++i) {
+                    for (size_t i = 0; i < m_nodes.size(); ++i) {
                         os << fmt::format(
                             "[{:>03}] : {}",
-                            i, format_node(nodes[i]->getNode())
+                            i, format_node(m_nodes[i]->getNode())
                         ) << std::endl;
                     }
                 }
@@ -247,7 +247,7 @@ Entry::Entry() : commands{
                 if (!index)
                     throw std::invalid_argument("INDEX required!");
 
-                const auto &node = *nodes[*index];
+                const auto &node = *m_nodes[*index];
 
                 const std::optional<NodeInformation::Node> *last_finger = nullptr;
                 bool printed_star = false;

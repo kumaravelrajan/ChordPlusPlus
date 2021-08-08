@@ -33,9 +33,9 @@ namespace entry
         void execute(std::vector<std::string> args, std::ostream &os = std::cout, std::ostream &err = std::cerr);
 
     private:
-        std::vector<std::unique_ptr<dht::Dht>> DHTs{};
-        std::vector<std::shared_ptr<NodeInformation>> nodes{};
-        const std::unordered_map<std::string, Command> commands;
+        std::vector<std::unique_ptr<dht::Dht>> m_DHTs{};
+        std::vector<std::shared_ptr<NodeInformation>> m_nodes{};
+        const std::unordered_map<std::string, Command> m_commands;
     };
 }
 
