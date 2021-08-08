@@ -230,6 +230,9 @@ void Dht::stabilize()
     auto cap = client.getMain<Peer>();
     auto req = cap.getPredecessorRequest();
 
+    /*
+     * Request pre(suc(cur)).
+     * */
     auto predOfSuccessor = req.send().then([LOG_CAPTURE](capnp::Response<Peer::GetPredecessorResults> &&response) {
         auto predOfSuccessor = PeerImpl::nodeFromReader(response.getNode());
         if (!predOfSuccessor) {
@@ -241,35 +244,54 @@ void Dht::stabilize()
         return std::optional<NodeInformation::Node>{};
     }).wait(client.getWaitScope());
 
-    if (predOfSuccessor && util::is_in_range_loop(
-        predOfSuccessor->getId(), m_nodeInformation->getId(), successor->getId(),
-        false, false
-    )) {
-        m_nodeInformation->setSuccessor(predOfSuccessor);
-        capnp::EzRpcClient client2{predOfSuccessor->getIp(), predOfSuccessor->getPort()};
-        auto cap2 = client2.getMain<Peer>();
-        auto req2 = cap2.notifyRequest();
-        PeerImpl::buildNode(req2.getNode(), m_nodeInformation->getNode());
-        return req2.send().then([LOG_CAPTURE](capnp::Response<Peer::NotifyResults> &&) {
-            LOG_TRACE("got response from predecessor of successor");
-        }, [LOG_CAPTURE](const kj::Exception &e) {
-            LOG_DEBUG("connection issue with predecessor of successor\n\t\t{}", e.getDescription().cStr());
-        }).wait(client2.getWaitScope());
-    } else {
-        capnp::EzRpcClient client2{successor->getIp(), successor->getPort()};
-        auto cap2 = client2.getMain<Peer>();
-        auto req2 = cap2.notifyRequest();
-        PeerImpl::buildNode(req2.getNode(), m_nodeInformation->getNode());
-        return req2.send().then([LOG_CAPTURE](capnp::Response<Peer::NotifyResults> &&) {
-            LOG_TRACE("got response from successor");
-        }, [LOG_CAPTURE](const kj::Exception &e) {
-            LOG_DEBUG("connection issue with successor\n\t\t{}", e.getDescription().cStr());
-        }).wait(client2.getWaitScope());
+    /*
+     * If pred(suc(cur)) == cur, no need to do further processing.
+     * */
+    if(!(predOfSuccessor && predOfSuccessor->getId() == m_nodeInformation->getId()))
+    {
+        /*
+         * if ( pred(suc(cur)) [called PSC] != null ) && if ( PSC is in range (cur, suc) )
+         * then PSC is successor of cur and cur is predecessor of PSC. Update accordingly.
+         * */
+        if (predOfSuccessor && util::is_in_range_loop(
+            predOfSuccessor->getId(), m_nodeInformation->getId(), successor->getId(),
+            false, false
+            )) {
+            m_nodeInformation->setSuccessor(predOfSuccessor);
+            capnp::EzRpcClient client2{predOfSuccessor->getIp(), predOfSuccessor->getPort()};
+            auto cap2 = client2.getMain<Peer>();
+            auto req2 = cap2.notifyRequest();
+            PeerImpl::buildNode(req2.getNode(), m_nodeInformation->getNode());
+            return req2.send().then([LOG_CAPTURE](capnp::Response<Peer::NotifyResults> &&) {
+                LOG_TRACE("got response from predecessor of successor");
+                }, [LOG_CAPTURE](const kj::Exception &e) {
+                LOG_DEBUG("connection issue with predecessor of successor\n\t\t{}", e.getDescription().cStr());
+            }).wait(client2.getWaitScope());
+        }
+        else
+        {
+            /*
+             * if ( pred(suc(cur)) [called PSC] == null  || ( PSC!=null && PSC not in range (cur, suc) ) )
+             * then cur is predecessor of suc(cur).
+             * */
+            capnp::EzRpcClient client2{successor->getIp(), successor->getPort()};
+            auto cap2 = client2.getMain<Peer>();
+            auto req2 = cap2.notifyRequest();
+            PeerImpl::buildNode(req2.getNode(), m_nodeInformation->getNode());
+            return req2.send().then([LOG_CAPTURE](capnp::Response<Peer::NotifyResults> &&) {
+                LOG_TRACE("got response from successor");
+                }, [LOG_CAPTURE](const kj::Exception &e) {
+                LOG_DEBUG("connection issue with successor\n\t\t{}", e.getDescription().cStr());
+            }).wait(client2.getWaitScope());
+        }
     }
 }
 
 void Dht::fixFingers()
 {
+    auto Res1 = util::pow2<uint8_t, SHA_DIGEST_LENGTH>(nextFinger);
+    auto Res2 = m_nodeInformation->getId();
+    auto ResFinal = Res2 + Res1;
     auto successor = getSuccessor(m_nodeInformation->getId() +
                                   util::pow2<uint8_t, SHA_DIGEST_LENGTH>(nextFinger));
     m_nodeInformation->setFinger(
