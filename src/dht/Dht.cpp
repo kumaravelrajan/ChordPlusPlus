@@ -230,9 +230,7 @@ void Dht::stabilize()
     auto cap = client.getMain<Peer>();
     auto req = cap.getPredecessorRequest();
 
-    /*
-     * Request pre(suc(cur)).
-     * */
+    /* Request pre(suc(cur)). */
     auto predOfSuccessor = req.send().then([LOG_CAPTURE](capnp::Response<Peer::GetPredecessorResults> &&response) {
         auto predOfSuccessor = PeerImpl::nodeFromReader(response.getNode());
         if (!predOfSuccessor) {
@@ -244,15 +242,11 @@ void Dht::stabilize()
         return std::optional<NodeInformation::Node>{};
     }).wait(client.getWaitScope());
 
-    /*
-     * If pred(suc(cur)) == cur, no need to do further processing.
-     * */
+    /* If pred(suc(cur)) == cur, no need to do further processing. */
     if(!(predOfSuccessor && predOfSuccessor->getId() == m_nodeInformation->getId()))
     {
-        /*
-         * if ( pred(suc(cur)) [called PSC] != null ) && if ( PSC is in range (cur, suc) )
-         * then PSC is successor of cur and cur is predecessor of PSC. Update accordingly.
-         * */
+        /* if ( pred(suc(cur)) [called PSC] != null ) && if ( PSC is in range (cur, suc) )
+         * then PSC is successor of cur and cur is predecessor of PSC. Update accordingly. */
         if (predOfSuccessor && util::is_in_range_loop(
             predOfSuccessor->getId(), m_nodeInformation->getId(), successor->getId(),
             false, false
@@ -270,10 +264,8 @@ void Dht::stabilize()
         }
         else
         {
-            /*
-             * if ( pred(suc(cur)) [called PSC] == null  || ( PSC!=null && PSC not in range (cur, suc) ) )
-             * then cur is predecessor of suc(cur).
-             * */
+            /* if ( pred(suc(cur)) [called PSC] == null  || ( PSC!=null && PSC not in range (cur, suc) ) )
+             * then cur is predecessor of suc(cur). */
             capnp::EzRpcClient client2{successor->getIp(), successor->getPort()};
             auto cap2 = client2.getMain<Peer>();
             auto req2 = cap2.notifyRequest();
