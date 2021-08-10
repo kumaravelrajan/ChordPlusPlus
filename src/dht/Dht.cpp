@@ -311,3 +311,21 @@ void Dht::checkPredecessor()
         m_nodeInformation->setPredecessor();
     }).wait(client.getWaitScope());
 }
+
+/* Get data items from predecessor for which joining node is responsible. */
+void dht::Dht::syncDataItemsWithPredecessorOnJoin() const
+{
+    std::optional<NodeInformation::Node> curPredecessor = m_nodeInformation->getPredecessor();
+
+    int i = 0;
+    while(!m_dhtCancelled){
+        std::optional<NodeInformation::Node> updatedPredecessor;
+
+        /* If predecessor not set or predecessor not changed, wait till pred newly set or changed and then sync. */
+        while((!curPredecessor && curPredecessor == updatedPredecessor)){
+            updatedPredecessor = m_nodeInformation->getPredecessor();
+        }
+
+        curPredecessor = updatedPredecessor;
+    }
+}

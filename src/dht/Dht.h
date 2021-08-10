@@ -22,13 +22,15 @@ namespace dht
     public:
         explicit Dht(std::shared_ptr<NodeInformation> nodeInformation) :
             m_nodeInformation(std::move(nodeInformation)),
-            m_mainLoop(std::async(std::launch::async, [this]() { runServer(); }))
+            m_mainLoop(std::async(std::launch::async, [this]() { runServer(); })),
+            m_predecessorSetFuture(std::async(std::launch::async, [this](){ syncDataItemsWithPredecessorOnJoin(); }))
         {}
         ~Dht()
         {
             m_dhtCancelled = true;
             m_api = nullptr;
             m_mainLoop.wait(); // This happens after the destructor anyway, but this way it is clearer
+            m_predecessorSetFuture.wait();
         };
         Dht(const Dht &) = delete;
         Dht(Dht &&) = delete;
@@ -55,7 +57,8 @@ namespace dht
         void fixFingers();
         void checkPredecessor();
 
-
+        /* When a node joins the ring, it gets the data items it is responsible for from its predecessor. */
+        void syncDataItemsWithPredecessorOnJoin() const;
 
         [[nodiscard]] std::optional<NodeInformation::Node> getSuccessor(NodeInformation::id_type key);
         std::vector<uint8_t> onDhtPut(const api::Message_DHT_PUT &m, std::atomic_bool &cancelled);
@@ -63,6 +66,7 @@ namespace dht
 
         std::shared_ptr<NodeInformation> m_nodeInformation;
         std::future<void> m_mainLoop;
+        std::future<void> m_predecessorSetFuture;
         std::unique_ptr<api::Api> m_api;
         std::atomic_bool m_dhtCancelled{false};
         std::atomic_bool m_mainLoopExited{false};
