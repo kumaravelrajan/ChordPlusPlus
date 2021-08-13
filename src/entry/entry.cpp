@@ -127,13 +127,32 @@ int Entry::mainLoop()
 
     while (true) {
         std::cout << "$ ";
-        std::getline(is, line);
-        std::regex re{R"(\[[^\]]*\]|[^ \n\r\t\[\]]+)"};
         std::vector<std::string> tokens{};
-        std::transform(
-            std::sregex_iterator{line.begin(), line.end(), re}, std::sregex_iterator{},
-            std::back_inserter(tokens), [](const std::smatch &match) { return match.str(); });
-        if (tokens.empty()) continue;
+        if(!isRepeatSet){
+            std::getline(is, line);
+            std::regex re{R"(\[[^\]]*\]|[^ \n\r\t\[\]]+)"};
+            std::transform(
+                std::sregex_iterator{line.begin(), line.end(), re}, std::sregex_iterator{},
+                std::back_inserter(tokens), [](const std::smatch &match) { return match.str(); });
+            if (tokens.empty()) continue;
+
+            if(tokens[0] != "repeat"){
+                m_lastEnteredCommand = tokens;
+            }
+        } else {
+            std::string toPrint {};
+            for(int i = 0; i < m_lastEnteredCommand.size(); ++i){
+                if(i != (m_lastEnteredCommand.size() - 1)){
+                    toPrint.append(m_lastEnteredCommand[i] + " ");
+                } else {
+                    toPrint.append(m_lastEnteredCommand[i] + "\n");
+                }
+            }
+            std::cout << toPrint;
+            tokens = m_lastEnteredCommand;
+        }
+
+        isRepeatSet = false;
 
         execute(tokens, os, err);
         std::cout << std::endl;
@@ -201,6 +220,17 @@ Entry::Entry() : m_commands{
                 os << "Shutting down..." << std::endl;
             }
         }
+    },
+    {
+            "repeat",
+            {
+                .brief="Exit the program",
+                .usage="exit",
+                .execute=
+                [this](const std::vector<std::string> &args, std::ostream &os, std::ostream &) {
+                        isRepeatSet = true;
+                }
+            }
     },
     {
         "add",
@@ -365,4 +395,6 @@ Entry::Entry() : m_commands{
             }
         }
     }
-} {}
+} {
+    isRepeatSet = false;
+}
