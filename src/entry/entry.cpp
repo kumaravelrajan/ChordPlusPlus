@@ -29,6 +29,11 @@ namespace entry
     {
         return node ? format_node(*node) : "<null>";
     }
+
+    std::string format_argument_choice(const std::string &metavar, const std::vector<std::string> &choices)
+    {
+        return fmt::format("{:>8}:    {{{}}}", metavar, fmt::join(choices, ", "));
+    }
 }
 
 Entry::Entry(const config::Configuration &conf) : Entry()
@@ -175,7 +180,8 @@ Entry::Entry() : commands{
         "show",
         {
             .brief="Show data depending on arguments",
-            .usage="show <WHAT> [ARGS...]",
+            .usage="show <WHAT> [ARGS...]\n\n" +
+                   format_argument_choice("WHAT", {"nodes", "fingers"}),
             .execute=
             [this](const std::vector<std::string> &args, std::ostream &os, std::ostream &err) {
                 if (args.empty())
@@ -202,9 +208,8 @@ Entry::Entry() : commands{
                     index = get_index(args[0]);
 
                 if (index) {
-                    if (index >= nodes.size()) {
+                    if (index >= nodes.size())
                         throw std::invalid_argument("Index [" + util::to_string(*index) + "] out of bounds!");
-                    }
                     auto &node = *nodes[*index];
 
                     os << fmt::format(
@@ -246,6 +251,8 @@ Entry::Entry() : commands{
                     index = get_index(args[0]);
                 if (!index)
                     throw std::invalid_argument("INDEX required!");
+                if (index >= nodes.size())
+                    throw std::invalid_argument("Index [" + util::to_string(*index) + "] out of bounds!");
 
                 const auto &node = *nodes[*index];
 

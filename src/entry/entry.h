@@ -35,7 +35,7 @@ namespace entry
     private:
         std::vector<std::unique_ptr<dht::Dht>> DHTs{};
         std::vector<std::shared_ptr<NodeInformation>> nodes{};
-        const std::unordered_map<std::string, Command> commands;
+        mutable std::unordered_map<std::string, Command> commands;
     };
 }
 
