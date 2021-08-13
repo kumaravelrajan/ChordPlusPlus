@@ -29,6 +29,36 @@ namespace entry
     {
         return node ? format_node(*node) : "<null>";
     }
+
+    void Entry::addNodeDynamicallyToNetwork(uint16_t portParam = 0){
+        uint16_t Port = 0;
+
+        if(portParam != 0){
+            Port = portParam;
+        }
+        else{
+            uint16_t tempPort = m_nodes.back()->getPort();
+            Port = ++tempPort;
+        }
+
+        m_nodes.push_back(std::make_shared<NodeInformation>(m_conf.p2p_address, Port));
+
+        // Set bootstrap node details parsed from config file
+        m_nodes.back()->setBootstrapNode(
+            NodeInformation::Node(m_conf.bootstrapNode_address, m_conf.bootstrapNode_port)
+            );
+
+        // The constructor of Dht starts mainLoop asynchronously.
+        m_DHTs.push_back(std::make_unique<dht::Dht>(m_nodes.back()));
+
+        m_DHTs.back()->setApi(std::make_unique<api::Api>(api::Options{
+            .port= m_nodes.back()->getPort() + static_cast<uint16_t>(1000),
+            }));
+
+        std::cout << "Details of new node = \n"
+        << "1. P2P address - " << m_nodes.back()->getIp() << ":" << m_nodes.back()->getPort() << "\n"
+        << "2. API port - " << m_conf.api_port + m_conf.extra_debug_nodes + 1 << "\n";
+    }
 }
 
 Entry::Entry(const config::Configuration &conf) : Entry()
@@ -180,48 +210,15 @@ Entry::Entry() : m_commands{
             .execute=[this](const std::vector<std::string> &args, std::ostream &os, std::ostream &err) {
                 bool isUserPortAvailable = true;
                 if(!args.empty()){
-                    uint16_t nodeP2p_Port = 0;
                     if(static_cast<uint16_t>(stoi(args[0])) <= 65535){
-                        nodeP2p_Port = static_cast<uint16_t>(stoi(args[0]));
+                        addNodeDynamicallyToNetwork(stoi(args[0]));
                     }
-                    m_nodes.push_back(std::make_shared<NodeInformation>(m_conf.p2p_address, nodeP2p_Port));
-
-                    // Set bootstrap node details parsed from config file
-                    m_nodes.back()->setBootstrapNode(
-                        NodeInformation::Node(m_conf.bootstrapNode_address, m_conf.bootstrapNode_port)
-                        );
-
-                    // The constructor of Dht starts mainLoop asynchronously.
-                    m_DHTs.push_back(std::make_unique<dht::Dht>(m_nodes.back()));
-
-                    m_DHTs.back()->setApi(std::make_unique<api::Api>(api::Options{
-                        .port= m_nodes.back()->getPort() + static_cast<uint16_t>(1000)
-                        }));
-
-                    std::cout << "Details of new node = \n"
-                    << "1. P2P address - " << m_nodes.back()->getIp() << ":" << m_nodes.back()->getPort() << "\n"
-                    << "2. API port - " << m_conf.api_port + m_conf.extra_debug_nodes + 1 << "\n";
+                    else{
+                        addNodeDynamicallyToNetwork();
+                    }
                 }
-
-                if(!isUserPortAvailable || args.empty()){
-                    uint16_t lastPortValue = m_nodes.back()->getPort();
-                    m_nodes.push_back(std::make_shared<NodeInformation>(m_conf.p2p_address, ++lastPortValue));
-
-                    // Set bootstrap node details parsed from config file
-                    m_nodes.back()->setBootstrapNode(
-                        NodeInformation::Node(m_conf.bootstrapNode_address, m_conf.bootstrapNode_port)
-                        );
-
-                    // The constructor of Dht starts mainLoop asynchronously.
-                    m_DHTs.push_back(std::make_unique<dht::Dht>(m_nodes.back()));
-
-                    m_DHTs.back()->setApi(std::make_unique<api::Api>(api::Options{
-                        .port= m_nodes.back()->getPort() + static_cast<uint16_t>(1000),
-                        }));
-
-                    std::cout << "Details of new node = \n"
-                    << "1. P2P address - " << m_nodes.back()->getIp() << ":" << m_nodes.back()->getPort() << "\n"
-                    << "2. API port - " << m_conf.api_port + m_conf.extra_debug_nodes + 1 << "\n";
+                else{
+                    addNodeDynamicallyToNetwork();
                 }
             }
         }
