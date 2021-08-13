@@ -31,8 +31,9 @@ PeerImpl::PeerImpl(std::shared_ptr<NodeInformation> nodeInformation) :
             auto node = context.getResults().getNode().getValue();
             node.setIp(successor->getIp());
             node.setPort(successor->getPort());
+            auto id = successor->getId();
             node.setId(
-                capnp::Data::Builder(kj::heapArray<kj::byte>(successor->getId().begin(), successor->getId().end())));
+                capnp::Data::Builder(kj::heapArray<kj::byte>(id.begin(), id.end())));
         }
     });
 }
@@ -45,7 +46,8 @@ PeerImpl::PeerImpl(std::shared_ptr<NodeInformation> nodeInformation) :
         auto node = context.getResults().getNode().getValue();
         node.setIp(pred->getIp());
         node.setPort(pred->getPort());
-        node.setId(capnp::Data::Builder(kj::heapArray<kj::byte>(pred->getId().begin(), pred->getId().end())));
+        auto id = pred->getId();
+        node.setId(capnp::Data::Builder(kj::heapArray<kj::byte>(id.begin(), id.end())));
     } else {
         context.getResults().getNode().setEmpty();
     }
@@ -134,12 +136,13 @@ void PeerImpl::buildNode(Node::Builder builder, const NodeInformation::Node &nod
 {
     builder.setIp(node.getIp());
     builder.setPort(node.getPort());
-    builder.setId(capnp::Data::Builder(kj::heapArray<kj::byte>(node.getId().begin(), node.getId().end())));
+    auto id = node.getId();
+    builder.setId(capnp::Data::Builder(kj::heapArray<kj::byte>(id.begin(), id.end())));
 }
 
 // Interface
 
-::kj::Promise<std::optional<NodeInformation::Node>> PeerImpl::getSuccessor(NodeInformation::id_type id)
+::kj::Promise <std::optional<NodeInformation::Node>> PeerImpl::getSuccessor(NodeInformation::id_type id)
 {
     LOG_GET
     // If this node is requested
@@ -173,7 +176,7 @@ void PeerImpl::buildNode(Node::Builder builder, const NodeInformation::Node &nod
     auto cap = client->getMain<Peer>();
     auto req = cap.getSuccessorRequest();
     req.setId(capnp::Data::Builder{kj::heapArray<kj::byte>(id.begin(), id.end())});
-    return req.send().then([client = kj::mv(client)](capnp::Response<Peer::GetSuccessorResults> &&response) {
+    return req.send().then([client = kj::mv(client)](capnp::Response <Peer::GetSuccessorResults> &&response) {
         return nodeFromReader(response.getNode());
     }, [LOG_CAPTURE](const kj::Exception &e) {
         LOG_DEBUG("Exception in request\n\t\t{}", e.getDescription().cStr());
@@ -205,7 +208,7 @@ PeerImpl::getData(const NodeInformation::Node &node, const std::vector<uint8_t> 
         auto cap = client.getMain<Peer>();
         auto req = cap.getDataRequest();
         req.setKey(capnp::Data::Builder(kj::heapArray<kj::byte>(key.begin(), key.end())));
-        return req.send().then([LOG_CAPTURE](capnp::Response<Peer::GetDataResults> &&response) {
+        return req.send().then([LOG_CAPTURE](capnp::Response <Peer::GetDataResults> &&response) {
             auto data = response.getData();
 
             if (data.which() == Optional<capnp::Data>::EMPTY) {
@@ -240,7 +243,7 @@ void PeerImpl::setData(
         req.setKey(capnp::Data::Builder(kj::heapArray<kj::byte>(key.begin(), key.end())));
         req.setValue(capnp::Data::Builder(kj::heapArray<kj::byte>(value.begin(), value.end())));
         req.setTtl(ttl);
-        return req.send().then([LOG_CAPTURE](capnp::Response<Peer::SetDataResults> &&) {
+        return req.send().then([LOG_CAPTURE](capnp::Response <Peer::SetDataResults> &&) {
             LOG_TRACE("got response");
         }, [LOG_CAPTURE](const kj::Exception &e) {
             LOG_DEBUG("Exception in request\n\t\t{}", e.getDescription().cStr());

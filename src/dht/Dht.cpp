@@ -202,8 +202,9 @@ void Dht::join(const NodeInformation::Node &node)
     capnp::EzRpcClient client{node.getIp(), node.getPort()};
     auto cap = client.getMain<Peer>();
     auto req = cap.getSuccessorRequest();
+    auto id = m_nodeInformation->getId();
     req.setId(capnp::Data::Builder(
-        kj::heapArray<kj::byte>(m_nodeInformation->getId().begin(), m_nodeInformation->getId().end())));
+        kj::heapArray<kj::byte>(id.begin(), id.end())));
 
     return req.send().then([LOG_CAPTURE, this](capnp::Response<Peer::GetSuccessorResults> &&response) {
         LOG_DEBUG("got response from node");
