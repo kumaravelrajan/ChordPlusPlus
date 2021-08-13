@@ -36,6 +36,7 @@ namespace entry
         std::vector<std::unique_ptr<dht::Dht>> m_DHTs{};
         std::vector<std::shared_ptr<NodeInformation>> m_nodes{};
         const std::unordered_map<std::string, Command> m_commands;
+        config::Configuration m_conf;
     };
 }
 
