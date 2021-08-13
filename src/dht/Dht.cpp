@@ -281,9 +281,6 @@ void Dht::stabilize()
 
 void Dht::fixFingers()
 {
-    auto Res1 = util::pow2<uint8_t, SHA_DIGEST_LENGTH>(nextFinger);
-    auto Res2 = m_nodeInformation->getId();
-    auto ResFinal = Res2 + Res1;
     auto successor = getSuccessor(m_nodeInformation->getId() +
                                   util::pow2<uint8_t, SHA_DIGEST_LENGTH>(nextFinger));
     m_nodeInformation->setFinger(

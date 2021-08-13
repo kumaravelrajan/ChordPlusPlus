@@ -132,6 +132,10 @@ void NodeInformation::setBootstrapNode(const std::optional<Node> &bootstrapNodeA
 {
     m_bootstrapNodeAddress = bootstrapNodeAddress;
 }
+NodeInformation::dataItem_type NodeInformation::getAllDataInNode() const
+{
+    return m_data;
+}
 
 // Node Methods:
 

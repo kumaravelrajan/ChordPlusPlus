@@ -12,6 +12,7 @@
 
 namespace entry
 {
+    using dataItem_type = std::map<std::vector<uint8_t>, std::pair<std::vector<uint8_t>, std::chrono::system_clock::time_point>>;
     class Entry;
 
     struct Command

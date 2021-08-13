@@ -210,7 +210,7 @@ Entry::Entry() : m_commands{
             .execute=[this](const std::vector<std::string> &args, std::ostream &os, std::ostream &err) {
                 bool isUserPortAvailable = true;
                 if(!args.empty()){
-                    if(static_cast<uint16_t>(stoi(args[0])) <= 65535){
+                    if(stoi(args[0]) <= 65535){
                         addNodeDynamicallyToNetwork(stoi(args[0]));
                     }
                     else{
@@ -248,10 +248,19 @@ Entry::Entry() : m_commands{
             .brief="List all Nodes, or information of one Node",
             .usage="show nodes [INDEX]",
             .execute=
-            [this](const std::vector<std::string> &args, std::ostream &os, std::ostream &) {
+            [this](const std::vector<std::string> &args, std::ostream &os, std::ostream &err) {
                 std::optional<uint32_t> index{};
-                if (!args.empty())
-                    index = get_index(args[0]);
+                if (!args.empty()){
+                    if(args[0] == "data"){
+                        std::string what = util::to_lower(args[0]);
+                        std::vector<std::string> new_args{args.begin(), args.end()};
+                        new_args[0] = "show:nodes:" + what;
+                        execute(new_args, os, err);
+                        return;
+                    }else{
+                        index = get_index(args[0]);
+                    }
+                }
 
                 if (index) {
                     if (index >= m_nodes.size()) {
@@ -285,6 +294,39 @@ Entry::Entry() : m_commands{
                 }
             }
         }
+    },
+    {
+      "show:nodes:data",
+      {
+          .brief="List all Nodes, or information of one Node",
+          .usage="show nodes [INDEX]",
+          .execute=
+          [this](const std::vector<std::string> &args, std::ostream &os, std::ostream &err) {
+                if(stoi(args[0]) <= 65535){
+                    uint16_t index = stoi(args[0]);
+                    dataItem_type dataInNode = m_nodes[index]->getAllDataInNode();
+
+                    /* Display node details. */
+                    std::vector<std::string> new_Args = {"show", "nodes", std::to_string(index) };
+                    execute(new_Args, os, err);
+
+                    if(!dataInNode.empty()){
+                        int i = 1;
+                        for(auto s : dataInNode){
+                            // Hashing received key to convert it into length of 20 bytes
+                            std::string sKey{s.first.begin(), s.first.end()};
+                            NodeInformation::id_type finalHashedKey = NodeInformation::hash_sha1(sKey);
+                            os << fmt::format("Data items in node : \n "
+                                "{}. key = {}\n", i, util::hexdump(finalHashedKey, 20, false, false));
+                            ++i;
+                        }
+                    }
+                    else{
+                        os << fmt::format("No data items stored in node {}\n", index);
+                    }
+                }
+          }
+      }
     },
     {
         "show:fingers",

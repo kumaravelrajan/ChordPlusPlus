@@ -22,6 +22,7 @@ class NodeInformation
 public:
     static constexpr size_t key_bits = SHA_DIGEST_LENGTH * 8;
     using id_type = std::array<uint8_t, SHA_DIGEST_LENGTH>;
+    using dataItem_type = std::map<std::vector<uint8_t>, std::pair<std::vector<uint8_t>, std::chrono::system_clock::time_point>>;
 
     class Node
     {
@@ -95,7 +96,7 @@ public:
     [[nodiscard]] std::optional<std::vector<uint8_t>> getData(const std::vector<uint8_t> &key) const;
     void setData(const std::vector<uint8_t> &key, const std::vector<uint8_t> &value,
                  std::chrono::system_clock::duration ttl = std::chrono::system_clock::duration::max());
-
+    [[nodiscard]] NodeInformation::dataItem_type getAllDataInNode() const;
 public:
     // Constructor
     explicit NodeInformation(std::string host = "", uint16_t port = 0);
