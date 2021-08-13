@@ -57,7 +57,7 @@ namespace entry
 
         std::cout << "Details of new node = \n"
         << "1. P2P address - " << m_nodes.back()->getIp() << ":" << m_nodes.back()->getPort() << "\n"
-        << "2. API port - " << m_conf.api_port + m_conf.extra_debug_nodes + 1 << "\n";
+        << "2. API port - " << m_nodes.back()->getPort() + static_cast<uint16_t>(1000) << "\n";
     }
 }
 
