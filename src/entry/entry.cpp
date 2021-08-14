@@ -357,7 +357,7 @@ Entry::Entry() : m_commands{
                             ++i;
                         }
                     } else {
-                        os << fmt::format("No data items stored in node {}\n", index);
+                        os << fmt::format("No data items stored in node {}\n", *index);
                     }
                 }
             }
