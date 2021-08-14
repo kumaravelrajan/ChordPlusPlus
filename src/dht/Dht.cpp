@@ -70,6 +70,12 @@ void Dht::mainLoop()
         if (m_dhtCancelled) break;
         checkPredecessor();
         if (m_dhtCancelled) break;
+        /* Sync data items from successor for which new node is responsible. */
+        /* Todo - Remove this */
+        if(m_nodeInformation->getPort() == 6035){
+            getPeerImpl().getDataItemsOnJoinHelper(m_nodeInformation->getSuccessor(), m_nodeInformation);
+        }
+        if (m_dhtCancelled) break;
 
         // Wait one second
         std::this_thread::sleep_for(1s);
