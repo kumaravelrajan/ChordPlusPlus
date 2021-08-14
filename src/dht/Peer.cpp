@@ -142,27 +142,40 @@ void PeerImpl::buildNode(Node::Builder builder, const NodeInformation::Node &nod
 
 // Interface
 
-::kj::Promise <std::optional<NodeInformation::Node>> PeerImpl::getSuccessor(NodeInformation::id_type id)
+::kj::Promise<std::optional<NodeInformation::Node>> PeerImpl::getSuccessor(NodeInformation::id_type id)
 {
     LOG_GET
     // If this node is requested
-    if (m_nodeInformation->getPredecessor() &&
+    auto pred = m_nodeInformation->getPredecessor();
+    if (pred &&
         util::is_in_range_loop(
             id,
-            m_nodeInformation->getPredecessor()->getId(), m_nodeInformation->getId(),
+            pred->getId(), m_nodeInformation->getId(),
             false, true
         )) {
         return std::optional<NodeInformation::Node>{m_nodeInformation->getNode()};
     }
 
     // If next node is requested
-    if (m_nodeInformation->getSuccessor() &&
+    auto successor = m_nodeInformation->getSuccessor();
+    if (successor &&
         util::is_in_range_loop(
             id,
-            m_nodeInformation->getId(), m_nodeInformation->getSuccessor()->getId(),
+            m_nodeInformation->getId(), successor->getId(),
             false, true
         )) {
-        return m_nodeInformation->getFinger(0);
+        // Check if successor is online
+        auto client = kj::heap<capnp::EzRpcClient>(successor->getIp(), successor->getPort());
+        auto cap = client->getMain<Peer>();
+        auto req = cap.getPredecessorRequest();
+        return req.send().then(
+            [client = kj::mv(client), successor](capnp::Response<Peer::GetPredecessorResults> &&response) {
+                return successor;
+            }, [LOG_CAPTURE](const kj::Exception &) {
+                LOG_DEBUG("Exception in request\n\t\t{}", e.getDescription().cStr());
+                return std::optional<NodeInformation::Node>{};
+            }
+        );
     }
 
     // Otherwise, pass the request to the closest preceding finger
@@ -176,7 +189,7 @@ void PeerImpl::buildNode(Node::Builder builder, const NodeInformation::Node &nod
     auto cap = client->getMain<Peer>();
     auto req = cap.getSuccessorRequest();
     req.setId(capnp::Data::Builder{kj::heapArray<kj::byte>(id.begin(), id.end())});
-    return req.send().then([client = kj::mv(client)](capnp::Response <Peer::GetSuccessorResults> &&response) {
+    return req.send().then([client = kj::mv(client)](capnp::Response<Peer::GetSuccessorResults> &&response) {
         return nodeFromReader(response.getNode());
     }, [LOG_CAPTURE](const kj::Exception &e) {
         LOG_DEBUG("Exception in request\n\t\t{}", e.getDescription().cStr());
@@ -208,7 +221,7 @@ PeerImpl::getData(const NodeInformation::Node &node, const std::vector<uint8_t> 
         auto cap = client.getMain<Peer>();
         auto req = cap.getDataRequest();
         req.setKey(capnp::Data::Builder(kj::heapArray<kj::byte>(key.begin(), key.end())));
-        return req.send().then([LOG_CAPTURE](capnp::Response <Peer::GetDataResults> &&response) {
+        return req.send().then([LOG_CAPTURE](capnp::Response<Peer::GetDataResults> &&response) {
             auto data = response.getData();
 
             if (data.which() == Optional<capnp::Data>::EMPTY) {
@@ -243,7 +256,7 @@ void PeerImpl::setData(
         req.setKey(capnp::Data::Builder(kj::heapArray<kj::byte>(key.begin(), key.end())));
         req.setValue(capnp::Data::Builder(kj::heapArray<kj::byte>(value.begin(), value.end())));
         req.setTtl(ttl);
-        return req.send().then([LOG_CAPTURE](capnp::Response <Peer::SetDataResults> &&) {
+        return req.send().then([LOG_CAPTURE](capnp::Response<Peer::SetDataResults> &&) {
             LOG_TRACE("got response");
         }, [LOG_CAPTURE](const kj::Exception &e) {
             LOG_DEBUG("Exception in request\n\t\t{}", e.getDescription().cStr());
