@@ -253,7 +253,7 @@ Entry::Entry() : m_commands{
             .brief= "Remove node(s) from the chord ring",
             .usage= "remove <INDEX> [COUNT]",
             .execute=
-            [this](const std::vector<std::string> &args, std::ostream &os, std::ostream &) {
+            [this](const std::vector<std::string> &args, std::ostream &, std::ostream &) {
                 std::optional<uint32_t> index{};
                 if (!args.empty())
                     index = get_index(args[0]);
@@ -270,6 +270,16 @@ Entry::Entry() : m_commands{
                         count = *c;
                     }
                 }
+
+                std::vector<std::future<void>> deletions{};
+                std::transform(
+                    m_DHTs.begin() + *index, m_DHTs.begin() + *index + count, std::back_inserter(deletions),
+                    [](std::unique_ptr<dht::Dht> &dht) {
+                        std::this_thread::sleep_for(50ms);
+                        return std::async(std::launch::async, [&dht] { dht = nullptr; });
+                    }
+                );
+                deletions.clear(); // await deletions
 
                 m_DHTs.erase(m_DHTs.begin() + *index, m_DHTs.begin() + *index + count);
                 m_nodes.erase(m_nodes.begin() + *index, m_nodes.begin() + *index + count);
