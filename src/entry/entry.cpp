@@ -35,6 +35,10 @@ namespace entry
     {
         return fmt::format("{:>8}:    {{{}}}", metavar, fmt::join(choices, ", "));
     }
+
+    std::string insertHighlighterSection(){
+        return "=======================================";
+    }
 }
 
 
@@ -358,40 +362,46 @@ Entry::Entry() : m_commands{
         }
     },
     {
-        "show:data",
-        {
-            .brief= "Show data stored in specified node.",
-            .usage= "show data [INDEX]",
-            .execute=
-            [this](const std::vector<std::string> &args, std::ostream &os, std::ostream &err) {
-                auto index = get_index(args[0]);
-                if (index) {
-                    // NOTE: you are copying the entire map
-                    dataItem_type dataInNode = m_nodes[*index]->getAllDataInNode();
+      "show:data",
+      {
+          .brief="List all data items contained in Node",
+          .usage="show nodes [INDEX]",
+          .execute=
+          [this](const std::vector<std::string> &args, std::ostream &os, std::ostream &err) {
+                if(!args.empty()){
+                    if(stoi(args[0]) <= 65535){
+                        uint16_t index = stoi(args[0]);
+                        dataItem_type dataInNode = m_nodes[index]->getAllDataInNode();
 
-                    /* Display node details. */
-                    std::vector<std::string> new_Args{"show", "nodes", std::to_string(*index)};
-                    execute(new_Args, os, err);
+                        /* Display node details. */
+                        std::vector<std::string> new_Args = {"show", "nodes", std::to_string(index) };
+                        execute(new_Args, os, err);
 
-                    if (!dataInNode.empty()) {
-                        os << fmt::format("Keys in node {}:\n", *index);
+                        /* Highlighting the data keys */
+                        os << fmt::format("\n{}\n", insertHighlighterSection());
 
-                        for (int i = 0; const auto &s : dataInNode) {
-                            // Hashing received key to convert it into length of 20 bytes
-                            std::string sKey{s.first.begin(), s.first.end()};
-                            NodeInformation::id_type finalHashedKey = NodeInformation::hash_sha1(sKey);
-                            os << fmt::format(
-                                "[{:>03}] key hash = {}\n",
-                                i, util::hexdump(finalHashedKey, 20, false, false)
-                            );
-                            ++i;
+                        if(!dataInNode.empty()){
+                            os << "Data items in node : \n";
+                            int i = 1;
+                            for(auto s : dataInNode){
+                                // Hashing received key to convert it into length of 20 bytes
+                                std::string sKey{s.first.begin(), s.first.end()};
+                                NodeInformation::id_type finalHashedKey = NodeInformation::hash_sha1(sKey);
+                                os << fmt::format("{}. key = {}\n", i, util::hexdump(finalHashedKey, 20, false, false));
+                                ++i;
+                            }
+                            os << fmt::format("{}\n", insertHighlighterSection());
                         }
-                    } else {
-                        os << fmt::format("No data items stored in node {}\n", *index);
+                        else{
+                            os << fmt::format("No data items stored in node {}\n", index);
+                            os << fmt::format("{}\n", insertHighlighterSection());
+                        }
                     }
+                } else {
+                    os << "INDEX required!";
                 }
-            }
-        }
+          }
+      }
     },
     {
         "show:fingers",
