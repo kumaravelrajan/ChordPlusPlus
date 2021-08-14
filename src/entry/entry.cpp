@@ -15,9 +15,9 @@ namespace entry
                          std::regex(R"(((?:\d|\.\')+)|\[((?:\d|\.\')+)\])"));
         std::string result = match[1].str() + match[2].str();
         return
-            !result.empty()
-            ? util::from_string<uint32_t>(result)
-            : std::optional<uint32_t>{};
+        !result.empty()
+        ? util::from_string<uint32_t>(result)
+        : std::optional<uint32_t>{};
     }
 
     std::string format_node(const NodeInformation::Node &node)
@@ -36,8 +36,10 @@ namespace entry
     }
 }
 
+
 Entry::Entry(const config::Configuration &conf) : Entry()
 {
+    m_conf = conf;
     uint16_t dht_port = conf.p2p_port;
     uint16_t api_port = conf.api_port;
 
@@ -53,17 +55,17 @@ Entry::Entry(const config::Configuration &conf) : Entry()
                 i, dht_port, api_port
             );
 
-            nodes.push_back(std::make_shared<NodeInformation>("127.0.0.1", dht_port));
+            m_nodes.push_back(std::make_shared<NodeInformation>(conf.p2p_address, dht_port));
 
             // Set bootstrap node details parsed from config file
-            nodes[i]->setBootstrapNode(
+            m_nodes[i]->setBootstrapNode(
                 NodeInformation::Node(conf.bootstrapNode_address, conf.bootstrapNode_port)
             );
 
             // The constructor of Dht starts mainLoop asynchronously.
-            DHTs.push_back(std::make_unique<dht::Dht>(nodes[i]));
+            m_DHTs.push_back(std::make_unique<dht::Dht>(m_nodes[i]));
 
-            DHTs[i]->setApi(std::make_unique<api::Api>(api::Options{
+            m_DHTs[i]->setApi(std::make_unique<api::Api>(api::Options{
                 .port= api_port,
             }));
 
@@ -78,14 +80,14 @@ Entry::~Entry()
     SPDLOG_TRACE("[ENTRY] exiting...");
 
     // Asynchronously delete dht objects
-    std::vector<std::future<void>> deletions(DHTs.size());
-    std::transform(DHTs.begin(), DHTs.end(), deletions.begin(), [](std::unique_ptr<dht::Dht> &dht) {
+    std::vector<std::future<void>> deletions(m_DHTs.size());
+    std::transform(m_DHTs.begin(), m_DHTs.end(), deletions.begin(), [](std::unique_ptr<dht::Dht> &dht) {
         std::this_thread::sleep_for(50ms);
         return std::async(std::launch::async, [&dht] { dht = nullptr; });
     });
     deletions.clear(); // await deletions
-    DHTs.clear();
-    nodes.clear();
+    m_DHTs.clear();
+    m_nodes.clear();
     SPDLOG_TRACE("[ENTRY] Dht Stopped.");
 }
 
@@ -101,13 +103,32 @@ int Entry::mainLoop()
 
     while (true) {
         std::cout << "$ ";
-        std::getline(is, line);
-        std::regex re{R"(\[[^\]]*\]|[^ \n\r\t\[\]]+)"};
         std::vector<std::string> tokens{};
-        std::transform(
-            std::sregex_iterator{line.begin(), line.end(), re}, std::sregex_iterator{},
-            std::back_inserter(tokens), [](const std::smatch &match) { return match.str(); });
-        if (tokens.empty()) continue;
+        if(!isRepeatSet){
+            std::getline(is, line);
+            std::regex re{R"(\[[^\]]*\]|[^ \n\r\t\[\]]+)"};
+            std::transform(
+                std::sregex_iterator{line.begin(), line.end(), re}, std::sregex_iterator{},
+                std::back_inserter(tokens), [](const std::smatch &match) { return match.str(); });
+            if (tokens.empty()) continue;
+
+            if(tokens[0] != "repeat"){
+                m_lastEnteredCommand = tokens;
+            }
+        } else {
+            std::string toPrint {};
+            for(int i = 0; i < m_lastEnteredCommand.size(); ++i){
+                if(i != (m_lastEnteredCommand.size() - 1)){
+                    toPrint.append(m_lastEnteredCommand[i] + " ");
+                } else {
+                    toPrint.append(m_lastEnteredCommand[i] + "\n");
+                }
+            }
+            std::cout << toPrint;
+            tokens = m_lastEnteredCommand;
+        }
+
+        isRepeatSet = false;
 
         execute(tokens, os, err);
         std::cout << std::endl;
@@ -123,8 +144,8 @@ void Entry::execute(std::vector<std::string> args, std::ostream &os, std::ostrea
     std::string cmd = args.front();
     args.erase(args.begin());
 
-    if (Entry::commands.contains(cmd)) {
-        const auto &command = Entry::commands.at(cmd);
+    if (Entry::m_commands.contains(cmd)) {
+        const auto &command = Entry::m_commands.at(cmd);
         try {
             command.execute(args, os, err);
         } catch (const std::exception &e) {
@@ -137,7 +158,37 @@ void Entry::execute(std::vector<std::string> args, std::ostream &os, std::ostrea
     }
 }
 
-Entry::Entry() : commands{
+void Entry::addNodeDynamicallyToNetwork(uint16_t portParam = 0){
+    uint16_t Port = 0;
+
+    if(portParam != 0){
+        Port = portParam;
+    }
+    else{
+        uint16_t tempPort = m_nodes.back()->getPort();
+        Port = ++tempPort;
+    }
+
+    m_nodes.push_back(std::make_shared<NodeInformation>(m_conf.p2p_address, Port));
+
+    // Set bootstrap node details parsed from config file
+    m_nodes.back()->setBootstrapNode(
+        NodeInformation::Node(m_conf.bootstrapNode_address, m_conf.bootstrapNode_port)
+        );
+
+    // The constructor of Dht starts mainLoop asynchronously.
+    m_DHTs.push_back(std::make_unique<dht::Dht>(m_nodes.back()));
+
+    m_DHTs.back()->setApi(std::make_unique<api::Api>(api::Options{
+        .port= m_nodes.back()->getPort() + static_cast<uint16_t>(1000),
+        }));
+
+    std::cout << "Details of new node = \n"
+    << "1. P2P address - " << m_nodes.back()->getIp() << ":" << m_nodes.back()->getPort() << "\n"
+    << "2. API port - " << m_nodes.back()->getPort() + static_cast<uint16_t>(1000) << "\n";
+}
+
+Entry::Entry() : m_commands{
     {
         "help",
         {
@@ -147,14 +198,14 @@ Entry::Entry() : commands{
             [this](const std::vector<std::string> &args, std::ostream &os, std::ostream &) {
                 if (args.empty()) {
                     os << "Commands:\n";
-                    for (const auto &item : commands) {
+                    for (const auto &item : m_commands) {
                         if (item.first.find(":") != std::string::npos) continue;
                         os << fmt::format("{:<12} : {}", item.first, item.second.brief) << std::endl;
                     }
                 } else {
                     std::string str = util::join(args, ":");
-                    if (commands.contains(str)) {
-                        const auto &cmd = commands.at(str);
+                    if (m_commands.contains(str)) {
+                        const auto &cmd = m_commands.at(str);
                         os << cmd.brief << "\n\nUsage:\n" << cmd.usage << std::endl;
                     } else {
                         throw std::invalid_argument("Command \"" + str + "\" not found!");
@@ -173,6 +224,38 @@ Entry::Entry() : commands{
                 if (!args.empty())
                     throw std::invalid_argument("No arguments expected!");
                 os << "Shutting down..." << std::endl;
+            }
+        }
+    },
+    {
+            "repeat",
+            {
+                .brief="Exit the program",
+                .usage="exit",
+                .execute=
+                [this](const std::vector<std::string> &args, std::ostream &os, std::ostream &) {
+                        isRepeatSet = true;
+                }
+            }
+    },
+    {
+        "add",
+        {
+            .brief = "Add node to the chord ring",
+            .usage = "add [PORT]",
+            .execute=[this](const std::vector<std::string> &args, std::ostream &os, std::ostream &err) {
+                bool isUserPortAvailable = true;
+                if(!args.empty()){
+                    if(stoi(args[0]) <= 65535){
+                        addNodeDynamicallyToNetwork(stoi(args[0]));
+                    }
+                    else{
+                        addNodeDynamicallyToNetwork();
+                    }
+                }
+                else{
+                    addNodeDynamicallyToNetwork();
+                }
             }
         }
     },
@@ -202,15 +285,24 @@ Entry::Entry() : commands{
             .brief="List all Nodes, or information of one Node",
             .usage="show nodes [INDEX]",
             .execute=
-            [this](const std::vector<std::string> &args, std::ostream &os, std::ostream &) {
+            [this](const std::vector<std::string> &args, std::ostream &os, std::ostream &err) {
                 std::optional<uint32_t> index{};
-                if (!args.empty())
-                    index = get_index(args[0]);
+                if (!args.empty()){
+                    if(args[0] == "data"){
+                        std::string what = util::to_lower(args[0]);
+                        std::vector<std::string> new_args{args.begin(), args.end()};
+                        new_args[0] = "show:nodes:" + what;
+                        execute(new_args, os, err);
+                        return;
+                    }else{
+                        index = get_index(args[0]);
+                    }
+                }
 
                 if (index) {
-                    if (index >= nodes.size())
+                    if (index >= m_nodes.size())
                         throw std::invalid_argument("Index [" + util::to_string(*index) + "] out of bounds!");
-                    auto &node = *nodes[*index];
+                    auto &node = *m_nodes[*index];
 
                     os << fmt::format(
                         ""
@@ -229,15 +321,48 @@ Entry::Entry() : commands{
                     ) << std::endl;
                     os << "show nodes " << *index << std::endl;
                 } else {
-                    for (size_t i = 0; i < nodes.size(); ++i) {
+                    for (size_t i = 0; i < m_nodes.size(); ++i) {
                         os << fmt::format(
                             "[{:>03}] : {}",
-                            i, format_node(nodes[i]->getNode())
+                            i, format_node(m_nodes[i]->getNode())
                         ) << std::endl;
                     }
                 }
             }
         }
+    },
+    {
+      "show:nodes:data",
+      {
+          .brief="List all Nodes, or information of one Node",
+          .usage="show nodes [INDEX]",
+          .execute=
+          [this](const std::vector<std::string> &args, std::ostream &os, std::ostream &err) {
+                if(stoi(args[0]) <= 65535){
+                    uint16_t index = stoi(args[0]);
+                    dataItem_type dataInNode = m_nodes[index]->getAllDataInNode();
+
+                    /* Display node details. */
+                    std::vector<std::string> new_Args = {"show", "nodes", std::to_string(index) };
+                    execute(new_Args, os, err);
+
+                    if(!dataInNode.empty()){
+                        int i = 1;
+                        for(auto s : dataInNode){
+                            // Hashing received key to convert it into length of 20 bytes
+                            std::string sKey{s.first.begin(), s.first.end()};
+                            NodeInformation::id_type finalHashedKey = NodeInformation::hash_sha1(sKey);
+                            os << fmt::format("Data items in node : \n "
+                                "{}. key = {}\n", i, util::hexdump(finalHashedKey, 20, false, false));
+                            ++i;
+                        }
+                    }
+                    else{
+                        os << fmt::format("No data items stored in node {}\n", index);
+                    }
+                }
+          }
+      }
     },
     {
         "show:fingers",
@@ -251,10 +376,10 @@ Entry::Entry() : commands{
                     index = get_index(args[0]);
                 if (!index)
                     throw std::invalid_argument("INDEX required!");
-                if (index >= nodes.size())
+                if (index >= m_nodes.size())
                     throw std::invalid_argument("Index [" + util::to_string(*index) + "] out of bounds!");
 
-                const auto &node = *nodes[*index];
+                const auto &node = *m_nodes[*index];
 
                 const std::optional<NodeInformation::Node> *last_finger = nullptr;
                 bool printed_star = false;
@@ -278,4 +403,6 @@ Entry::Entry() : commands{
             }
         }
     }
-} {}
+} {
+    isRepeatSet = false;
+}

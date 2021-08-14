@@ -23,6 +23,9 @@ void Dht::runServer()
     };
     auto &waitScope = peerServer.getWaitScope();
 
+    // from kj/async.h - Use `kj::getCurrentThreadExecutor()` to get an executor that schedules calls on the current
+    // thread's event loop.
+    // Here we make sure every node runs on its own thread which has its own event loop.
     m_executor.emplace(kj::getCurrentThreadExecutor());
 
     // It seems like promises are atomic in the event loop. So no *actual* asynchronous execution... Threads it is then
@@ -228,6 +231,7 @@ void Dht::stabilize()
     auto cap = client.getMain<Peer>();
     auto req = cap.getPredecessorRequest();
 
+    /* Request pre(suc(cur)). */
     auto predOfSuccessor = req.send().then([LOG_CAPTURE](capnp::Response<Peer::GetPredecessorResults> &&response) {
         auto predOfSuccessor = PeerImpl::nodeFromReader(response.getNode());
         if (!predOfSuccessor) {
@@ -239,30 +243,40 @@ void Dht::stabilize()
         return std::optional<NodeInformation::Node>{};
     }).wait(client.getWaitScope());
 
-    if (predOfSuccessor && util::is_in_range_loop(
-        predOfSuccessor->getId(), m_nodeInformation->getId(), successor->getId(),
-        false, false
-    )) {
-        m_nodeInformation->setSuccessor(predOfSuccessor);
-        capnp::EzRpcClient client2{predOfSuccessor->getIp(), predOfSuccessor->getPort()};
-        auto cap2 = client2.getMain<Peer>();
-        auto req2 = cap2.notifyRequest();
-        PeerImpl::buildNode(req2.getNode(), m_nodeInformation->getNode());
-        return req2.send().then([LOG_CAPTURE](capnp::Response<Peer::NotifyResults> &&) {
-            LOG_TRACE("got response from predecessor of successor");
-        }, [LOG_CAPTURE](const kj::Exception &e) {
-            LOG_DEBUG("connection issue with predecessor of successor\n\t\t{}", e.getDescription().cStr());
-        }).wait(client2.getWaitScope());
-    } else {
-        capnp::EzRpcClient client2{successor->getIp(), successor->getPort()};
-        auto cap2 = client2.getMain<Peer>();
-        auto req2 = cap2.notifyRequest();
-        PeerImpl::buildNode(req2.getNode(), m_nodeInformation->getNode());
-        return req2.send().then([LOG_CAPTURE](capnp::Response<Peer::NotifyResults> &&) {
-            LOG_TRACE("got response from successor");
-        }, [LOG_CAPTURE](const kj::Exception &e) {
-            LOG_DEBUG("connection issue with successor\n\t\t{}", e.getDescription().cStr());
-        }).wait(client2.getWaitScope());
+    /* If pred(suc(cur)) == cur, no need to do further processing. */
+    if(!(predOfSuccessor && predOfSuccessor->getId() == m_nodeInformation->getId()))
+    {
+        /* if ( pred(suc(cur)) [called PSC] != null ) && if ( PSC is in range (cur, suc) )
+         * then PSC is successor of cur and cur is predecessor of PSC. Update accordingly. */
+        if (predOfSuccessor && util::is_in_range_loop(
+            predOfSuccessor->getId(), m_nodeInformation->getId(), successor->getId(),
+            false, false
+            )) {
+            m_nodeInformation->setSuccessor(predOfSuccessor);
+            capnp::EzRpcClient client2{predOfSuccessor->getIp(), predOfSuccessor->getPort()};
+            auto cap2 = client2.getMain<Peer>();
+            auto req2 = cap2.notifyRequest();
+            PeerImpl::buildNode(req2.getNode(), m_nodeInformation->getNode());
+            return req2.send().then([LOG_CAPTURE](capnp::Response<Peer::NotifyResults> &&) {
+                LOG_TRACE("got response from predecessor of successor");
+                }, [LOG_CAPTURE](const kj::Exception &e) {
+                LOG_DEBUG("connection issue with predecessor of successor\n\t\t{}", e.getDescription().cStr());
+            }).wait(client2.getWaitScope());
+        }
+        else
+        {
+            /* if ( pred(suc(cur)) [called PSC] == null  || ( PSC!=null && PSC not in range (cur, suc) ) )
+             * then cur is predecessor of suc(cur). */
+            capnp::EzRpcClient client2{successor->getIp(), successor->getPort()};
+            auto cap2 = client2.getMain<Peer>();
+            auto req2 = cap2.notifyRequest();
+            PeerImpl::buildNode(req2.getNode(), m_nodeInformation->getNode());
+            return req2.send().then([LOG_CAPTURE](capnp::Response<Peer::NotifyResults> &&) {
+                LOG_TRACE("got response from successor");
+                }, [LOG_CAPTURE](const kj::Exception &e) {
+                LOG_DEBUG("connection issue with successor\n\t\t{}", e.getDescription().cStr());
+            }).wait(client2.getWaitScope());
+        }
     }
 }
 

@@ -13,7 +13,7 @@ namespace config
         std::string api_address{"127.0.0.1"};
         uint16_t api_port{7002};
         std::string bootstrapNode_address{"127.0.0.1"};
-        uint16_t bootstrapNode_port{1124};
+        uint16_t bootstrapNode_port{6002};
         uint64_t extra_debug_nodes{0};
     };
 

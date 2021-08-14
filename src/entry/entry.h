@@ -12,6 +12,7 @@
 
 namespace entry
 {
+    using dataItem_type = std::map<std::vector<uint8_t>, std::pair<std::vector<uint8_t>, std::chrono::system_clock::time_point>>;
     class Entry;
 
     struct Command
@@ -31,11 +32,15 @@ namespace entry
         int mainLoop();
 
         void execute(std::vector<std::string> args, std::ostream &os = std::cout, std::ostream &err = std::cerr);
+        void addNodeDynamicallyToNetwork(uint16_t port);
 
     private:
-        std::vector<std::unique_ptr<dht::Dht>> DHTs{};
-        std::vector<std::shared_ptr<NodeInformation>> nodes{};
-        mutable std::unordered_map<std::string, Command> commands;
+        std::vector<std::unique_ptr<dht::Dht>> m_DHTs{};
+        std::vector<std::shared_ptr<NodeInformation>> m_nodes{};
+        mutable std::unordered_map<std::string, Command> m_commands;
+        config::Configuration m_conf;
+        std::vector<std::string> m_lastEnteredCommand;
+        bool isRepeatSet;
     };
 }
 
