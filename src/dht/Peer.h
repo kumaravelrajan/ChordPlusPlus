@@ -11,6 +11,7 @@ namespace dht
 {
     class PeerImpl : public Peer::Server
     {
+        using dataItem_type = std::map<std::vector<uint8_t>, std::pair<std::vector<uint8_t>, std::chrono::system_clock::time_point>>;
         /**
          * @brief This function returns the successor of the supplied key. Sending additional requests is also done here.
          */
@@ -36,6 +37,11 @@ namespace dht
          */
         ::kj::Promise<void> setData(SetDataContext context) override;
 
+        /**
+         * @brief This function returns data for which a node is responsible for from its successor.
+         */
+        ::kj::Promise<void> getDataItemsOnJoin(GetDataItemsOnJoinContext context);
+
     public:
         explicit PeerImpl(std::shared_ptr<NodeInformation>);
 
@@ -50,6 +56,8 @@ namespace dht
         void setData(const NodeInformation::Node &node,
                      const std::vector<uint8_t> &key, const std::vector<uint8_t> &value,
                      uint16_t ttl);
+
+        std::optional<dataItem_type> getDataItemsOnJoinHelper(std::optional<NodeInformation::Node> successorNode, std::shared_ptr<NodeInformation> &newNode);
 
     private:
         std::shared_ptr<NodeInformation> m_nodeInformation;

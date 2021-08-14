@@ -96,6 +96,8 @@ public:
     [[nodiscard]] std::optional<std::vector<uint8_t>> getData(const std::vector<uint8_t> &key) const;
     void setData(const std::vector<uint8_t> &key, const std::vector<uint8_t> &value,
                  std::chrono::system_clock::duration ttl = std::chrono::system_clock::duration::max());
+
+    [[nodiscard]] std::optional<NodeInformation::dataItem_type> getDataItemsForNodeId(const std::vector<uint8_t> &arrKeyOfNewNode);
     [[nodiscard]] NodeInformation::dataItem_type getAllDataInNode() const;
 public:
     // Constructor

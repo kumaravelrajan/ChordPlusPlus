@@ -1,6 +1,6 @@
 #include "NodeInformation.h"
 #include <centralLogControl.h>
-
+#include <util.h>
 using namespace std::chrono_literals;
 
 NodeInformation::NodeInformation(std::string host, uint16_t port) : m_node(std::move(host), port)
@@ -131,6 +131,26 @@ std::optional<NodeInformation::Node> NodeInformation::getBootstrapNode() const
 void NodeInformation::setBootstrapNode(const std::optional<Node> &bootstrapNodeAddress)
 {
     m_bootstrapNodeAddress = bootstrapNodeAddress;
+}
+std::optional<NodeInformation::dataItem_type> NodeInformation::getDataItemsForNodeId(
+    const std::vector<uint8_t> &vKeyOfNewNode
+    )
+{
+    NodeInformation::dataItem_type dataToReturn;
+    for(auto &s : m_data){
+        const std::string strDataKey {s.first.begin(), s.first.end() };
+        id_type arrhashOfDataKey = NodeInformation::hash_sha1(strDataKey);
+        std::vector<uint8_t> vHashOfDataKey(SHA_DIGEST_LENGTH);
+        std::copy_n(arrhashOfDataKey.begin(), SHA_DIGEST_LENGTH, vHashOfDataKey.begin());
+
+        const std::vector<uint8_t> vZero(SHA_DIGEST_LENGTH, 0);
+
+        if(util::is_in_range_loop(vHashOfDataKey, vZero, vKeyOfNewNode, false, true)){
+            dataToReturn[s.first] = std::make_pair(s.second.first, s.second.second);
+        }
+    }
+
+    return dataToReturn;
 }
 NodeInformation::dataItem_type NodeInformation::getAllDataInNode() const
 {
