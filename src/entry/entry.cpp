@@ -15,9 +15,9 @@ namespace entry
                          std::regex(R"(((?:\d|\.\')+)|\[((?:\d|\.\')+)\])"));
         std::string result = match[1].str() + match[2].str();
         return
-        !result.empty()
-        ? util::from_string<uint32_t>(result)
-        : std::optional<uint32_t>{};
+            !result.empty()
+            ? util::from_string<uint32_t>(result)
+            : std::optional<uint32_t>{};
     }
 
     std::string format_node(const NodeInformation::Node &node)
@@ -104,7 +104,7 @@ int Entry::mainLoop()
     while (true) {
         std::cout << "$ ";
         std::vector<std::string> tokens{};
-        if(!isRepeatSet){
+        if (!isRepeatSet) {
             std::getline(is, line);
             std::regex re{R"(\[[^\]]*\]|[^ \n\r\t\[\]]+)"};
             std::transform(
@@ -112,13 +112,13 @@ int Entry::mainLoop()
                 std::back_inserter(tokens), [](const std::smatch &match) { return match.str(); });
             if (tokens.empty()) continue;
 
-            if(tokens[0] != "repeat"){
+            if (tokens[0] != "repeat") {
                 m_lastEnteredCommand = tokens;
             }
         } else {
-            std::string toPrint {};
-            for(int i = 0; i < m_lastEnteredCommand.size(); ++i){
-                if(i != (m_lastEnteredCommand.size() - 1)){
+            std::string toPrint{};
+            for (int i = 0; i < m_lastEnteredCommand.size(); ++i) {
+                if (i != (m_lastEnteredCommand.size() - 1)) {
                     toPrint.append(m_lastEnteredCommand[i] + " ");
                 } else {
                     toPrint.append(m_lastEnteredCommand[i] + "\n");
@@ -158,13 +158,13 @@ void Entry::execute(std::vector<std::string> args, std::ostream &os, std::ostrea
     }
 }
 
-void Entry::addNodeDynamicallyToNetwork(uint16_t portParam = 0){
+void Entry::addNodeDynamicallyToNetwork(uint16_t portParam = 0)
+{
     uint16_t Port = 0;
 
-    if(portParam != 0){
+    if (portParam != 0) {
         Port = portParam;
-    }
-    else{
+    } else {
         uint16_t tempPort = m_nodes.back()->getPort();
         Port = ++tempPort;
     }
@@ -174,18 +174,19 @@ void Entry::addNodeDynamicallyToNetwork(uint16_t portParam = 0){
     // Set bootstrap node details parsed from config file
     m_nodes.back()->setBootstrapNode(
         NodeInformation::Node(m_conf.bootstrapNode_address, m_conf.bootstrapNode_port)
-        );
+    );
 
     // The constructor of Dht starts mainLoop asynchronously.
     m_DHTs.push_back(std::make_unique<dht::Dht>(m_nodes.back()));
 
     m_DHTs.back()->setApi(std::make_unique<api::Api>(api::Options{
-        .port= m_nodes.back()->getPort() + static_cast<uint16_t>(1000),
-        }));
+        .port= static_cast<uint16_t>(m_nodes.back()->getPort() + static_cast<uint16_t>(1000)),
+    }));
 
-    std::cout << "Details of new node = \n"
-    << "1. P2P address - " << m_nodes.back()->getIp() << ":" << m_nodes.back()->getPort() << "\n"
-    << "2. API port - " << m_nodes.back()->getPort() + static_cast<uint16_t>(1000) << "\n";
+    std::cout
+        << "Details of new node = \n"
+        << "1. P2P address - " << m_nodes.back()->getIp() << ":" << m_nodes.back()->getPort() << "\n"
+        << "2. API port - " << m_nodes.back()->getPort() + static_cast<uint16_t>(1000) << "\n";
 }
 
 Entry::Entry() : m_commands{
@@ -228,15 +229,15 @@ Entry::Entry() : m_commands{
         }
     },
     {
-            "repeat",
-            {
-                .brief="Exit the program",
-                .usage="exit",
-                .execute=
-                [this](const std::vector<std::string> &args, std::ostream &os, std::ostream &) {
-                        isRepeatSet = true;
-                }
+        "repeat",
+        {
+            .brief="Exit the program",
+            .usage="exit",
+            .execute=
+            [this](const std::vector<std::string> &args, std::ostream &os, std::ostream &) {
+                isRepeatSet = true;
             }
+        }
     },
     {
         "add",
@@ -245,15 +246,13 @@ Entry::Entry() : m_commands{
             .usage = "add [PORT]",
             .execute=[this](const std::vector<std::string> &args, std::ostream &os, std::ostream &err) {
                 bool isUserPortAvailable = true;
-                if(!args.empty()){
-                    if(stoi(args[0]) <= 65535){
+                if (!args.empty()) {
+                    if (stoi(args[0]) <= 65535) {
                         addNodeDynamicallyToNetwork(stoi(args[0]));
-                    }
-                    else{
+                    } else {
                         addNodeDynamicallyToNetwork();
                     }
-                }
-                else{
+                } else {
                     addNodeDynamicallyToNetwork();
                 }
             }
@@ -287,14 +286,14 @@ Entry::Entry() : m_commands{
             .execute=
             [this](const std::vector<std::string> &args, std::ostream &os, std::ostream &err) {
                 std::optional<uint32_t> index{};
-                if (!args.empty()){
-                    if(args[0] == "data"){
+                if (!args.empty()) {
+                    if (args[0] == "data") {
                         std::string what = util::to_lower(args[0]);
                         std::vector<std::string> new_args{args.begin(), args.end()};
                         new_args[0] = "show:nodes:" + what;
                         execute(new_args, os, err);
                         return;
-                    }else{
+                    } else {
                         index = get_index(args[0]);
                     }
                 }
@@ -332,37 +331,36 @@ Entry::Entry() : m_commands{
         }
     },
     {
-      "show:nodes:data",
-      {
-          .brief="List all Nodes, or information of one Node",
-          .usage="show nodes [INDEX]",
-          .execute=
-          [this](const std::vector<std::string> &args, std::ostream &os, std::ostream &err) {
-                if(stoi(args[0]) <= 65535){
+        "show:nodes:data",
+        {
+            .brief="List all Nodes, or information of one Node",
+            .usage="show nodes [INDEX]",
+            .execute=
+            [this](const std::vector<std::string> &args, std::ostream &os, std::ostream &err) {
+                if (stoi(args[0]) <= 65535) {
                     uint16_t index = stoi(args[0]);
                     dataItem_type dataInNode = m_nodes[index]->getAllDataInNode();
 
                     /* Display node details. */
-                    std::vector<std::string> new_Args = {"show", "nodes", std::to_string(index) };
+                    std::vector<std::string> new_Args = {"show", "nodes", std::to_string(index)};
                     execute(new_Args, os, err);
 
-                    if(!dataInNode.empty()){
+                    if (!dataInNode.empty()) {
                         int i = 1;
-                        for(auto s : dataInNode){
+                        for (auto s : dataInNode) {
                             // Hashing received key to convert it into length of 20 bytes
                             std::string sKey{s.first.begin(), s.first.end()};
                             NodeInformation::id_type finalHashedKey = NodeInformation::hash_sha1(sKey);
                             os << fmt::format("Data items in node : \n "
-                                "{}. key = {}\n", i, util::hexdump(finalHashedKey, 20, false, false));
+                                              "{}. key = {}\n", i, util::hexdump(finalHashedKey, 20, false, false));
                             ++i;
                         }
-                    }
-                    else{
+                    } else {
                         os << fmt::format("No data items stored in node {}\n", index);
                     }
                 }
-          }
-      }
+            }
+        }
     },
     {
         "show:fingers",
@@ -403,6 +401,7 @@ Entry::Entry() : m_commands{
             }
         }
     }
-} {
+}
+{
     isRepeatSet = false;
 }
