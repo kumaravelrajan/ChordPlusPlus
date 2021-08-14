@@ -40,7 +40,7 @@ namespace entry
         mutable std::unordered_map<std::string, Command> m_commands;
         config::Configuration m_conf;
         std::vector<std::string> m_lastEnteredCommand;
-        bool isRepeatSet;
+        bool isRepeatSet{false};
     };
 }
 

@@ -8,7 +8,8 @@ using entry::Entry;
 
 namespace entry
 {
-    std::optional<uint32_t> get_index(const std::string &str)
+    template<typename T = uint32_t>
+    std::optional<T> get_index(const std::string &str)
     {
         std::smatch match;
         std::regex_match(str, match,
@@ -16,8 +17,8 @@ namespace entry
         std::string result = match[1].str() + match[2].str();
         return
             !result.empty()
-            ? util::from_string<uint32_t>(result)
-            : std::optional<uint32_t>{};
+            ? util::from_string<T>(result)
+            : std::optional<T>{};
     }
 
     std::string format_node(const NodeInformation::Node &node)
@@ -116,14 +117,7 @@ int Entry::mainLoop()
                 m_lastEnteredCommand = tokens;
             }
         } else {
-            std::string toPrint{};
-            for (int i = 0; i < m_lastEnteredCommand.size(); ++i) {
-                if (i != (m_lastEnteredCommand.size() - 1)) {
-                    toPrint.append(m_lastEnteredCommand[i] + " ");
-                } else {
-                    toPrint.append(m_lastEnteredCommand[i] + "\n");
-                }
-            }
+            std::string toPrint = fmt::format("{}\n", fmt::join(m_lastEnteredCommand, " "));
             std::cout << toPrint;
             tokens = m_lastEnteredCommand;
         }
@@ -234,7 +228,7 @@ Entry::Entry() : m_commands{
             .brief="Exit the program",
             .usage="exit",
             .execute=
-            [this](const std::vector<std::string> &args, std::ostream &os, std::ostream &) {
+            [this](const std::vector<std::string> &, std::ostream &, std::ostream &) {
                 isRepeatSet = true;
             }
         }
@@ -244,11 +238,12 @@ Entry::Entry() : m_commands{
         {
             .brief = "Add node to the chord ring",
             .usage = "add [PORT]",
-            .execute=[this](const std::vector<std::string> &args, std::ostream &os, std::ostream &err) {
+            .execute=[this](const std::vector<std::string> &args, std::ostream &, std::ostream &) {
                 bool isUserPortAvailable = true;
                 if (!args.empty()) {
-                    if (stoi(args[0]) <= 65535) {
-                        addNodeDynamicallyToNetwork(stoi(args[0]));
+                    auto port = get_index<uint16_t>(args[0]);
+                    if (port) {
+                        addNodeDynamicallyToNetwork(*port);
                     } else {
                         addNodeDynamicallyToNetwork();
                     }
@@ -337,22 +332,28 @@ Entry::Entry() : m_commands{
             .usage="show nodes [INDEX]",
             .execute=
             [this](const std::vector<std::string> &args, std::ostream &os, std::ostream &err) {
-                if (stoi(args[0]) <= 65535) {
-                    uint16_t index = stoi(args[0]);
-                    dataItem_type dataInNode = m_nodes[index]->getAllDataInNode();
+                auto index = get_index(args[0]);
+                if (index) {
+                    // NOTE: you are copying the entire map
+                    dataItem_type dataInNode = m_nodes[*index]->getAllDataInNode();
 
                     /* Display node details. */
-                    std::vector<std::string> new_Args = {"show", "nodes", std::to_string(index)};
+                    std::vector<std::string> new_Args{"show", "nodes", std::to_string(*index)};
                     execute(new_Args, os, err);
 
                     if (!dataInNode.empty()) {
                         int i = 1;
-                        for (auto s : dataInNode) {
+                        for (const auto &s : dataInNode) {
                             // Hashing received key to convert it into length of 20 bytes
                             std::string sKey{s.first.begin(), s.first.end()};
                             NodeInformation::id_type finalHashedKey = NodeInformation::hash_sha1(sKey);
-                            os << fmt::format("Data items in node : \n "
-                                              "{}. key = {}\n", i, util::hexdump(finalHashedKey, 20, false, false));
+                            // NOTE: you are printing "Data items in mode :" before each entry.
+                            os << fmt::format(
+                                ""
+                                "Data items in node :\n"
+                                "{}. key = {}\n",
+                                i, util::hexdump(finalHashedKey, 20, false, false)
+                            );
                             ++i;
                         }
                     } else {
@@ -375,7 +376,7 @@ Entry::Entry() : m_commands{
                 if (!index)
                     throw std::invalid_argument("INDEX required!");
                 if (index >= m_nodes.size())
-                    throw std::invalid_argument("Index [" + util::to_string(*index) + "] out of bounds!");
+                    throw std::invalid_argument(fmt::format("Index [{}] out of bounds!", *index));
 
                 const auto &node = *m_nodes[*index];
 
@@ -401,7 +402,4 @@ Entry::Entry() : m_commands{
             }
         }
     }
-}
-{
-    isRepeatSet = false;
-}
+} {}
