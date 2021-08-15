@@ -253,57 +253,65 @@ void PeerImpl::setData(
 
 ::kj::Promise<void> dht::PeerImpl::getDataItemsOnJoin(GetDataItemsOnJoinContext context)
 {
-    /* 1. Predecessor nodes needs to call some function GetDataItemsForNodeId() in NodeInformation.cpp file.
-     * 2. The returned list from NodeInformation.cpp has to be returned as GetDataItemsOnJoinResults.*/
-
-    /* Check if current node is predecessor of node in GetDataItemsOnJoinParams */
+     /* Check if current node is predecessor of node in GetDataItemsOnJoinParams */
     ::capnp::Data::Reader keyOfNewNode = context.getParams().getNewNodeKey();
     std::vector<uint8_t> vKeyOfNewNode(keyOfNewNode.begin(), keyOfNewNode.end());
     std::array<uint8_t, SHA_DIGEST_LENGTH> arrKeyOfNewNode;
     std::copy_n(vKeyOfNewNode.begin(), SHA_DIGEST_LENGTH, arrKeyOfNewNode.begin());
 
-    /*KJ_ASSERT(m_nodeInformation->getPredecessor()->getId() == arrKeyOfNewNode, "Wrong successor node.");*/
+    KJ_REQUIRE(m_nodeInformation->getPredecessor()->getId() == arrKeyOfNewNode, "Wrong successor node.");
 
-    if(m_nodeInformation->getPredecessor()->getId() == arrKeyOfNewNode){
+    auto mapOfDataItemsForNewNode = m_nodeInformation->getDataItemsForNodeId(vKeyOfNewNode);
 
-        auto mapOfDataItemsForNewNode = m_nodeInformation->getDataItemsForNodeId(vKeyOfNewNode);
+    if(mapOfDataItemsForNewNode){
+        auto iter = mapOfDataItemsForNewNode->begin();
+        std::vector<DataItem::Builder> vectorOfDataItems;
+        DataItem::Builder dataItemBuilder(nullptr);
+        auto s = context.getResults().initListOfDataItems(mapOfDataItemsForNewNode->size());
 
-        if(mapOfDataItemsForNewNode){
-            DataItem::Builder dataItemBuilder(nullptr);
-            auto iter = mapOfDataItemsForNewNode->begin();
+        // Iterate through map and store values in ::capnp::List
+        for(size_t i = 0; i < mapOfDataItemsForNewNode->size(); ++i){
+            s[i].setKey(kj::heapArray<kj::byte>(iter->first.begin(), iter->first.end()));
+            s[i].setData(kj::heapArray<kj::byte>(iter->second.first.begin(), iter->second.first.end()));
+            /* todo - Change this */
+            s[i].setTtl(5);
 
-            for(int i = 0; i < mapOfDataItemsForNewNode->size(); ++i){
-                dataItemBuilder.setKey(capnp::Data::Builder(kj::heapArray<kj::byte>(iter->first.begin(), iter->first.end())));
-                dataItemBuilder.setData(capnp::Data::Builder(kj::heapArray<kj::byte>(iter->second.first.begin(), iter->second.first.end())));
-                dataItemBuilder.setTtl(5/*Todo - iter->second.second.count()*/);
-                std::advance(iter, 1);
-            }
+            std::advance(iter, 1);
         }
-
-        return kj::READY_NOW;
     }
 
-    /* Todo - remove this */
     return kj::READY_NOW;
 }
 
-std::optional<PeerImpl::dataItem_type> PeerImpl::getDataItemsOnJoinHelper(std::optional<NodeInformation::Node> successorNode, std::shared_ptr<NodeInformation> &newNode)
+ std::optional<PeerImpl::dataItem_type> PeerImpl::getDataItemsOnJoinHelper(std::optional<NodeInformation::Node> successorNode, std::shared_ptr<NodeInformation> &newNode)
 {
     LOG_GET
+
+    /* todo - Change type */
+    std::map<std::vector<uint8_t>, std::pair<std::vector<uint8_t>, uint16_t>> dataItemsToReturn;
     capnp::EzRpcClient client{ successorNode->getIp(), successorNode->getPort() };
     auto cap = client.getMain<Peer>();
     auto req = cap.getDataItemsOnJoinRequest();
     req.setNewNodeKey(capnp::Data::Builder(kj::heapArray<kj::byte>(newNode->getId().begin(), newNode->getId().end())));
 
-    /* Start RPC */
-    req.send().then([LOG_CAPTURE](capnp::Response<Peer::GetDataItemsOnJoinResults> &&Response) {
+     /* Start RPC */
+     req.send().then([LOG_CAPTURE, &dataItemsToReturn](capnp::Response<Peer::GetDataItemsOnJoinResults> &&Response) {
+        std::map<std::vector<uint8_t>, std::pair<std::vector<uint8_t>, uint16_t>> mapDataItemsToReturn;
+
+        Response.getListOfDataItems().size();
+        for(auto individualDataItem : Response.getListOfDataItems()){
+            const std::vector<uint8_t> key(individualDataItem.getKey().begin(), individualDataItem.getKey().end());
+            std::vector<uint8_t> data(individualDataItem.getData().begin(), individualDataItem.getData().end());
+            uint16_t ttl(individualDataItem.getTtl());
+
+            dataItemsToReturn[key] = std::make_pair(data, ttl);
+        }
         LOG_TRACE("got response from GetDataItemsOnJoin");
-        auto dataItemsToReturn = Response.getListOfDataItems();
         }, [LOG_CAPTURE, this](const kj::Exception &e) {
         // Delete predecessor
-        LOG_ERROR("e");
+        LOG_ERROR(e.getDescription().cStr());
         m_nodeInformation->setPredecessor();
     }).wait(client.getWaitScope());
 
-    return PeerImpl::dataItem_type();
+     return PeerImpl::dataItem_type();
 }

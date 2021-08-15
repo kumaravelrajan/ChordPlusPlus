@@ -16,10 +16,10 @@ struct Node {
   port @2 :UInt16;
 }
 
-struct DataItem {
-  key @0 :Data;
+struct DataItem{
+  key @0  :Data;
   data @1 :Data;
-  ttl @2 :UInt16;
+  ttl @2  :UInt16;
 }
 
 interface Peer {
@@ -28,5 +28,5 @@ interface Peer {
   notify @2 (node :Node);
   getData @3 (key :Data) -> (data :Optional(Data));
   setData @4 (key :Data, value :Data, ttl :UInt16 = 0);
-  getDataItemsOnJoin @5 (newNodeKey :Data) -> (listOfDataItems :Optional(List(DataItem)));
+  getDataItemsOnJoin @5 (newNodeKey :Data) -> (listOfDataItems :List(DataItem));
 }
