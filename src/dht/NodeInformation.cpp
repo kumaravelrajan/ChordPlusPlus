@@ -136,6 +136,7 @@ std::optional<NodeInformation::dataItem_type> NodeInformation::getDataItemsForNo
     const std::vector<uint8_t> &vKeyOfNewNode
     )
 {
+    std::unique_lock l{m_dataMutex};
     NodeInformation::dataItem_type dataToReturn;
     for(auto &s : m_data){
         const std::string strDataKey {s.first.begin(), s.first.end() };
@@ -154,6 +155,7 @@ std::optional<NodeInformation::dataItem_type> NodeInformation::getDataItemsForNo
 }
 NodeInformation::dataItem_type NodeInformation::getAllDataInNode() const
 {
+    std::shared_lock l{m_dataMutex};
     return m_data;
 }
 

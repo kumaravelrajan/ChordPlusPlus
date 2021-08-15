@@ -37,9 +37,7 @@ namespace dht
          */
         ::kj::Promise<void> setData(SetDataContext context) override;
 
-        /**
-         * @brief This function returns data for which a node is responsible for from its successor.
-         */
+        /* @brief This function returns data for which a node is responsible for from its successor. */
         ::kj::Promise<void> getDataItemsOnJoin(GetDataItemsOnJoinContext context);
 
     public:
@@ -57,7 +55,7 @@ namespace dht
                      const std::vector<uint8_t> &key, const std::vector<uint8_t> &value,
                      uint16_t ttl);
 
-        std::optional<dataItem_type> getDataItemsOnJoinHelper(std::optional<NodeInformation::Node> successorNode, std::shared_ptr<NodeInformation> &newNode);
+        std::optional<PeerImpl::dataItem_type> getDataItemsOnJoinHelper(std::optional<NodeInformation::Node> successorNode, std::shared_ptr<NodeInformation> &newNode);
 
     private:
         std::shared_ptr<NodeInformation> m_nodeInformation;

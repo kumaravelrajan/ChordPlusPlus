@@ -70,12 +70,6 @@ void Dht::mainLoop()
         if (m_dhtCancelled) break;
         checkPredecessor();
         if (m_dhtCancelled) break;
-        /* Sync data items from successor for which new node is responsible. */
-        /* Todo - Remove this */
-        if(m_nodeInformation->getPort() == 6035){
-            getPeerImpl().getDataItemsOnJoinHelper(m_nodeInformation->getSuccessor(), m_nodeInformation);
-        }
-        if (m_dhtCancelled) break;
 
         // Wait one second
         std::this_thread::sleep_for(1s);
@@ -263,7 +257,12 @@ void Dht::stabilize()
             auto cap2 = client2.getMain<Peer>();
             auto req2 = cap2.notifyRequest();
             PeerImpl::buildNode(req2.getNode(), m_nodeInformation->getNode());
-            return req2.send().then([LOG_CAPTURE](capnp::Response<Peer::NotifyResults> &&) {
+            return req2.send().then([LOG_CAPTURE, this](capnp::Response<Peer::NotifyResults> &&) {
+                /* Sync data items from successor for which new node is responsible. */
+                /* Todo - Remove this */
+                if(m_nodeInformation->getPort() == 6007){
+                    getPeerImpl().getDataItemsOnJoinHelper(m_nodeInformation->getSuccessor(), m_nodeInformation);
+                }
                 LOG_TRACE("got response from predecessor of successor");
                 }, [LOG_CAPTURE](const kj::Exception &e) {
                 LOG_DEBUG("connection issue with predecessor of successor\n\t\t{}", e.getDescription().cStr());
@@ -277,7 +276,12 @@ void Dht::stabilize()
             auto cap2 = client2.getMain<Peer>();
             auto req2 = cap2.notifyRequest();
             PeerImpl::buildNode(req2.getNode(), m_nodeInformation->getNode());
-            return req2.send().then([LOG_CAPTURE](capnp::Response<Peer::NotifyResults> &&) {
+            return req2.send().then([LOG_CAPTURE, this](capnp::Response<Peer::NotifyResults> &&) {
+                /* Sync data items from successor for which new node is responsible. */
+                /* Todo - Remove this */
+                if(m_nodeInformation->getPort() == 6007){
+                    getPeerImpl().getDataItemsOnJoinHelper(m_nodeInformation->getSuccessor(), m_nodeInformation);
+                }
                 LOG_TRACE("got response from successor");
                 }, [LOG_CAPTURE](const kj::Exception &e) {
                 LOG_DEBUG("connection issue with successor\n\t\t{}", e.getDescription().cStr());
