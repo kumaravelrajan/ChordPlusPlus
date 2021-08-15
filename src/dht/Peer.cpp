@@ -306,8 +306,6 @@ void PeerImpl::getDataItemsOnJoinHelper(std::optional<NodeInformation::Node> suc
         }
         LOG_TRACE("got response from GetDataItemsOnJoin");
         }, [LOG_CAPTURE, this](const kj::Exception &e) {
-        // Delete predecessor
         LOG_ERROR(e.getDescription().cStr());
-        m_nodeInformation->setPredecessor();
     }).wait(client.getWaitScope());
 }
