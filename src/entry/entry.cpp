@@ -123,7 +123,12 @@ int Entry::mainLoop()
         } else {
             std::string toPrint = fmt::format("{}\n", fmt::join(m_lastEnteredCommand, " "));
             std::cout << toPrint;
-            tokens = m_lastEnteredCommand;
+            if(!m_lastEnteredCommand.empty()){
+                tokens = m_lastEnteredCommand;
+            } else {
+                isRepeatSet = false;
+                continue;
+            }
         }
 
         isRepeatSet = false;
