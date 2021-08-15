@@ -273,8 +273,7 @@ void PeerImpl::setData(
         for(size_t i = 0; i < mapOfDataItemsForNewNode->size(); ++i){
             s[i].setKey(kj::heapArray<kj::byte>(iter->first.begin(), iter->first.end()));
             s[i].setData(kj::heapArray<kj::byte>(iter->second.first.begin(), iter->second.first.end()));
-            /* todo - Change this */
-            s[i].setTtl(5);
+            s[i].setTtl(static_cast<uint16_t>(std::chrono::duration_cast<std::chrono::seconds>(iter->second.second - std::chrono::system_clock::now()).count()));
 
             std::advance(iter, 1);
         }
@@ -283,28 +282,27 @@ void PeerImpl::setData(
     return kj::READY_NOW;
 }
 
- std::optional<PeerImpl::dataItem_type> PeerImpl::getDataItemsOnJoinHelper(std::optional<NodeInformation::Node> successorNode, std::shared_ptr<NodeInformation> &newNode)
+void PeerImpl::getDataItemsOnJoinHelper(std::optional<NodeInformation::Node> successorNode, std::shared_ptr<NodeInformation> &newNode)
 {
     LOG_GET
-
-    /* todo - Change type */
-    std::map<std::vector<uint8_t>, std::pair<std::vector<uint8_t>, uint16_t>> dataItemsToReturn;
     capnp::EzRpcClient client{ successorNode->getIp(), successorNode->getPort() };
     auto cap = client.getMain<Peer>();
     auto req = cap.getDataItemsOnJoinRequest();
     req.setNewNodeKey(capnp::Data::Builder(kj::heapArray<kj::byte>(newNode->getId().begin(), newNode->getId().end())));
 
      /* Start RPC */
-     req.send().then([LOG_CAPTURE, &dataItemsToReturn](capnp::Response<Peer::GetDataItemsOnJoinResults> &&Response) {
+     req.send().then([LOG_CAPTURE, this](capnp::Response<Peer::GetDataItemsOnJoinResults> &&Response) {
         std::map<std::vector<uint8_t>, std::pair<std::vector<uint8_t>, uint16_t>> mapDataItemsToReturn;
 
         Response.getListOfDataItems().size();
         for(auto individualDataItem : Response.getListOfDataItems()){
             const std::vector<uint8_t> key(individualDataItem.getKey().begin(), individualDataItem.getKey().end());
             std::vector<uint8_t> data(individualDataItem.getData().begin(), individualDataItem.getData().end());
-            uint16_t ttl(individualDataItem.getTtl());
+            auto ttl_seconds = individualDataItem.getTtl() > 0
+                ? std::chrono::seconds(individualDataItem.getTtl())
+                : std::chrono::system_clock::duration::max();
 
-            dataItemsToReturn[key] = std::make_pair(data, ttl);
+            m_nodeInformation->setData(key, data, ttl_seconds);
         }
         LOG_TRACE("got response from GetDataItemsOnJoin");
         }, [LOG_CAPTURE, this](const kj::Exception &e) {
@@ -312,6 +310,4 @@ void PeerImpl::setData(
         LOG_ERROR(e.getDescription().cStr());
         m_nodeInformation->setPredecessor();
     }).wait(client.getWaitScope());
-
-     return PeerImpl::dataItem_type();
 }

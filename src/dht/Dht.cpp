@@ -259,10 +259,8 @@ void Dht::stabilize()
             PeerImpl::buildNode(req2.getNode(), m_nodeInformation->getNode());
             return req2.send().then([LOG_CAPTURE, this](capnp::Response<Peer::NotifyResults> &&) {
                 /* Sync data items from successor for which new node is responsible. */
-                /* Todo - Remove this */
-                if(m_nodeInformation->getPort() == 6007){
-                    getPeerImpl().getDataItemsOnJoinHelper(m_nodeInformation->getSuccessor(), m_nodeInformation);
-                }
+                getPeerImpl().getDataItemsOnJoinHelper(m_nodeInformation->getSuccessor(), m_nodeInformation);
+
                 LOG_TRACE("got response from predecessor of successor");
                 }, [LOG_CAPTURE](const kj::Exception &e) {
                 LOG_DEBUG("connection issue with predecessor of successor\n\t\t{}", e.getDescription().cStr());
@@ -278,10 +276,8 @@ void Dht::stabilize()
             PeerImpl::buildNode(req2.getNode(), m_nodeInformation->getNode());
             return req2.send().then([LOG_CAPTURE, this](capnp::Response<Peer::NotifyResults> &&) {
                 /* Sync data items from successor for which new node is responsible. */
-                /* Todo - Remove this */
-                if(m_nodeInformation->getPort() == 6007){
-                    getPeerImpl().getDataItemsOnJoinHelper(m_nodeInformation->getSuccessor(), m_nodeInformation);
-                }
+                getPeerImpl().getDataItemsOnJoinHelper(m_nodeInformation->getSuccessor(), m_nodeInformation);
+
                 LOG_TRACE("got response from successor");
                 }, [LOG_CAPTURE](const kj::Exception &e) {
                 LOG_DEBUG("connection issue with successor\n\t\t{}", e.getDescription().cStr());

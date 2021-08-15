@@ -55,7 +55,7 @@ namespace dht
                      const std::vector<uint8_t> &key, const std::vector<uint8_t> &value,
                      uint16_t ttl);
 
-        std::optional<PeerImpl::dataItem_type> getDataItemsOnJoinHelper(std::optional<NodeInformation::Node> successorNode, std::shared_ptr<NodeInformation> &newNode);
+        void getDataItemsOnJoinHelper(std::optional<NodeInformation::Node> successorNode, std::shared_ptr<NodeInformation> &newNode);
 
     private:
         std::shared_ptr<NodeInformation> m_nodeInformation;
