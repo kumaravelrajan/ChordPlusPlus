@@ -126,6 +126,8 @@ int Entry::mainLoop()
             if(!m_lastEnteredCommand.empty()){
                 tokens = m_lastEnteredCommand;
             } else {
+                /* repeat entered as the first comment. */
+                fmt::print("repeat cannot be the first command. Enter any other command.\n");
                 isRepeatSet = false;
                 continue;
             }
