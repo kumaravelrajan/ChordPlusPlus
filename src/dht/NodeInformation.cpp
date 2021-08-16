@@ -1,6 +1,8 @@
 #include "NodeInformation.h"
 #include <centralLogControl.h>
 #include <util.h>
+#include <spdlog/fmt/chrono.h>
+
 using namespace std::chrono_literals;
 
 NodeInformation::NodeInformation(std::string host, uint16_t port) : m_node(std::move(host), port)
@@ -115,14 +117,19 @@ std::optional<std::vector<uint8_t>> NodeInformation::getData(const std::vector<u
 void NodeInformation::setData(const std::vector<uint8_t> &key, const std::vector<uint8_t> &value,
                               std::chrono::system_clock::duration ttl)
 {
+    setDataExpires(key, value, ttl == std::chrono::system_clock::duration::max()
+                               ? std::chrono::system_clock::time_point::max() :
+                               std::chrono::system_clock::now() + ttl);
+}
+void NodeInformation::setDataExpires(const std::vector<uint8_t> &key, const std::vector<uint8_t> &value,
+                                     std::chrono::system_clock::time_point expires)
+{
     SPDLOG_INFO(
-        "setting data, key length: {}, value length: {}, ttl: {}",
-        key.size(), value.size(), std::chrono::duration_cast<std::chrono::seconds>(ttl).count()
+        "setting data, key length: {}, value length: {}, expires: {}",
+        key.size(), value.size(), expires
     );
     std::unique_lock l{m_dataMutex};
-    m_data[key] = std::make_pair(value, ttl == std::chrono::system_clock::duration::max()
-                                        ? std::chrono::system_clock::time_point::max() :
-                                        std::chrono::system_clock::now() + ttl);
+    m_data[key] = std::make_pair(value, expires);
 }
 std::optional<NodeInformation::Node> NodeInformation::getBootstrapNode() const
 {
@@ -132,28 +139,27 @@ void NodeInformation::setBootstrapNode(const std::optional<Node> &bootstrapNodeA
 {
     m_bootstrapNodeAddress = bootstrapNodeAddress;
 }
-std::optional<NodeInformation::dataItem_type> NodeInformation::getDataItemsForNodeId(
-    const std::vector<uint8_t> &vKeyOfNewNode
-    )
+std::optional<NodeInformation::data_type> NodeInformation::getDataItemsForNodeId(
+    const Node &newNode
+) const
 {
-    std::unique_lock l{m_dataMutex};
-    NodeInformation::dataItem_type dataToReturn;
-    for(auto &s : m_data){
-        const std::string strDataKey {s.first.begin(), s.first.end() };
-        id_type arrhashOfDataKey = NodeInformation::hash_sha1(strDataKey);
-        std::vector<uint8_t> vHashOfDataKey(SHA_DIGEST_LENGTH);
-        std::copy_n(arrhashOfDataKey.begin(), SHA_DIGEST_LENGTH, vHashOfDataKey.begin());
+    std::shared_lock l{m_dataMutex};
+    NodeInformation::data_type dataToReturn;
+    id_type new_id = newNode.getId();
+    auto pred = getPredecessor();
+    id_type pred_id = pred ? pred->getId() : new_id;
+    for (auto &s : m_data) {
+        const std::string strDataKey{s.first.begin(), s.first.end()};
+        id_type key_hash = NodeInformation::hash_sha1(strDataKey);
 
-        const std::vector<uint8_t> vZero(SHA_DIGEST_LENGTH, 0);
-
-        if(util::is_in_range_loop(vHashOfDataKey, vZero, vKeyOfNewNode, false, true)){
-            dataToReturn[s.first] = std::make_pair(s.second.first, s.second.second);
+        if (util::is_in_range_loop(key_hash, pred_id, new_id, false, true)) {
+            dataToReturn.insert(s);
         }
     }
-
     return dataToReturn;
 }
-NodeInformation::dataItem_type NodeInformation::getAllDataInNode() const
+
+NodeInformation::data_type NodeInformation::getAllDataInNode() const
 {
     std::shared_lock l{m_dataMutex};
     return m_data;

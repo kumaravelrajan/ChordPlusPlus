@@ -22,7 +22,7 @@ class NodeInformation
 public:
     static constexpr size_t key_bits = SHA_DIGEST_LENGTH * 8;
     using id_type = std::array<uint8_t, SHA_DIGEST_LENGTH>;
-    using dataItem_type = std::map<std::vector<uint8_t>, std::pair<std::vector<uint8_t>, std::chrono::system_clock::time_point>>;
+    using data_type = std::map<std::vector<uint8_t>, std::pair<std::vector<uint8_t>, std::chrono::system_clock::time_point>>;
 
     class Node
     {
@@ -58,7 +58,7 @@ private:
     std::optional<Node> m_predecessor{};
     mutable std::shared_mutex m_predecessorMutex{};
     /// Stores data along with the expiry date.
-    std::map<std::vector<uint8_t>, std::pair<std::vector<uint8_t>, std::chrono::system_clock::time_point>> m_data{};
+    data_type m_data{};
     mutable std::shared_mutex m_dataMutex{};
     /// Asynchronously removes expired data entries.
     std::future<void> m_dataCleaner{};
@@ -96,9 +96,11 @@ public:
     [[nodiscard]] std::optional<std::vector<uint8_t>> getData(const std::vector<uint8_t> &key) const;
     void setData(const std::vector<uint8_t> &key, const std::vector<uint8_t> &value,
                  std::chrono::system_clock::duration ttl = std::chrono::system_clock::duration::max());
+    void setDataExpires(const std::vector<uint8_t> &key, const std::vector<uint8_t> &value,
+                        std::chrono::system_clock::time_point expires);
 
-    [[nodiscard]] std::optional<NodeInformation::dataItem_type> getDataItemsForNodeId(const std::vector<uint8_t> &arrKeyOfNewNode);
-    [[nodiscard]] NodeInformation::dataItem_type getAllDataInNode() const;
+    [[nodiscard]] std::optional<NodeInformation::data_type> getDataItemsForNodeId(const Node &newNode) const;
+    [[nodiscard]] NodeInformation::data_type getAllDataInNode() const;
 public:
     // Constructor
     explicit NodeInformation(std::string host = "", uint16_t port = 0);

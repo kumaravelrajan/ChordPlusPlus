@@ -22,8 +22,7 @@ namespace dht
     public:
         explicit Dht(std::shared_ptr<NodeInformation> nodeInformation) :
             m_nodeInformation(std::move(nodeInformation)),
-            m_mainLoop(std::async(std::launch::async, [this]() { runServer(); }))
-        {}
+            m_mainLoop(std::async(std::launch::async, [this]() { runServer(); })) {}
         ~Dht()
         {
             m_dhtCancelled = true;
@@ -54,7 +53,6 @@ namespace dht
         void stabilize();
         void fixFingers();
         void checkPredecessor();
-
 
 
         [[nodiscard]] std::optional<NodeInformation::Node> getSuccessor(NodeInformation::id_type key);

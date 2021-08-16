@@ -36,7 +36,8 @@ namespace entry
         return fmt::format("{:>8}:    {{{}}}", metavar, fmt::join(choices, ", "));
     }
 
-    std::string insertHighlighterSection(){
+    std::string insertHighlighterSection()
+    {
         return "=======================================";
     }
 }
@@ -123,7 +124,7 @@ int Entry::mainLoop()
         } else {
             std::string toPrint = fmt::format("{}\n", fmt::join(m_lastEnteredCommand, " "));
             std::cout << toPrint;
-            if(!m_lastEnteredCommand.empty()){
+            if (!m_lastEnteredCommand.empty()) {
                 tokens = m_lastEnteredCommand;
             } else {
                 /* repeat entered as the first comment. */
@@ -369,28 +370,28 @@ Entry::Entry() : m_commands{
         }
     },
     {
-      "show:data",
-      {
-          .brief="List all data items contained in Node",
-          .usage="show nodes [INDEX]",
-          .execute=
-          [this](const std::vector<std::string> &args, std::ostream &os, std::ostream &err) {
-                if(!args.empty()){
-                    if(stoi(args[0]) <= 65535){
-                        uint16_t index = stoi(args[0]);
-                        dataItem_type dataInNode = m_nodes[index]->getAllDataInNode();
+        "show:data",
+        {
+            .brief="List all data items contained in Node",
+            .usage="show nodes [INDEX]",
+            .execute=
+            [this](const std::vector<std::string> &args, std::ostream &os, std::ostream &err) {
+                if (!args.empty()) {
+                    auto index = get_index<uint32_t>(args[0]);
+                    if (index) {
+                        dataItem_type dataInNode = m_nodes[*index]->getAllDataInNode();
 
                         /* Display node details. */
-                        std::vector<std::string> new_Args = {"show", "nodes", std::to_string(index) };
+                        std::vector<std::string> new_Args = {"show", "nodes", std::to_string(*index)};
                         execute(new_Args, os, err);
 
                         /* Highlighting the data keys */
                         os << fmt::format("\n{}\n", insertHighlighterSection());
 
-                        if(!dataInNode.empty()){
-                            os << "Data items in node : \n";
+                        if (!dataInNode.empty()) {
+                            os << "Data items in node:\n";
                             int i = 1;
-                            for(auto s : dataInNode){
+                            for (const auto &s : dataInNode) {
                                 // Hashing received key to convert it into length of 20 bytes
                                 std::string sKey{s.first.begin(), s.first.end()};
                                 NodeInformation::id_type finalHashedKey = NodeInformation::hash_sha1(sKey);
@@ -398,17 +399,16 @@ Entry::Entry() : m_commands{
                                 ++i;
                             }
                             os << fmt::format("{}\n", insertHighlighterSection());
-                        }
-                        else{
-                            os << fmt::format("No data items stored in node {}\n", index);
+                        } else {
+                            os << fmt::format("No data items stored in node {}\n", *index);
                             os << fmt::format("{}\n", insertHighlighterSection());
                         }
                     }
                 } else {
                     os << "INDEX required!";
                 }
-          }
-      }
+            }
+        }
     },
     {
         "show:fingers",

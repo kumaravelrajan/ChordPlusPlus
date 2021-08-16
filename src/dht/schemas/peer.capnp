@@ -11,22 +11,22 @@ struct Optional(T) {
 }
 
 struct Node {
-  id @0 :Data;
-  ip @1 :Text;
+  id   @0 :Data;
+  ip   @1 :Text;
   port @2 :UInt16;
 }
 
-struct DataItem{
-  key @0  :Data;
-  data @1 :Data;
-  ttl @2  :UInt16;
+struct DataItem {
+  key     @0 :Data;
+  data    @1 :Data;
+  expires @2 :UInt64;
 }
 
 interface Peer {
-  getSuccessor @0 (id :Data) -> (node :Optional(Node));
-  getPredecessor @1 () -> (node :Optional(Node));
-  notify @2 (node :Node);
-  getData @3 (key :Data) -> (data :Optional(Data));
-  setData @4 (key :Data, value :Data, ttl :UInt16 = 0);
-  getDataItemsOnJoin @5 (newNodeKey :Data) -> (listOfDataItems :List(DataItem));
+  getSuccessor       @0 (id :Data)      -> (node :Optional(Node));
+  getPredecessor     @1 ()              -> (node :Optional(Node));
+  notify             @2 (node :Node);
+  getData            @3 (key :Data)     -> (data :Optional(Data));
+  setData            @4 (key :Data, value :Data, ttl :UInt16 = 0);
+  getDataItemsOnJoin @5 (newNode :Node) -> (listOfDataItems :List(DataItem));
 }

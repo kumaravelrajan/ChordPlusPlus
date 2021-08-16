@@ -1,7 +1,4 @@
 #include "Peer.h"
-#include "NodeInformation.h"
-#include <kj/common.h>
-#include <utility>
 #include <capnp/ez-rpc.h>
 #include <util.h>
 #include <centralLogControl.h>
@@ -109,6 +106,39 @@ PeerImpl::PeerImpl(std::shared_ptr<NodeInformation> nodeInformation) :
     return kj::READY_NOW;
 }
 
+::kj::Promise<void> dht::PeerImpl::getDataItemsOnJoin(GetDataItemsOnJoinContext context)
+{
+    /* Check if current node is predecessor of node in GetDataItemsOnJoinParams */
+    auto newNode = nodeFromReader(context.getParams().getNewNode());
+
+    if (!util::is_in_range_loop(newNode.getId(), m_nodeInformation->getPredecessor()->getId(),
+                                m_nodeInformation->getId(), false, false)) {
+        SPDLOG_INFO("New Node must be in between predecessor an this node.");
+        return kj::READY_NOW;
+    }
+
+    auto dataForNewNode = m_nodeInformation->getDataItemsForNodeId(newNode);
+
+    if (dataForNewNode) {
+        auto iter = dataForNewNode->begin();
+
+        auto s = context.getResults().initListOfDataItems(static_cast<kj::uint>(dataForNewNode->size()));
+
+        // Iterate through map and store values in ::capnp::List
+        for (kj::uint i = 0; i < dataForNewNode->size(); ++i) {
+            s[i].setKey(kj::heapArray<kj::byte>(iter->first.begin(), iter->first.end()));
+            s[i].setData(kj::heapArray<kj::byte>(iter->second.first.begin(), iter->second.first.end()));
+            s[i].setExpires(
+                static_cast<size_t>(std::chrono::duration_cast<std::chrono::seconds>(
+                    iter->second.second.time_since_epoch()).count())
+            );
+            ++iter;
+        }
+    }
+
+    return kj::READY_NOW;
+}
+
 // Conversion
 
 NodeInformation::Node PeerImpl::nodeFromReader(Node::Reader value)
@@ -169,7 +199,7 @@ void PeerImpl::buildNode(Node::Builder builder, const NodeInformation::Node &nod
         auto cap = client->getMain<Peer>();
         auto req = cap.getPredecessorRequest();
         return req.send().then(
-            [client = kj::mv(client), successor](capnp::Response<Peer::GetPredecessorResults> &&response) {
+            [client = kj::mv(client), successor](capnp::Response<Peer::GetPredecessorResults> &&) {
                 return successor;
             }, [LOG_CAPTURE](const kj::Exception &e) {
                 LOG_DEBUG("Exception in request\n\t\t{}", e.getDescription().cStr());
@@ -264,61 +294,28 @@ void PeerImpl::setData(
     }
 }
 
-::kj::Promise<void> dht::PeerImpl::getDataItemsOnJoin(GetDataItemsOnJoinContext context)
-{
-     /* Check if current node is predecessor of node in GetDataItemsOnJoinParams */
-    ::capnp::Data::Reader keyOfNewNode = context.getParams().getNewNodeKey();
-    std::vector<uint8_t> vKeyOfNewNode(keyOfNewNode.begin(), keyOfNewNode.end());
-    std::array<uint8_t, SHA_DIGEST_LENGTH> arrKeyOfNewNode;
-    std::copy_n(vKeyOfNewNode.begin(), SHA_DIGEST_LENGTH, arrKeyOfNewNode.begin());
-
-    KJ_REQUIRE(m_nodeInformation->getPredecessor()->getId() == arrKeyOfNewNode, "Wrong successor node.");
-
-    auto mapOfDataItemsForNewNode = m_nodeInformation->getDataItemsForNodeId(vKeyOfNewNode);
-
-    if(mapOfDataItemsForNewNode){
-        auto iter = mapOfDataItemsForNewNode->begin();
-        std::vector<DataItem::Builder> vectorOfDataItems;
-        DataItem::Builder dataItemBuilder(nullptr);
-        auto s = context.getResults().initListOfDataItems(mapOfDataItemsForNewNode->size());
-
-        // Iterate through map and store values in ::capnp::List
-        for(size_t i = 0; i < mapOfDataItemsForNewNode->size(); ++i){
-            s[i].setKey(kj::heapArray<kj::byte>(iter->first.begin(), iter->first.end()));
-            s[i].setData(kj::heapArray<kj::byte>(iter->second.first.begin(), iter->second.first.end()));
-            s[i].setTtl(static_cast<uint16_t>(std::chrono::duration_cast<std::chrono::seconds>(iter->second.second - std::chrono::system_clock::now()).count()));
-
-            std::advance(iter, 1);
-        }
-    }
-
-    return kj::READY_NOW;
-}
-
-void PeerImpl::getDataItemsOnJoinHelper(std::optional<NodeInformation::Node> successorNode, std::shared_ptr<NodeInformation> &newNode)
+void PeerImpl::getDataItemsOnJoinHelper(std::optional<NodeInformation::Node> successorNode)
 {
     LOG_GET
-    capnp::EzRpcClient client{ successorNode->getIp(), successorNode->getPort() };
+    capnp::EzRpcClient client{successorNode->getIp(), successorNode->getPort()};
     auto cap = client.getMain<Peer>();
     auto req = cap.getDataItemsOnJoinRequest();
-    req.setNewNodeKey(capnp::Data::Builder(kj::heapArray<kj::byte>(newNode->getId().begin(), newNode->getId().end())));
+    buildNode(req.getNewNode(), m_nodeInformation->getNode());
 
-     /* Start RPC */
-     req.send().then([LOG_CAPTURE, this](capnp::Response<Peer::GetDataItemsOnJoinResults> &&Response) {
+    /* Start RPC */
+    req.send().then([LOG_CAPTURE, this](capnp::Response<Peer::GetDataItemsOnJoinResults> &&Response) {
         std::map<std::vector<uint8_t>, std::pair<std::vector<uint8_t>, uint16_t>> mapDataItemsToReturn;
 
         Response.getListOfDataItems().size();
-        for(auto individualDataItem : Response.getListOfDataItems()){
+        for (auto individualDataItem : Response.getListOfDataItems()) {
             const std::vector<uint8_t> key(individualDataItem.getKey().begin(), individualDataItem.getKey().end());
             std::vector<uint8_t> data(individualDataItem.getData().begin(), individualDataItem.getData().end());
-            auto ttl_seconds = individualDataItem.getTtl() > 0
-                ? std::chrono::seconds(individualDataItem.getTtl())
-                : std::chrono::system_clock::duration::max();
-
-            m_nodeInformation->setData(key, data, ttl_seconds);
+            size_t expires_since_epoch = individualDataItem.getExpires();
+            std::chrono::system_clock::time_point expires{std::chrono::seconds{expires_since_epoch}};
+            m_nodeInformation->setDataExpires(key, data, expires);
         }
         LOG_TRACE("got response from GetDataItemsOnJoin");
-        }, [LOG_CAPTURE, this](const kj::Exception &e) {
-        LOG_ERROR(e.getDescription().cStr());
+    }, [LOG_CAPTURE](const kj::Exception &e) {
+        LOG_DEBUG(e.getDescription().cStr());
     }).wait(client.getWaitScope());
 }

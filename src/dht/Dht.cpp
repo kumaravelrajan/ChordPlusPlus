@@ -244,14 +244,13 @@ void Dht::stabilize()
     }).wait(client.getWaitScope());
 
     /* If pred(suc(cur)) == cur, no need to do further processing. */
-    if(!(predOfSuccessor && predOfSuccessor->getId() == m_nodeInformation->getId()))
-    {
+    if (!(predOfSuccessor && predOfSuccessor->getId() == m_nodeInformation->getId())) {
         /* if ( pred(suc(cur)) [called PSC] != null ) && if ( PSC is in range (cur, suc) )
          * then PSC is successor of cur and cur is predecessor of PSC. Update accordingly. */
         if (predOfSuccessor && util::is_in_range_loop(
             predOfSuccessor->getId(), m_nodeInformation->getId(), successor->getId(),
             false, false
-            )) {
+        )) {
             m_nodeInformation->setSuccessor(predOfSuccessor);
             capnp::EzRpcClient client2{predOfSuccessor->getIp(), predOfSuccessor->getPort()};
             auto cap2 = client2.getMain<Peer>();
@@ -259,15 +258,13 @@ void Dht::stabilize()
             PeerImpl::buildNode(req2.getNode(), m_nodeInformation->getNode());
             return req2.send().then([LOG_CAPTURE, this](capnp::Response<Peer::NotifyResults> &&) {
                 /* Sync data items from successor for which new node is responsible. */
-                getPeerImpl().getDataItemsOnJoinHelper(m_nodeInformation->getSuccessor(), m_nodeInformation);
+                getPeerImpl().getDataItemsOnJoinHelper(m_nodeInformation->getSuccessor());
 
                 LOG_TRACE("got response from predecessor of successor");
-                }, [LOG_CAPTURE](const kj::Exception &e) {
+            }, [LOG_CAPTURE](const kj::Exception &e) {
                 LOG_DEBUG("connection issue with predecessor of successor\n\t\t{}", e.getDescription().cStr());
             }).wait(client2.getWaitScope());
-        }
-        else
-        {
+        } else {
             /* if ( pred(suc(cur)) [called PSC] == null  || ( PSC!=null && PSC not in range (cur, suc) ) )
              * then cur is predecessor of suc(cur). */
             capnp::EzRpcClient client2{successor->getIp(), successor->getPort()};
@@ -276,10 +273,10 @@ void Dht::stabilize()
             PeerImpl::buildNode(req2.getNode(), m_nodeInformation->getNode());
             return req2.send().then([LOG_CAPTURE, this](capnp::Response<Peer::NotifyResults> &&) {
                 /* Sync data items from successor for which new node is responsible. */
-                getPeerImpl().getDataItemsOnJoinHelper(m_nodeInformation->getSuccessor(), m_nodeInformation);
+                getPeerImpl().getDataItemsOnJoinHelper(m_nodeInformation->getSuccessor());
 
                 LOG_TRACE("got response from successor");
-                }, [LOG_CAPTURE](const kj::Exception &e) {
+            }, [LOG_CAPTURE](const kj::Exception &e) {
                 LOG_DEBUG("connection issue with successor\n\t\t{}", e.getDescription().cStr());
             }).wait(client2.getWaitScope());
         }
