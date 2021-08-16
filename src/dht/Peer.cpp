@@ -171,7 +171,7 @@ void PeerImpl::buildNode(Node::Builder builder, const NodeInformation::Node &nod
         return req.send().then(
             [client = kj::mv(client), successor](capnp::Response<Peer::GetPredecessorResults> &&response) {
                 return successor;
-            }, [LOG_CAPTURE](const kj::Exception &) {
+            }, [LOG_CAPTURE](const kj::Exception &e) {
                 LOG_DEBUG("Exception in request\n\t\t{}", e.getDescription().cStr());
                 return std::optional<NodeInformation::Node>{};
             }
