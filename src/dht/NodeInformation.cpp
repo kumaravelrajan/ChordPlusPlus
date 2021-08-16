@@ -164,6 +164,13 @@ NodeInformation::data_type NodeInformation::getAllDataInNode() const
     std::shared_lock l{m_dataMutex};
     return m_data;
 }
+void NodeInformation::deleteDataAssignedToPredecessor(std::vector<std::vector<uint8_t>> &keyOfDataItemsToDelete)
+{
+    std::unique_lock l{m_dataMutex};
+    for(auto s : keyOfDataItemsToDelete){
+        m_data.erase(s);
+    }
+}
 
 // Node Methods:
 
