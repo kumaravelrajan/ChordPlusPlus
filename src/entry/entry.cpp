@@ -115,8 +115,17 @@ int Entry::mainLoop()
         return *m_input_files.top();
     };
 
-    auto format_callstack = [this] {
-        return fmt::format(fg(fmt::color::cornflower_blue), "({})", fmt::join(m_input_filenames, "::"));
+    auto format_callstack = [this](const size_t max_elems = 3) {
+        size_t elems = m_input_filenames.size() <= max_elems ? m_input_filenames.size() : (max_elems - 1);
+        return fmt::format(
+            fg(fmt::color::cornflower_blue), "({}{})",
+            m_input_filenames.size() > (max_elems) ?
+            fmt::format("[{:>02}]...::",
+                        m_input_filenames.size() - elems) : "",
+            fmt::join(
+                m_input_filenames.end() - static_cast<long>(elems),
+                m_input_filenames.end(), "::")
+        );
     };
 
     while (true) {
@@ -296,6 +305,8 @@ Entry::Entry() : m_commands{
             [this](const std::vector<std::string> &args, std::ostream &, std::ostream &) {
                 if (args.empty())
                     throw std::invalid_argument("PATH required!");
+                if (m_input_files.size() >= 64)
+                    throw std::invalid_argument("Recursion depth reached!");
                 auto f = std::make_unique<std::ifstream>();
                 // Make path relative to previous script
                 std::string path = args[0];
