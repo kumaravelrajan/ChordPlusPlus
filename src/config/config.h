@@ -3,6 +3,7 @@
 
 #include <string>
 #include <cstdint>
+#include <optional>
 
 namespace config
 {
@@ -15,6 +16,7 @@ namespace config
         std::string bootstrapNode_address{"127.0.0.1"};
         uint16_t bootstrapNode_port{6002};
         uint64_t extra_debug_nodes{0};
+        std::optional<std::string> startup_script{};
     };
 
     Configuration parseConfigFile(const std::string &path);
