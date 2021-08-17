@@ -5,4 +5,3 @@ sleep 1
 show nodes 1
 sleep 1
 show nodes 2
-execute show_nodes.txt

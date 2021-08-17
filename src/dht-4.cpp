@@ -4,7 +4,8 @@
 #include <config.h>
 #include <entry.h>
 #include <memory>
-#include <logging/centralLogControl.h>
+#include <optional>
+#include <centralLogControl.h>
 
 using namespace std::literals;
 
@@ -40,11 +41,14 @@ void InitSpdlog(const int &consoleLogLevel, const std::string &logfilePath)
 
 int main(int argc, char *argv[])
 {
+    std::optional<std::string> startup_script{};
+    std::optional<std::string> configPath{};
+
     cxxopts::Options options("dht-4", "DHT module for the VoidPhone project");
     options.add_options()
         (
             "c,config", "Configuration file path",
-            cxxopts::value<std::string>()->default_value("./config.ini")
+            cxxopts::value(configPath)->default_value("./config.ini")
         )
         ("h,help", "Print usage")
         (
@@ -62,6 +66,11 @@ int main(int argc, char *argv[])
             "o,logOutput",
             "Specify path for log file.\nDefault: ./log.txt",
             cxxopts::value<std::string>()->default_value("./log.txt")
+        )
+        (
+            "s,startupScript",
+            "Specify path for startup script.",
+            cxxopts::value(startup_script)
         );
     auto args = options.parse(argc, argv);
 
@@ -70,9 +79,9 @@ int main(int argc, char *argv[])
         exit(0);
     }
 
-    std::cout << "Config path: " << args["config"].as<std::string>() << std::endl;
+    auto conf = configPath ? config::parseConfigFile(*configPath) : config::Configuration{};
 
-    auto conf = config::parseConfigFile(args["config"].as<std::string>());
+    conf.startup_script = conf.startup_script ? conf.startup_script : startup_script;
 
     // Get user input nodes to create
     if (args.count("testNodeAmount")) {
@@ -82,7 +91,8 @@ int main(int argc, char *argv[])
     // Initialize spdlog
     InitSpdlog(args["logMode"].as<int>(), args["logOutput"].as<std::string>());
 
-    SPDLOG_DEBUG("Config path: {}", args["config"].as<std::string>());
+    if (configPath)
+        SPDLOG_DEBUG("Config path: {}", *configPath);
 
     SPDLOG_INFO(
         "\n\t=================================================================================="

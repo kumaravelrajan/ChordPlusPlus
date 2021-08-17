@@ -128,62 +128,66 @@ int Entry::mainLoop()
         );
     };
 
+    if (m_conf.startup_script && !m_conf.startup_script->empty()) {
+        os << fmt::format(
+            fg(fmt::color::aqua), "Executing script at {}...",
+            fmt::format(fg(fmt::color::cornflower_blue), "({})", *m_conf.startup_script)
+        ) << std::endl;
+        execute({"execute", *m_conf.startup_script}, os, err);
+    }
+
     while (true) {
-        std::cout << fmt::format(fmt::emphasis::bold | fg(fmt::color::light_green), "$ ");
+        if (isRepeatSet && m_lastEnteredCommand.empty()) {
+            /* repeat entered as the first command. */
+            os << fmt::format("repeat cannot be the first command. Enter any other command.") << std::endl;
+            isRepeatSet = false;
+            continue;
+        }
+
+        os << fmt::format(fmt::emphasis::bold | fg(fmt::color::light_green), "$ ");
         std::vector<std::string> tokens{};
-        if (!isRepeatSet) {
+        if (isRepeatSet) {
+            line = m_lastEnteredCommand;
+        } else {
             if (!std::getline(get_in(), line)) {
                 if (m_input_files.empty())
                     break;
                 else {
                     os << format_callstack() << " Finished executing script!" << std::endl;
+                    m_lastEnteredCommand = "execute " + m_input_filenames.back();
                     m_input_files.top()->close();
                     m_input_files.pop();
                     m_input_filenames.pop_back();
                     continue;
                 }
             }
-            {
-                std::string l2{};
-                std::regex_replace(std::back_inserter(l2), line.begin(), line.end(), std::regex{R"(#.*)"}, "");
-                line = l2;
-            }
-            std::regex re{R"(\[[^\]]*\]|[^ \n\r\t\[\]]+)"};
-            std::transform(
-                std::sregex_iterator{line.begin(), line.end(), re}, std::sregex_iterator{},
-                std::back_inserter(tokens), [](const std::smatch &match) { return match.str(); });
-            if (tokens.empty()) continue;
-
-            if (!isatty(fileno(stdin))) {
-                if (!m_input_files.empty())
-                    os << format_callstack() << ' ';
-                os << line << std::endl;
-            }
-
-            if (tokens[0] != "repeat") {
-                m_lastEnteredCommand = tokens;
-            }
-        } else {
-            std::string toPrint = fmt::format("{}\n", fmt::join(m_lastEnteredCommand, " "));
-            std::cout << toPrint;
-            if (!m_lastEnteredCommand.empty()) {
-                tokens = m_lastEnteredCommand;
-            } else {
-                /* repeat entered as the first comment. */
-                fmt::print("repeat cannot be the first command. Enter any other command.\n");
-                isRepeatSet = false;
-                continue;
-            }
+            std::string l2{};
+            std::regex_replace(std::back_inserter(l2), line.begin(), line.end(), std::regex{R"(#.*)"}, "");
+            line = l2;
         }
+
+        std::regex re{R"(\[[^\]]*\]|[^ \n\r\t\[\]]+)"};
+        std::transform(
+            std::sregex_iterator{line.begin(), line.end(), re}, std::sregex_iterator{},
+            std::back_inserter(tokens), [](const std::smatch &match) { return match.str(); });
+        if (tokens.empty()) continue;
+
+        if (!isatty(fileno(stdin))) {
+            if (!m_input_files.empty())
+                os << format_callstack() << ' ';
+            os << line << std::endl;
+        }
+
+        if (tokens[0] != "repeat")
+            m_lastEnteredCommand = line;
 
         isRepeatSet = false;
 
         execute(tokens, os, err);
-        std::cout << std::endl;
+        os << std::endl;
 
         if (line == "exit") break;
     }
-
     return 0;
 }
 
@@ -320,6 +324,7 @@ Entry::Entry() : m_commands{
                 else {
                     m_input_files.push(std::move(f));
                     m_input_filenames.push_back(path);
+                    m_lastEnteredCommand.clear(); // Prevent "repeat" as first command in a script.
                 }
             }
         }
@@ -481,7 +486,8 @@ Entry::Entry() : m_commands{
                                 // Hashing received key to convert it into length of 20 bytes
                                 std::string sKey{s.first.begin(), s.first.end()};
                                 NodeInformation::id_type finalHashedKey = NodeInformation::hash_sha1(sKey);
-                                os << fmt::format("{}. key = {}\n", i, util::hexdump(finalHashedKey, 20, false, false));
+                                os << fmt::format("{}. key = {}\n", i,
+                                                  util::hexdump(finalHashedKey, 20, false, false));
                                 ++i;
                             }
                             os << fmt::format("{}\n", insertHighlighterSection());
@@ -517,7 +523,8 @@ Entry::Entry() : m_commands{
                 bool printed_star = false;
                 for (size_t i = 0; i < NodeInformation::key_bits; ++i) {
                     const auto &finger = node.getFinger(i);
-                    const auto *next_finger = (i < NodeInformation::key_bits - 1) ? &node.getFinger(i + 1) : nullptr;
+                    const auto *next_finger = (i < NodeInformation::key_bits - 1) ? &node.getFinger(i + 1)
+                                                                                  : nullptr;
                     if (next_finger && last_finger && *last_finger == finger && *next_finger == finger) {
                         if (!printed_star) {
                             os << "*\n";

@@ -44,7 +44,7 @@ namespace entry
         std::vector<std::shared_ptr<NodeInformation>> m_nodes{};
         const std::unordered_map<std::string, Command> m_commands;
         config::Configuration m_conf{};
-        std::vector<std::string> m_lastEnteredCommand{};
+        std::string m_lastEnteredCommand{};
         bool isRepeatSet{false};
 
         std::stack<std::unique_ptr<std::ifstream>> m_input_files{};
