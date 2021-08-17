@@ -172,7 +172,7 @@ int Entry::mainLoop()
             std::back_inserter(tokens), [](const std::smatch &match) { return match.str(); });
         if (tokens.empty()) continue;
 
-        if (!isatty(fileno(stdin))) {
+        if (!isatty(fileno(stdin)) || !m_input_files.empty()) {
             if (!m_input_files.empty())
                 os << format_callstack() << ' ';
             os << line << std::endl;
