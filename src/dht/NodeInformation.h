@@ -101,6 +101,7 @@ public:
 
     [[nodiscard]] std::optional<NodeInformation::data_type> getDataItemsForNodeId(const Node &newNode) const;
     [[nodiscard]] NodeInformation::data_type getAllDataInNode() const;
+    [[nodiscard]] void deleteDataAssignedToPredecessor(std::vector<std::vector<uint8_t>> &keyOfDataItemsToDelete);
 public:
     // Constructor
     explicit NodeInformation(std::string host = "", uint16_t port = 0);

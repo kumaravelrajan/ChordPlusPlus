@@ -117,7 +117,15 @@ PeerImpl::PeerImpl(std::shared_ptr<NodeInformation> nodeInformation) :
         return kj::READY_NOW;
     }
 
+    /* Get data items for which predecessor of current node is responsible. */
     auto dataForNewNode = m_nodeInformation->getDataItemsForNodeId(newNode);
+
+    /* Delete data items from current node which have been assigned to predecessor. */
+    std::vector<std::vector<uint8_t>> keyOfDataItemsAssignedToPredecessor;
+    for(auto s : *dataForNewNode){
+        keyOfDataItemsAssignedToPredecessor.push_back(s.first);
+    }
+    m_nodeInformation->deleteDataAssignedToPredecessor(keyOfDataItemsAssignedToPredecessor);
 
     if (dataForNewNode) {
         auto iter = dataForNewNode->begin();

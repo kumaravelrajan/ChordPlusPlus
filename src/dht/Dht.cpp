@@ -213,6 +213,9 @@ void Dht::join(const NodeInformation::Node &node)
         LOG_DEBUG("got response from node");
         auto successor = PeerImpl::nodeFromReader(response.getNode());
         m_nodeInformation->setSuccessor(successor);
+
+        /* Sync data items from successor for which new node is responsible. */
+        getPeerImpl().getDataItemsOnJoinHelper(m_nodeInformation->getSuccessor());
     }, [LOG_CAPTURE](const kj::Exception &e) {
         LOG_ERR(e);
     }).wait(client.getWaitScope());
@@ -257,9 +260,6 @@ void Dht::stabilize()
             auto req2 = cap2.notifyRequest();
             PeerImpl::buildNode(req2.getNode(), m_nodeInformation->getNode());
             return req2.send().then([LOG_CAPTURE, this](capnp::Response<Peer::NotifyResults> &&) {
-                /* Sync data items from successor for which new node is responsible. */
-                getPeerImpl().getDataItemsOnJoinHelper(m_nodeInformation->getSuccessor());
-
                 LOG_TRACE("got response from predecessor of successor");
             }, [LOG_CAPTURE](const kj::Exception &e) {
                 LOG_DEBUG("connection issue with predecessor of successor\n\t\t{}", e.getDescription().cStr());
@@ -272,9 +272,6 @@ void Dht::stabilize()
             auto req2 = cap2.notifyRequest();
             PeerImpl::buildNode(req2.getNode(), m_nodeInformation->getNode());
             return req2.send().then([LOG_CAPTURE, this](capnp::Response<Peer::NotifyResults> &&) {
-                /* Sync data items from successor for which new node is responsible. */
-                getPeerImpl().getDataItemsOnJoinHelper(m_nodeInformation->getSuccessor());
-
                 LOG_TRACE("got response from successor");
             }, [LOG_CAPTURE](const kj::Exception &e) {
                 LOG_DEBUG("connection issue with successor\n\t\t{}", e.getDescription().cStr());
