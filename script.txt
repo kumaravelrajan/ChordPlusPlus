@@ -3,10 +3,4 @@ add 6007
 sleep 1
 add 6009
 sleep 10
-show nodes
-sleep 1
-show nodes 0
-sleep 1
-show nodes 1
-sleep 1
-show nodes 2
+execute show_nodes.txt

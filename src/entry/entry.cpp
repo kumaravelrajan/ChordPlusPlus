@@ -1,6 +1,8 @@
 #include "entry.h"
 #include <regex>
-#include "../logging/centralLogControl.h"
+#include <filesystem>
+#include <spdlog/fmt/bundled/color.h>
+#include <centralLogControl.h>
 
 using namespace std::literals;
 using entry::Command;
@@ -100,26 +102,54 @@ Entry::~Entry()
 int Entry::mainLoop()
 {
     // TODO: Maybe make the streams configurable
-    std::istream &is = std::cin;
+    std::istream &in = std::cin;
     std::ostream &os = std::cout;
     // std::ostream &err = std::cerr;
     std::ostream &err = std::cout;
 
     std::string line;
 
+    auto get_in = [this]() -> std::istream & {
+        if (m_input_files.empty())
+            return in;
+        return *m_input_files.top();
+    };
+
+    auto format_callstack = [this] {
+        return fmt::format(fg(fmt::color::cornflower_blue), "({})", fmt::join(m_input_filenames, "::"));
+    };
+
     while (true) {
-        std::cout << "$ ";
+        std::cout << fmt::format(fmt::emphasis::bold | fg(fmt::color::light_green), "$ ");
         std::vector<std::string> tokens{};
         if (!isRepeatSet) {
-            if (!std::getline(is, line))
-                break;
-            if (!isatty(fileno(stdin)))
-                os << line << std::endl;
+            if (!std::getline(get_in(), line)) {
+                if (m_input_files.empty())
+                    break;
+                else {
+                    os << format_callstack() << " Finished executing script!" << std::endl;
+                    m_input_files.top()->close();
+                    m_input_files.pop();
+                    m_input_filenames.pop_back();
+                    continue;
+                }
+            }
+            {
+                std::string l2{};
+                std::regex_replace(std::back_inserter(l2), line.begin(), line.end(), std::regex{R"(#.*)"}, "");
+                line = l2;
+            }
             std::regex re{R"(\[[^\]]*\]|[^ \n\r\t\[\]]+)"};
             std::transform(
                 std::sregex_iterator{line.begin(), line.end(), re}, std::sregex_iterator{},
                 std::back_inserter(tokens), [](const std::smatch &match) { return match.str(); });
             if (tokens.empty()) continue;
+
+            if (!isatty(fileno(stdin))) {
+                if (!m_input_files.empty())
+                    os << format_callstack() << ' ';
+                os << line << std::endl;
+            }
 
             if (tokens[0] != "repeat") {
                 m_lastEnteredCommand = tokens;
@@ -254,6 +284,32 @@ Entry::Entry() : m_commands{
             .execute=
             [this](const std::vector<std::string> &, std::ostream &, std::ostream &) {
                 isRepeatSet = true;
+            }
+        }
+    },
+    {
+        "execute",
+        {
+            .brief= "Execute a script",
+            .usage= "execute <PATH>",
+            .execute=
+            [this](const std::vector<std::string> &args, std::ostream &, std::ostream &) {
+                if (args.empty())
+                    throw std::invalid_argument("PATH required!");
+                auto f = std::make_unique<std::ifstream>();
+                // Make path relative to previous script
+                std::string path = args[0];
+                if (!m_input_filenames.empty()) {
+                    std::filesystem::path lastFile{m_input_filenames.back()};
+                    path = lastFile.parent_path() / path;
+                }
+                f->open(path);
+                if (f->fail())
+                    throw std::invalid_argument(fmt::format("Could not open {}", path));
+                else {
+                    m_input_files.push(std::move(f));
+                    m_input_filenames.push_back(path);
+                }
             }
         }
     },
