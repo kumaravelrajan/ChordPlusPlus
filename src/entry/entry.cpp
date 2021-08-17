@@ -9,12 +9,12 @@ using entry::Entry;
 namespace entry
 {
     template<typename T = uint32_t>
-    std::optional<T> get_index(const std::string &str)
+    std::optional<T> parse_number(const std::string &str)
     {
         std::smatch match;
         std::regex_match(str, match,
-                         std::regex(R"(((?:\d|\.\')+)|\[((?:\d|\.\')+)\])"));
-        std::string result = match[1].str() + match[2].str();
+                         std::regex(R"(((?:\+|-)?(?:\.\d+|\d+\.?\d*)))"));
+        std::string result = match[1].str();
         return
             !result.empty()
             ? util::from_string<T>(result)
@@ -228,6 +228,22 @@ Entry::Entry() : m_commands{
         }
     },
     {
+        "sleep",
+        {
+            .brief= "Wait some time before accepting new input",
+            .usage= "sleep <SECONDS>",
+            .execute=
+            [](const std::vector<std::string> &args, std::ostream &, std::ostream &) {
+                auto seconds = args.empty() ? std::optional<float>{} : parse_number<float>(args[0]);
+                if (!seconds)
+                    throw std::invalid_argument("SECONDS required!");
+                if (*seconds < 0)
+                    throw std::invalid_argument(fmt::format("Invalid interval: {}", *seconds));
+                std::this_thread::sleep_for(std::chrono::milliseconds(static_cast<size_t>(*seconds * 1000)));
+            }
+        }
+    },
+    {
         "repeat",
         {
             .brief= "Exit the program",
@@ -247,7 +263,7 @@ Entry::Entry() : m_commands{
             [this](const std::vector<std::string> &args, std::ostream &os, std::ostream &) {
                 bool isUserPortAvailable = true;
                 if (!args.empty()) {
-                    auto port = get_index<uint16_t>(args[0]);
+                    auto port = parse_number<uint16_t>(args[0]);
                     if (port) {
                         addNodeDynamicallyToNetwork(*port, os);
                     } else {
@@ -268,14 +284,14 @@ Entry::Entry() : m_commands{
             [this](const std::vector<std::string> &args, std::ostream &, std::ostream &) {
                 std::optional<uint32_t> index{};
                 if (!args.empty())
-                    index = get_index(args[0]);
+                    index = parse_number(args[0]);
                 if (!index)
                     throw std::invalid_argument("INDEX required!");
                 if (index >= m_nodes.size())
                     throw std::invalid_argument(fmt::format("Index [{}] out of bounds!", *index));
                 uint32_t count = 1;
                 if (args.size() > 1) {
-                    auto c = get_index(args[1]);
+                    auto c = parse_number(args[1]);
                     if (c) {
                         if (*index + *c > m_nodes.size())
                             throw std::invalid_argument(fmt::format("Count [{}] out of bounds!", *c));
@@ -334,7 +350,7 @@ Entry::Entry() : m_commands{
                         execute(new_args, os, err);
                         return;
                     } else {
-                        index = get_index(args[0]);
+                        index = parse_number(args[0]);
                     }
                 }
 
@@ -377,7 +393,7 @@ Entry::Entry() : m_commands{
             .execute=
             [this](const std::vector<std::string> &args, std::ostream &os, std::ostream &err) {
                 if (!args.empty()) {
-                    auto index = get_index<uint32_t>(args[0]);
+                    auto index = parse_number<uint32_t>(args[0]);
                     if (index) {
                         dataItem_type dataInNode = m_nodes[*index]->getAllDataInNode();
 
@@ -419,7 +435,7 @@ Entry::Entry() : m_commands{
             [this](const std::vector<std::string> &args, std::ostream &os, std::ostream &) {
                 std::optional<uint32_t> index{};
                 if (!args.empty())
-                    index = get_index(args[0]);
+                    index = parse_number(args[0]);
                 if (!index)
                     throw std::invalid_argument("INDEX required!");
                 if (index >= m_nodes.size())
