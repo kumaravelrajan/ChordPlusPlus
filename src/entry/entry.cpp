@@ -111,7 +111,10 @@ int Entry::mainLoop()
         std::cout << "$ ";
         std::vector<std::string> tokens{};
         if (!isRepeatSet) {
-            std::getline(is, line);
+            if (!std::getline(is, line))
+                break;
+            if (!isatty(fileno(stdin)))
+                os << line << std::endl;
             std::regex re{R"(\[[^\]]*\]|[^ \n\r\t\[\]]+)"};
             std::transform(
                 std::sregex_iterator{line.begin(), line.end(), re}, std::sregex_iterator{},
