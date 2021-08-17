@@ -5,6 +5,9 @@
 
 using namespace std::chrono_literals;
 
+/* Initialize static variable */
+std::vector<uint8_t> NodeInformation::m_allReplicationIndices;
+
 NodeInformation::NodeInformation(std::string host, uint16_t port) : m_node(std::move(host), port)
 {
     m_dataCleaner = std::async(std::launch::async, [this]() {
@@ -170,6 +173,18 @@ void NodeInformation::deleteDataAssignedToPredecessor(std::vector<std::vector<ui
     for(auto s : keyOfDataItemsToDelete){
         m_data.erase(s);
     }
+}
+std::optional<uint8_t> NodeInformation::getReplicationIndex() const
+{
+    return m_replicationIndex;
+}
+void NodeInformation::setReplicationIndex(const uint8_t &replicationIndex){
+    m_replicationIndex = replicationIndex;
+    NodeInformation::m_allReplicationIndices.push_back(replicationIndex);
+}
+std::optional<uint8_t> NodeInformation::getAverageReplicationIndex() const
+{
+    return static_cast<uint8_t>((std::accumulate(NodeInformation::m_allReplicationIndices.begin(), NodeInformation::m_allReplicationIndices.end(), static_cast<uint8_t>(0))) / NodeInformation::m_allReplicationIndices.size());
 }
 
 // Node Methods:

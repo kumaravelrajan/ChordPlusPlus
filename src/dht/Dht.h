@@ -28,6 +28,7 @@ namespace dht
             m_dhtCancelled = true;
             m_api = nullptr;
             m_mainLoop.wait(); // This happens after the destructor anyway, but this way it is clearer
+            m_replicationFuture.wait();
         };
         Dht(const Dht &) = delete;
         Dht(Dht &&) = delete;
@@ -61,6 +62,7 @@ namespace dht
 
         std::shared_ptr<NodeInformation> m_nodeInformation;
         std::future<void> m_mainLoop;
+        std::future<void> m_replicationFuture;
         std::unique_ptr<api::Api> m_api;
         std::atomic_bool m_dhtCancelled{false};
         std::atomic_bool m_mainLoopExited{false};
