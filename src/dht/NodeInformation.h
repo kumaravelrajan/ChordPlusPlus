@@ -10,6 +10,7 @@
 #include <optional>
 #include <map>
 #include <future>
+#include <numeric>
 
 #define SHA1_CONSIDERATION_LIMIT 9
 
@@ -68,6 +69,9 @@ private:
     /// Bootstrap node details
     std::optional<Node> m_bootstrapNodeAddress{};
 
+    /* Used for DHT GET */
+    static std::vector<uint8_t> m_allReplicationIndices;
+
 public:
     [[nodiscard]] const Node &getNode() const;
     void setNode(const Node &node);
@@ -78,6 +82,8 @@ public:
     void setPort(uint16_t mPort);
     [[nodiscard]] std::optional<Node> getBootstrapNode() const;
     void setBootstrapNode(const std::optional<Node> &);
+    void setReplicationIndex(const uint8_t &replicationIndex);
+    [[nodiscard]] std::optional<uint8_t> getAverageReplicationIndex() const;
 
     /**
      * @throws std::out_of_range

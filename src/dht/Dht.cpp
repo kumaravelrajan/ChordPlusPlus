@@ -127,6 +127,9 @@ std::vector<uint8_t> Dht::onDhtPut(const api::Message_DHT_PUT &message_data, std
         std::to_string(message_data.m_headerExtend.reserved)
     );
 
+    // Setting replication index value
+    m_nodeInformation->setReplicationIndex(message_data.m_headerExtend.replication);
+
     // Hashing received key to convert it into length of 20 bytes
     std::string sKey{message_data.key.begin(), message_data.key.end()};
     NodeInformation::id_type finalHashedKey = NodeInformation::hash_sha1(sKey);
@@ -143,6 +146,32 @@ std::vector<uint8_t> Dht::onDhtPut(const api::Message_DHT_PUT &message_data, std
                               message_data.m_headerExtend.ttl);
     } else {
         SPDLOG_DEBUG("No Successor found!");
+    }
+
+    /* If replicationIndex == 0 or 1, no replication done. replicationIndex defines
+     * on how many nodes the value should be stored, ignoring a value of 0 */
+    if (message_data.m_headerExtend.replication >= 2) {
+
+        m_replicationFuture = std::async(std::launch::async, [this, message_data, successor]() {
+            std::vector<NodeInformation::Node> nodesHavingReplicatedData{};
+
+            for (int i = 0; i < message_data.m_headerExtend.replication - 1; ++i) {
+                auto tempMessage_Data = message_data;
+                tempMessage_Data.key.push_back(static_cast<uint8_t>(i + 1));
+
+                // Hashing received key to convert it into length of 20 bytes
+                std::string sKey { tempMessage_Data.key.begin(), tempMessage_Data.key.end() };
+                NodeInformation::id_type finalHashedKey = NodeInformation::hash_sha1(sKey);
+                auto replicationSuccessor = getSuccessor(finalHashedKey);
+
+                if (replicationSuccessor &&
+                    (std::end(nodesHavingReplicatedData) == std::find(nodesHavingReplicatedData.begin(), nodesHavingReplicatedData.end(), replicationSuccessor)) &&
+                    replicationSuccessor != successor) {
+                        nodesHavingReplicatedData.push_back(*replicationSuccessor);
+                        getPeerImpl().setData(*replicationSuccessor, tempMessage_Data.key, message_data.value, message_data.m_headerExtend.ttl);
+                }
+            }
+        });
     }
 
     for (uint8_t i{0}; !cancelled && i < 10; ++i)
@@ -173,6 +202,25 @@ std::vector<uint8_t> Dht::onDhtGet(const api::Message_KEY &message_data, std::at
     if (successor) {
         SPDLOG_DEBUG("Successor found: {}:{}", successor->getIp(), successor->getPort());
         response = getPeerImpl().getData(*successor, message_data.key);
+    }
+    
+    if(!response && m_nodeInformation->getAverageReplicationIndex() >= 1 ) {
+        /* Check if any of the replicated copies are present. */
+        for (int i = 1; i <= m_nodeInformation->getAverageReplicationIndex(); ++i) {
+            auto tempMessage_Data = message_data;
+            tempMessage_Data.key.push_back(static_cast<uint8_t>(i));
+
+            // Hashing received key to convert it into length of 20 bytes
+            std::string sReplicatedKey { tempMessage_Data.key.begin(), tempMessage_Data.key.end() };
+            NodeInformation::id_type finalReplicatedHashedKey = NodeInformation::hash_sha1(sReplicatedKey);
+            auto replicationSuccessor = getSuccessor(finalReplicatedHashedKey);
+
+            if (replicationSuccessor) {
+                SPDLOG_DEBUG("Successor found for replicated data: {}:{}", replicationSuccessor->getIp(), replicationSuccessor->getPort());
+                response = m_peerImpl.value().get().getData(*replicationSuccessor, tempMessage_Data.key);
+                break;
+            }
+        }
     } else {
         SPDLOG_DEBUG("No Successor found!");
     }
