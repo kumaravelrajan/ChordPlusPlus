@@ -202,7 +202,9 @@ std::vector<uint8_t> Dht::onDhtGet(const api::Message_KEY &message_data, std::at
     if (successor) {
         SPDLOG_DEBUG("Successor found: {}:{}", successor->getIp(), successor->getPort());
         response = getPeerImpl().getData(*successor, message_data.key);
-    } else if(m_nodeInformation->getAverageReplicationIndex() >= 1 ) {
+    }
+    
+    if(!response && m_nodeInformation->getAverageReplicationIndex() >= 1 ) {
         /* Check if any of the replicated copies are present. */
         for (int i = 1; i <= m_nodeInformation->getAverageReplicationIndex(); ++i) {
             auto tempMessage_Data = message_data;
