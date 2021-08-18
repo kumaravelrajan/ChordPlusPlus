@@ -292,8 +292,8 @@ Entry::Entry() : m_commands{
     {
         "repeat",
         {
-            .brief= "Exit the program",
-            .usage= "exit",
+            .brief= "Repeat the previous command",
+            .usage= "repeat",
             .execute=
             [this](const std::vector<std::string> &, std::ostream &, std::ostream &) {
                 isRepeatSet = true;
