@@ -28,7 +28,10 @@ namespace dht
             m_dhtCancelled = true;
             m_api = nullptr;
             m_mainLoop.wait(); // This happens after the destructor anyway, but this way it is clearer
-            m_replicationFuture.wait();
+
+            if(m_replicationFuture.valid()){
+                m_replicationFuture.wait();
+            }
         };
         Dht(const Dht &) = delete;
         Dht(Dht &&) = delete;

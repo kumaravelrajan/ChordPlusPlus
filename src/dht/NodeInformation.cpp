@@ -174,12 +174,7 @@ void NodeInformation::deleteDataAssignedToPredecessor(std::vector<std::vector<ui
         m_data.erase(s);
     }
 }
-std::optional<uint8_t> NodeInformation::getReplicationIndex() const
-{
-    return m_replicationIndex;
-}
 void NodeInformation::setReplicationIndex(const uint8_t &replicationIndex){
-    m_replicationIndex = replicationIndex;
     NodeInformation::m_allReplicationIndices.push_back(replicationIndex);
 }
 std::optional<uint8_t> NodeInformation::getAverageReplicationIndex() const

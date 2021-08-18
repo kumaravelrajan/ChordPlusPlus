@@ -167,7 +167,8 @@ std::vector<uint8_t> Dht::onDhtPut(const api::Message_DHT_PUT &message_data, std
                 if (replicationSuccessor &&
                     (std::end(nodesHavingReplicatedData) == std::find(nodesHavingReplicatedData.begin(), nodesHavingReplicatedData.end(), replicationSuccessor)) &&
                     replicationSuccessor != successor) {
-                    getPeerImpl().setData(*replicationSuccessor, tempMessage_Data.key, message_data.value, message_data.m_headerExtend.ttl);
+                        nodesHavingReplicatedData.push_back(*replicationSuccessor);
+                        getPeerImpl().setData(*replicationSuccessor, tempMessage_Data.key, message_data.value, message_data.m_headerExtend.ttl);
                 }
             }
         });
@@ -201,6 +202,23 @@ std::vector<uint8_t> Dht::onDhtGet(const api::Message_KEY &message_data, std::at
     if (successor) {
         SPDLOG_DEBUG("Successor found: {}:{}", successor->getIp(), successor->getPort());
         response = getPeerImpl().getData(*successor, message_data.key);
+    } else if(m_nodeInformation->getAverageReplicationIndex() >= 1 ) {
+        /* Check if any of the replicated copies are present. */
+        for (int i = 1; i <= m_nodeInformation->getAverageReplicationIndex(); ++i) {
+            auto tempMessage_Data = message_data;
+            tempMessage_Data.key.push_back(static_cast<uint8_t>(i));
+
+            // Hashing received key to convert it into length of 20 bytes
+            std::string sReplicatedKey { tempMessage_Data.key.begin(), tempMessage_Data.key.end() };
+            NodeInformation::id_type finalReplicatedHashedKey = NodeInformation::hash_sha1(sReplicatedKey);
+            auto replicationSuccessor = getSuccessor(finalReplicatedHashedKey);
+
+            if (replicationSuccessor) {
+                SPDLOG_DEBUG("Successor found for replicated data: {}:{}", replicationSuccessor->getIp(), replicationSuccessor->getPort());
+                response = m_peerImpl.value().get().getData(*replicationSuccessor, tempMessage_Data.key);
+                break;
+            }
+        }
     } else {
         SPDLOG_DEBUG("No Successor found!");
     }
