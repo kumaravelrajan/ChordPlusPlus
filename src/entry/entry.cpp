@@ -1,6 +1,8 @@
 #include "entry.h"
 #include <regex>
-#include "../logging/centralLogControl.h"
+#include <filesystem>
+#include <spdlog/fmt/bundled/color.h>
+#include <centralLogControl.h>
 
 using namespace std::literals;
 using entry::Command;
@@ -9,12 +11,12 @@ using entry::Entry;
 namespace entry
 {
     template<typename T = uint32_t>
-    std::optional<T> get_index(const std::string &str)
+    std::optional<T> parse_number(const std::string &str)
     {
         std::smatch match;
         std::regex_match(str, match,
-                         std::regex(R"(((?:\d|\.\')+)|\[((?:\d|\.\')+)\])"));
-        std::string result = match[1].str() + match[2].str();
+                         std::regex(R"(((?:\+|-)?(?:\.\d+|\d+\.?\d*)))"));
+        std::string result = match[1].str();
         return
             !result.empty()
             ? util::from_string<T>(result)
@@ -100,48 +102,92 @@ Entry::~Entry()
 int Entry::mainLoop()
 {
     // TODO: Maybe make the streams configurable
-    std::istream &is = std::cin;
+    std::istream &in = std::cin;
     std::ostream &os = std::cout;
     // std::ostream &err = std::cerr;
     std::ostream &err = std::cout;
 
     std::string line;
 
-    while (true) {
-        std::cout << "$ ";
-        std::vector<std::string> tokens{};
-        if (!isRepeatSet) {
-            std::getline(is, line);
-            std::regex re{R"(\[[^\]]*\]|[^ \n\r\t\[\]]+)"};
-            std::transform(
-                std::sregex_iterator{line.begin(), line.end(), re}, std::sregex_iterator{},
-                std::back_inserter(tokens), [](const std::smatch &match) { return match.str(); });
-            if (tokens.empty()) continue;
+    auto get_in = [this]() -> std::istream & {
+        if (m_input_files.empty())
+            return in;
+        return *m_input_files.top();
+    };
 
-            if (tokens[0] != "repeat") {
-                m_lastEnteredCommand = tokens;
-            }
-        } else {
-            std::string toPrint = fmt::format("{}\n", fmt::join(m_lastEnteredCommand, " "));
-            std::cout << toPrint;
-            if (!m_lastEnteredCommand.empty()) {
-                tokens = m_lastEnteredCommand;
-            } else {
-                /* repeat entered as the first comment. */
-                fmt::print("repeat cannot be the first command. Enter any other command.\n");
-                isRepeatSet = false;
-                continue;
-            }
+    auto format_callstack = [this](const size_t max_elems = 3) {
+        size_t elems = m_input_filenames.size() <= max_elems ? m_input_filenames.size() : (max_elems - 1);
+        return fmt::format(
+            fg(fmt::color::cornflower_blue), "({}{})",
+            m_input_filenames.size() > (max_elems) ?
+            fmt::format("[{:>02}]...::",
+                        m_input_filenames.size() - elems) : "",
+            fmt::join(
+                m_input_filenames.end() - static_cast<long>(elems),
+                m_input_filenames.end(), "::")
+        );
+    };
+
+    if (m_conf.startup_script && !m_conf.startup_script->empty()) {
+        os << fmt::format(
+            fg(fmt::color::aqua), "Executing script at {}...",
+            fmt::format(fg(fmt::color::cornflower_blue), "({})", *m_conf.startup_script)
+        ) << std::endl;
+        execute({"execute", *m_conf.startup_script}, os, err);
+    }
+
+    while (true) {
+        if (isRepeatSet && m_lastEnteredCommand.empty()) {
+            /* repeat entered as the first command. */
+            os << fmt::format("repeat cannot be the first command. Enter any other command.") << std::endl;
+            isRepeatSet = false;
+            continue;
         }
+
+        os << fmt::format(fmt::emphasis::bold | fg(fmt::color::light_green), "$ ");
+        std::vector<std::string> tokens{};
+        if (isRepeatSet) {
+            line = m_lastEnteredCommand;
+        } else {
+            if (!std::getline(get_in(), line)) {
+                if (m_input_files.empty())
+                    break;
+                else {
+                    os << format_callstack() << " Finished executing script!" << std::endl;
+                    m_lastEnteredCommand = "execute " + m_input_filenames.back();
+                    m_input_files.top()->close();
+                    m_input_files.pop();
+                    m_input_filenames.pop_back();
+                    continue;
+                }
+            }
+            std::string l2{};
+            std::regex_replace(std::back_inserter(l2), line.begin(), line.end(), std::regex{R"(#.*)"}, "");
+            line = l2;
+        }
+
+        std::regex re{R"(\[[^\]]*\]|[^ \n\r\t\[\]]+)"};
+        std::transform(
+            std::sregex_iterator{line.begin(), line.end(), re}, std::sregex_iterator{},
+            std::back_inserter(tokens), [](const std::smatch &match) { return match.str(); });
+        if (tokens.empty()) continue;
+
+        if (!isatty(fileno(stdin)) || !m_input_files.empty()) {
+            if (!m_input_files.empty())
+                os << format_callstack() << ' ';
+            os << line << std::endl;
+        }
+
+        if (tokens[0] != "repeat")
+            m_lastEnteredCommand = line;
 
         isRepeatSet = false;
 
         execute(tokens, os, err);
-        std::cout << std::endl;
+        os << std::endl;
 
         if (line == "exit") break;
     }
-
     return 0;
 }
 
@@ -228,13 +274,58 @@ Entry::Entry() : m_commands{
         }
     },
     {
+        "sleep",
+        {
+            .brief= "Wait some time before accepting new input",
+            .usage= "sleep <SECONDS>",
+            .execute=
+            [](const std::vector<std::string> &args, std::ostream &, std::ostream &) {
+                auto seconds = args.empty() ? std::optional<float>{} : parse_number<float>(args[0]);
+                if (!seconds)
+                    throw std::invalid_argument("SECONDS required!");
+                if (*seconds < 0)
+                    throw std::invalid_argument(fmt::format("Invalid interval: {}", *seconds));
+                std::this_thread::sleep_for(std::chrono::milliseconds(static_cast<size_t>(*seconds * 1000)));
+            }
+        }
+    },
+    {
         "repeat",
         {
-            .brief= "Exit the program",
-            .usage= "exit",
+            .brief= "Repeat the previous command",
+            .usage= "repeat",
             .execute=
             [this](const std::vector<std::string> &, std::ostream &, std::ostream &) {
                 isRepeatSet = true;
+            }
+        }
+    },
+    {
+        "execute",
+        {
+            .brief= "Execute a script",
+            .usage= "execute <PATH>",
+            .execute=
+            [this](const std::vector<std::string> &args, std::ostream &, std::ostream &) {
+                if (args.empty())
+                    throw std::invalid_argument("PATH required!");
+                if (m_input_files.size() >= 64)
+                    throw std::invalid_argument("Recursion depth reached!");
+                auto f = std::make_unique<std::ifstream>();
+                // Make path relative to previous script
+                std::string path = args[0];
+                if (!m_input_filenames.empty()) {
+                    std::filesystem::path lastFile{m_input_filenames.back()};
+                    path = lastFile.parent_path() / path;
+                }
+                f->open(path);
+                if (f->fail())
+                    throw std::invalid_argument(fmt::format("Could not open {}", path));
+                else {
+                    m_input_files.push(std::move(f));
+                    m_input_filenames.push_back(path);
+                    m_lastEnteredCommand.clear(); // Prevent "repeat" as first command in a script.
+                }
             }
         }
     },
@@ -247,7 +338,7 @@ Entry::Entry() : m_commands{
             [this](const std::vector<std::string> &args, std::ostream &os, std::ostream &) {
                 bool isUserPortAvailable = true;
                 if (!args.empty()) {
-                    auto port = get_index<uint16_t>(args[0]);
+                    auto port = parse_number<uint16_t>(args[0]);
                     if (port) {
                         addNodeDynamicallyToNetwork(*port, os);
                     } else {
@@ -268,14 +359,14 @@ Entry::Entry() : m_commands{
             [this](const std::vector<std::string> &args, std::ostream &, std::ostream &) {
                 std::optional<uint32_t> index{};
                 if (!args.empty())
-                    index = get_index(args[0]);
+                    index = parse_number(args[0]);
                 if (!index)
                     throw std::invalid_argument("INDEX required!");
                 if (index >= m_nodes.size())
                     throw std::invalid_argument(fmt::format("Index [{}] out of bounds!", *index));
                 uint32_t count = 1;
                 if (args.size() > 1) {
-                    auto c = get_index(args[1]);
+                    auto c = parse_number(args[1]);
                     if (c) {
                         if (*index + *c > m_nodes.size())
                             throw std::invalid_argument(fmt::format("Count [{}] out of bounds!", *c));
@@ -334,7 +425,7 @@ Entry::Entry() : m_commands{
                         execute(new_args, os, err);
                         return;
                     } else {
-                        index = get_index(args[0]);
+                        index = parse_number(args[0]);
                     }
                 }
 
@@ -377,7 +468,7 @@ Entry::Entry() : m_commands{
             .execute=
             [this](const std::vector<std::string> &args, std::ostream &os, std::ostream &err) {
                 if (!args.empty()) {
-                    auto index = get_index<uint32_t>(args[0]);
+                    auto index = parse_number<uint32_t>(args[0]);
                     if (index) {
                         dataItem_type dataInNode = m_nodes[*index]->getAllDataInNode();
 
@@ -395,7 +486,8 @@ Entry::Entry() : m_commands{
                                 // Hashing received key to convert it into length of 20 bytes
                                 std::string sKey{s.first.begin(), s.first.end()};
                                 NodeInformation::id_type finalHashedKey = NodeInformation::hash_sha1(sKey);
-                                os << fmt::format("{}. key = {}\n", i, util::hexdump(finalHashedKey, 20, false, false));
+                                os << fmt::format("{}. key = {}\n", i,
+                                                  util::hexdump(finalHashedKey, 20, false, false));
                                 ++i;
                             }
                             os << fmt::format("{}\n", insertHighlighterSection());
@@ -419,7 +511,7 @@ Entry::Entry() : m_commands{
             [this](const std::vector<std::string> &args, std::ostream &os, std::ostream &) {
                 std::optional<uint32_t> index{};
                 if (!args.empty())
-                    index = get_index(args[0]);
+                    index = parse_number(args[0]);
                 if (!index)
                     throw std::invalid_argument("INDEX required!");
                 if (index >= m_nodes.size())
@@ -431,7 +523,8 @@ Entry::Entry() : m_commands{
                 bool printed_star = false;
                 for (size_t i = 0; i < NodeInformation::key_bits; ++i) {
                     const auto &finger = node.getFinger(i);
-                    const auto *next_finger = (i < NodeInformation::key_bits - 1) ? &node.getFinger(i + 1) : nullptr;
+                    const auto *next_finger = (i < NodeInformation::key_bits - 1) ? &node.getFinger(i + 1)
+                                                                                  : nullptr;
                     if (next_finger && last_finger && *last_finger == finger && *next_finger == finger) {
                         if (!printed_star) {
                             os << "*\n";

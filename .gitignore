@@ -1,7 +1,9 @@
 .idea/
+.vscode/
 .cache/
 build/
 cmake-build-*/
 Testing/
 *log.txt
+config.ini
 venv/

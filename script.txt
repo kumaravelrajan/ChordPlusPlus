@@ -1,0 +1,6 @@
+sleep 1
+add 6007
+sleep 1
+add 6009
+sleep 10
+execute show_nodes.txt
