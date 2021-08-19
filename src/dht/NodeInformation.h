@@ -13,6 +13,8 @@
 #include <numeric>
 
 #define SHA1_CONSIDERATION_LIMIT 9
+
+// Also declared in config.h.
 #define DEFAULT_DIFFICULTY 1
 
 

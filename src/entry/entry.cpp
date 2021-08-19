@@ -70,6 +70,11 @@ Entry::Entry(const config::Configuration &conf) : Entry()
                 NodeInformation::Node(conf.bootstrapNode_address, conf.bootstrapNode_port)
             );
 
+            // Set PoW difficulty only once at the start.
+            if(i == 0){
+                m_nodes[i]->setDifficulty(config::Configuration::PoW_Difficulty);
+            }
+
             // The constructor of Dht starts mainLoop asynchronously.
             m_DHTs.push_back(std::make_unique<dht::Dht>(m_nodes[i]));
 

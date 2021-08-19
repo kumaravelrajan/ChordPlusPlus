@@ -3,6 +3,9 @@
 #include <fstream>
 #include <regex>
 
+// Define static variables
+uint8_t config::Configuration::PoW_Difficulty{DEFAULT_DIFFICULTY};
+
 bool splitIP(const std::string &value, std::string &address, uint16_t &port)
 {
     if (value.empty()) return false;
