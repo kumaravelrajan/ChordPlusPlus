@@ -13,6 +13,7 @@
 #include <numeric>
 
 #define SHA1_CONSIDERATION_LIMIT 9
+#define DEFAULT_DIFFICULTY 1
 
 
 /**
@@ -72,6 +73,9 @@ private:
     /* Used for DHT GET */
     static std::vector<uint8_t> m_allReplicationIndices;
 
+    // Used for PoW
+    static uint8_t m_difficulty;
+
 public:
     [[nodiscard]] const Node &getNode() const;
     void setNode(const Node &node);
@@ -84,6 +88,8 @@ public:
     void setBootstrapNode(const std::optional<Node> &);
     void setReplicationIndex(const uint8_t &replicationIndex);
     [[nodiscard]] std::optional<uint8_t> getAverageReplicationIndex() const;
+    uint8_t getDifficulty() const;
+    void setDifficulty(uint8_t &DifficultyToSet);
 
     /**
      * @throws std::out_of_range

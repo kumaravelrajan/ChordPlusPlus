@@ -13,6 +13,7 @@
 #include <cctype>
 #include <sstream>
 #include <iomanip>
+#include <bitset>
 
 namespace util
 {
@@ -181,6 +182,30 @@ namespace util
                 for (j = 0; j < stride; j++)
                     if (i + j < bytes.size())
                         ss << (std::isprint(static_cast<int>(bytes[i + j])) ? static_cast<char>(bytes[i + j]) : '.');
+            }
+        }
+        return ss.str();
+    }
+
+    template<typename C, std::enable_if_t<is_iterable_v<C>, int> = 0>
+    inline std::string
+    bytedump(const C &bytes, uint16_t stride = 16)
+    {
+        std::ostringstream ss{};
+        size_t i, j;
+        ss << std::setfill('0') << std::right;
+        for (i = 0; i < bytes.size(); i += stride) {
+            if (i != 0)
+                ss << std::endl;
+
+            for (j = 0; j < stride; j++) {
+                if (j > 0)
+                    ss << " ";
+
+                if (i + j < bytes.size())
+                    ss << std::setw(1) << std::bitset<8>{static_cast<unsigned>(bytes[i + j])};
+                else
+                    ss << "  ";
             }
         }
         return ss.str();

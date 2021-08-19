@@ -42,6 +42,18 @@ namespace dht
          */
         ::kj::Promise<void> getDataItemsOnJoin(GetDataItemsOnJoinContext context) override;
 
+        /**
+         * @brief The new node asks the bootstrap node for its search puzzle.
+         */
+        ::kj::Promise<void> getProofOfWorkPuzzleOnJoin(GetProofOfWorkPuzzleOnJoinContext context) override;
+
+        /**
+         * @brief The new node sends its response to the PoW search puzzle to the bootstrap node.
+         * The bootstrap node validates the response and sends the successor to the new node.
+         */
+        ::kj::Promise<void> sendProofOfWorkPuzzleResponseToBootstrap(SendProofOfWorkPuzzleResponseToBootstrapContext context) override;
+
+
     public:
         explicit PeerImpl(std::shared_ptr<NodeInformation>);
 

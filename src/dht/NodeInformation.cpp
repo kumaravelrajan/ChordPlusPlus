@@ -5,8 +5,9 @@
 
 using namespace std::chrono_literals;
 
-/* Initialize static variable */
+/* Initialize static variables */
 std::vector<uint8_t> NodeInformation::m_allReplicationIndices;
+uint8_t NodeInformation::m_difficulty = DEFAULT_DIFFICULTY;
 
 NodeInformation::NodeInformation(std::string host, uint16_t port) : m_node(std::move(host), port)
 {
@@ -180,6 +181,14 @@ void NodeInformation::setReplicationIndex(const uint8_t &replicationIndex){
 std::optional<uint8_t> NodeInformation::getAverageReplicationIndex() const
 {
     return static_cast<uint8_t>((std::accumulate(NodeInformation::m_allReplicationIndices.begin(), NodeInformation::m_allReplicationIndices.end(), static_cast<uint8_t>(0))) / NodeInformation::m_allReplicationIndices.size());
+}
+uint8_t NodeInformation::getDifficulty() const{
+    return m_difficulty;
+}
+void NodeInformation::setDifficulty(uint8_t &DifficultyToSet){
+    if(m_difficulty == DEFAULT_DIFFICULTY){
+        m_difficulty = DifficultyToSet;
+    }
 }
 
 // Node Methods:
