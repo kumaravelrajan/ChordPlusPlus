@@ -147,6 +147,52 @@ PeerImpl::PeerImpl(std::shared_ptr<NodeInformation> nodeInformation) :
     return kj::READY_NOW;
 }
 
+::kj::Promise<void> PeerImpl::getPoWPuzzleOnJoin(GetPoWPuzzleOnJoinContext context){
+    auto newNode = nodeFromReader(context.getParams().getNewNode());
+    std::string strproofOfWorkPuzzle = newNode.getIp() + ":" + std::to_string(newNode.getPort());
+    context.getResults().setProofOfWorkPuzzle(strproofOfWorkPuzzle.c_str());
+    context.getResults().setDifficulty(m_nodeInformation->getDifficulty());
+
+    return kj::READY_NOW;
+}
+
+::kj::Promise<void> PeerImpl::sendPoWPuzzleResponseToBootstrapAndGetSuccessor(SendPoWPuzzleResponseToBootstrapAndGetSuccessorContext context){
+    auto PoW_ReponseReader = context.getParams().getProofOfWorkPuzzleResponse();
+    std::string sPoW_Reponse(PoW_ReponseReader.cStr());
+
+    auto PoW_HashOfResponseReader = context.getParams().getHashOfproofOfWorkPuzzleResponse();
+    std::string sPoW_HashOfResponse(PoW_HashOfResponseReader.cStr());
+
+    auto newNodeReader = context.getParams().getNewNode();
+    NodeInformation::Node newNode = nodeFromReader(newNodeReader);
+    
+    std::string sTestString = newNode.getIp() + ":" + std::to_string(newNode.getPort());
+
+    // If new node is 127.0.0.1:6007, PoW_Reponse contains some string appended to "127.0.0.1:6007". 
+    // Check if correct PoW_Reponse handed over by new node.
+    // Todo - How to determine if correct node details are sent to bootstrap?
+    KJ_ASSERT(sPoW_Reponse.substr(0, sTestString.size()) == sTestString);
+    std::string sCalculatedHashOfPuzzleResponse = util::bytedump(NodeInformation::hash_sha1(sPoW_Reponse), SHA_DIGEST_LENGTH);
+    sCalculatedHashOfPuzzleResponse.erase(std::remove_if(sCalculatedHashOfPuzzleResponse.begin(), sCalculatedHashOfPuzzleResponse.end(), ::isspace), sCalculatedHashOfPuzzleResponse.end());
+
+    // Check if hash(sPoW_Reponse) == sPoW_HashOfResponse
+    KJ_ASSERT(sCalculatedHashOfPuzzleResponse == sPoW_HashOfResponse);
+
+    // If all checks passed, get successor of new node
+    return getSuccessor(newNode.getId()).then([KJ_CPCAP(context)](const std::optional<NodeInformation::Node> &successor) mutable {
+        if (!successor) {
+            context.getResults().getSuccessorOfNewNode().setEmpty();
+        } else {
+            auto node = context.getResults().getSuccessorOfNewNode().getValue();
+            node.setIp(successor->getIp());
+            node.setPort(successor->getPort());
+            auto id = successor->getId();
+            node.setId(
+                capnp::Data::Builder(kj::heapArray<kj::byte>(id.begin(), id.end())));
+        }
+    });
+}
+
 // Conversion
 
 NodeInformation::Node PeerImpl::nodeFromReader(Node::Reader value)
