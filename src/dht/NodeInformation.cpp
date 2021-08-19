@@ -127,9 +127,15 @@ void NodeInformation::setData(const std::vector<uint8_t> &key, const std::vector
 void NodeInformation::setDataExpires(const std::vector<uint8_t> &key, const std::vector<uint8_t> &value,
                                      std::chrono::system_clock::time_point expires)
 {
+    // TODO: Use Howard Hinnant's Date library
+    auto t = std::chrono::system_clock::now().time_since_epoch();
+    std::tm tm{};
+    tm.tm_hour = static_cast<int>(std::chrono::duration_cast<std::chrono::hours>(t).count() % 24);
+    tm.tm_min = static_cast<int>(std::chrono::duration_cast<std::chrono::minutes>(t).count() % 60);
+    tm.tm_sec = static_cast<int>(std::chrono::duration_cast<std::chrono::seconds>(t).count() % 60);
     SPDLOG_INFO(
-        "setting data, key length: {}, value length: {}, expires: {}",
-        key.size(), value.size(), expires
+        "setting data, key length: {}, value length: {}, expires: UTC-{:%H:%M:%S}",
+        key.size(), value.size(), tm
     );
     std::unique_lock l{m_dataMutex};
     m_data[key] = std::make_pair(value, expires);
@@ -170,17 +176,21 @@ NodeInformation::data_type NodeInformation::getAllDataInNode() const
 void NodeInformation::deleteDataAssignedToPredecessor(std::vector<std::vector<uint8_t>> &keyOfDataItemsToDelete)
 {
     std::unique_lock l{m_dataMutex};
-    for(auto s : keyOfDataItemsToDelete){
+    for (auto s : keyOfDataItemsToDelete) {
         m_data.erase(s);
     }
 }
-void NodeInformation::setReplicationIndex(const uint8_t &replicationIndex){
+void NodeInformation::setReplicationIndex(const uint8_t &replicationIndex)
+{
     NodeInformation::m_allReplicationIndices.push_back(replicationIndex);
 }
 std::optional<uint8_t> NodeInformation::getAverageReplicationIndex() const
 {
-    if(m_allReplicationIndices.size() > 0){
-        return static_cast<uint8_t>((std::accumulate(NodeInformation::m_allReplicationIndices.begin(), NodeInformation::m_allReplicationIndices.end(), static_cast<uint8_t>(0))) / NodeInformation::m_allReplicationIndices.size());
+    if (m_allReplicationIndices.size() > 0) {
+        return static_cast<uint8_t>((std::accumulate(NodeInformation::m_allReplicationIndices.begin(),
+                                                     NodeInformation::m_allReplicationIndices.end(),
+                                                     static_cast<uint8_t>(0))) /
+                                    NodeInformation::m_allReplicationIndices.size());
     } else {
         return static_cast<uint8_t>(0);
     }
