@@ -147,7 +147,7 @@ PeerImpl::PeerImpl(std::shared_ptr<NodeInformation> nodeInformation) :
     return kj::READY_NOW;
 }
 
-::kj::Promise<void> PeerImpl::getProofOfWorkPuzzleOnJoin(GetProofOfWorkPuzzleOnJoinContext context){
+::kj::Promise<void> PeerImpl::getPoWPuzzleOnJoin(GetPoWPuzzleOnJoinContext context){
     auto newNode = nodeFromReader(context.getParams().getNewNode());
     std::string strproofOfWorkPuzzle = newNode.getIp() + ":" + std::to_string(newNode.getPort());
     context.getResults().setProofOfWorkPuzzle(strproofOfWorkPuzzle.c_str());
@@ -156,7 +156,7 @@ PeerImpl::PeerImpl(std::shared_ptr<NodeInformation> nodeInformation) :
     return kj::READY_NOW;
 }
 
-::kj::Promise<void> PeerImpl::sendProofOfWorkPuzzleResponseToBootstrap(SendProofOfWorkPuzzleResponseToBootstrapContext context){
+::kj::Promise<void> PeerImpl::sendPoWPuzzleResponseToBootstrapAndGetSuccessor(SendPoWPuzzleResponseToBootstrapAndGetSuccessorContext context){
     auto PoW_ReponseReader = context.getParams().getProofOfWorkPuzzleResponse();
     std::string sPoW_Reponse(PoW_ReponseReader.cStr());
 

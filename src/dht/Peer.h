@@ -45,13 +45,13 @@ namespace dht
         /**
          * @brief The new node asks the bootstrap node for its search puzzle.
          */
-        ::kj::Promise<void> getProofOfWorkPuzzleOnJoin(GetProofOfWorkPuzzleOnJoinContext context) override;
+        ::kj::Promise<void> getPoWPuzzleOnJoin(GetPoWPuzzleOnJoinContext context) override;
 
         /**
          * @brief The new node sends its response to the PoW search puzzle to the bootstrap node.
          * The bootstrap node validates the response and sends the successor to the new node.
          */
-        ::kj::Promise<void> sendProofOfWorkPuzzleResponseToBootstrap(SendProofOfWorkPuzzleResponseToBootstrapContext context) override;
+        ::kj::Promise<void> sendPoWPuzzleResponseToBootstrapAndGetSuccessor(SendPoWPuzzleResponseToBootstrapAndGetSuccessorContext context) override;
 
 
     public:

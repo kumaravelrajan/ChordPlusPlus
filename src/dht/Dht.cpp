@@ -252,12 +252,12 @@ void Dht::join(const NodeInformation::Node &node)
 
     capnp::EzRpcClient client{node.getIp(), node.getPort()};
     auto cap = client.getMain<Peer>();
-    auto req = cap.getProofOfWorkPuzzleOnJoinRequest();
+    auto req = cap.getPoWPuzzleOnJoinRequest();
     getPeerImpl().buildNode(req.getNewNode(), m_nodeInformation->getNode());
     
     // Start RPC - get PoW puzzle from bootstrap
     std::string sResponseToPuzzle{};
-    req.send().then([LOG_CAPTURE, this, &sResponseToPuzzle, &node](capnp::Response<Peer::GetProofOfWorkPuzzleOnJoinResults> &&response) {
+    req.send().then([LOG_CAPTURE, this, &sResponseToPuzzle, &node](capnp::Response<Peer::GetPoWPuzzleOnJoinResults> &&response) {
         LOG_DEBUG("got PoW puzzle from bootstrap");
         auto puzzle = response.getProofOfWorkPuzzle();
         std::string strPuzzle{puzzle.cStr()};
@@ -285,12 +285,12 @@ void Dht::join(const NodeInformation::Node &node)
             LOG_DEBUG("{}:{} successfully solved puzzle.", this->m_nodeInformation->getIp(), this->m_nodeInformation->getPort());
             capnp::EzRpcClient client2{node.getIp(), node.getPort()};
             auto cap2 = client2.getMain<Peer>();
-            auto req2 = cap2.sendProofOfWorkPuzzleResponseToBootstrapRequest();
+            auto req2 = cap2.sendPoWPuzzleResponseToBootstrapAndGetSuccessorRequest();
             getPeerImpl().buildNode(req2.getNewNode(), m_nodeInformation->getNode());
             req2.setHashOfproofOfWorkPuzzleResponse(sResponseToPuzzle.c_str());
             req2.setProofOfWorkPuzzleResponse(tempStr.c_str());
 
-            req2.send().then([LOG_CAPTURE, this, &node](capnp::Response<Peer::SendProofOfWorkPuzzleResponseToBootstrapResults> &&response2){
+            req2.send().then([LOG_CAPTURE, this, &node](capnp::Response<Peer::SendPoWPuzzleResponseToBootstrapAndGetSuccessorResults> &&response2){
                 if(response2.hasSuccessorOfNewNode()){
                     auto successor = this->getPeerImpl().nodeFromReader(response2.getSuccessorOfNewNode());
                     this->m_nodeInformation->setSuccessor(successor);
