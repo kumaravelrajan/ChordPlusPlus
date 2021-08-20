@@ -153,7 +153,13 @@ std::vector<uint8_t> Dht::onDhtPut(const api::Message_DHT_PUT &message_data, std
     if (message_data.m_headerExtend.replication >= 2) {
 
         m_replicationFuture = std::async(std::launch::async, [this, message_data, successor]() {
-            std::vector<NodeInformation::Node> nodesHavingReplicatedData{};
+            // For given dataItemId
+            // Map[NodeId] = {numOfReplicationsOnNodeId1}
+            std::map<NodeInformation::id_type, uint8_t> ReplicationOfEachDataItemOnEachNode;
+
+            if(successor){
+                ReplicationOfEachDataItemOnEachNode.insert(std::make_pair(successor->getId(), 1));
+            }
 
             for (int i = 0; i < message_data.m_headerExtend.replication - 1; ++i) {
                 auto tempMessage_Data = message_data;
@@ -164,11 +170,23 @@ std::vector<uint8_t> Dht::onDhtPut(const api::Message_DHT_PUT &message_data, std
                 NodeInformation::id_type finalHashedKey = NodeInformation::hash_sha1(sKey);
                 auto replicationSuccessor = getSuccessor(finalHashedKey);
 
-                if (replicationSuccessor &&
-                    (std::end(nodesHavingReplicatedData) == std::find(nodesHavingReplicatedData.begin(), nodesHavingReplicatedData.end(), replicationSuccessor)) &&
-                    replicationSuccessor != successor) {
-                        nodesHavingReplicatedData.push_back(*replicationSuccessor);
+                if (replicationSuccessor) {
+
+                    // Permit replication iff 
+                    // 1. Map contains key sReplicationSuccessorId (AND) corresponding value of sReplicationSuccessorId <= replication limit 
+                    // (OR) 
+                    // 2. Map does not contain key sReplicationSuccessorId
+                    if((ReplicationOfEachDataItemOnEachNode.contains(replicationSuccessor->getId()) && 
+                    ReplicationOfEachDataItemOnEachNode.at(replicationSuccessor->getId()) < m_nodeInformation->getReplicationLimitOnEachNode()) || 
+                    !ReplicationOfEachDataItemOnEachNode.contains(replicationSuccessor->getId())){
+                        
+                        if(!ReplicationOfEachDataItemOnEachNode.contains(replicationSuccessor->getId())){
+                            ReplicationOfEachDataItemOnEachNode.insert({replicationSuccessor->getId(), 1});
+                        } else {
+                            ReplicationOfEachDataItemOnEachNode[replicationSuccessor->getId()] = ++ReplicationOfEachDataItemOnEachNode.at(replicationSuccessor->getId());
+                        }
                         getPeerImpl().setData(*replicationSuccessor, tempMessage_Data.key, message_data.value, message_data.m_headerExtend.ttl);
+                    }
                 }
             }
         });

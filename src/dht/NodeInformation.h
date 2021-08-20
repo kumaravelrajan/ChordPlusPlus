@@ -16,6 +16,7 @@
 
 // Also declared in config.h.
 #define DEFAULT_DIFFICULTY 1
+#define DEFAULT_REPLICATION_LIMIT 5
 
 
 /**
@@ -78,6 +79,10 @@ private:
     // Used for PoW
     static uint8_t m_difficulty;
 
+    // Used for maintaining limit on replication of one data item on each node.
+    // If m_replicationLimit = 5, the same data item can be replicated on the same node a maximum of 10 times.
+    static uint8_t m_replicationLimit;
+
 public:
     [[nodiscard]] const Node &getNode() const;
     void setNode(const Node &node);
@@ -92,6 +97,8 @@ public:
     [[nodiscard]] std::optional<uint8_t> getAverageReplicationIndex() const;
     uint8_t getDifficulty() const;
     void setDifficulty(uint8_t &DifficultyToSet);
+    uint8_t getReplicationLimitOnEachNode() const;
+    void setReplicationLimitOnEachNode(uint8_t &replicationLimit);
 
     /**
      * @throws std::out_of_range

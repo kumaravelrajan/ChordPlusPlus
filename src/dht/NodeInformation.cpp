@@ -8,6 +8,7 @@ using namespace std::chrono_literals;
 /* Initialize static variables */
 std::vector<uint8_t> NodeInformation::m_allReplicationIndices;
 uint8_t NodeInformation::m_difficulty = DEFAULT_DIFFICULTY;
+uint8_t NodeInformation::m_replicationLimit = DEFAULT_REPLICATION_LIMIT;
 
 NodeInformation::NodeInformation(std::string host, uint16_t port) : m_node(std::move(host), port)
 {
@@ -202,6 +203,14 @@ uint8_t NodeInformation::getDifficulty() const{
 void NodeInformation::setDifficulty(uint8_t &DifficultyToSet){
     if(m_difficulty == DEFAULT_DIFFICULTY){
         m_difficulty = DifficultyToSet;
+    }
+}
+uint8_t NodeInformation::getReplicationLimitOnEachNode() const{
+    return m_replicationLimit;
+}
+void NodeInformation::setReplicationLimitOnEachNode(uint8_t &replicationLimit){
+    if(m_replicationLimit == DEFAULT_REPLICATION_LIMIT){
+        m_replicationLimit = replicationLimit;
     }
 }
 
