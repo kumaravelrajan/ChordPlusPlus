@@ -256,39 +256,41 @@ void Dht::join(const NodeInformation::Node &node)
     getPeerImpl().buildNode(req.getNewNode(), m_nodeInformation->getNode());
     
     // Start RPC - get PoW puzzle from bootstrap
-    std::string sResponseToPuzzle{};
-    req.send().then([LOG_CAPTURE, this, &sResponseToPuzzle, &node](capnp::Response<Peer::GetPoWPuzzleOnJoinResults> &&response) {
+    std::string sFinalResponseToPuzzle{};
+    req.send().then([LOG_CAPTURE, this, &sFinalResponseToPuzzle, &node](capnp::Response<Peer::GetPoWPuzzleOnJoinResults> &&response) {
         LOG_DEBUG("got PoW puzzle from bootstrap");
         auto puzzle = response.getProofOfWorkPuzzle();
-        std::string strPuzzle{puzzle.cStr()};
+        std::string strPuzzle{puzzle};
 
         auto difficulty = response.getDifficulty();
         std::string strDifficulty(static_cast<size_t>(difficulty), '0');
 
         int i = 0;
-        std::string tempStr{};
+        std::string possiblePuzzleResponse{};
         while(true){
-            tempStr = strPuzzle;
-            tempStr.append(std::to_string(i));
-            std::string sHashOfPuzzleResponse = util::bytedump(NodeInformation::hash_sha1(tempStr), SHA_DIGEST_LENGTH);
-            sHashOfPuzzleResponse.erase(std::remove_if(sHashOfPuzzleResponse.begin(), sHashOfPuzzleResponse.end(), ::isspace), sHashOfPuzzleResponse.end());
+            possiblePuzzleResponse = strPuzzle;
+            possiblePuzzleResponse.append(std::to_string(i));
 
-            if(sHashOfPuzzleResponse.substr(0, static_cast<size_t>(difficulty)) == strDifficulty){
-                sResponseToPuzzle = sHashOfPuzzleResponse;
+            std::string sHashOfPossiblePuzzleResponse = util::bytedump(NodeInformation::hash_sha1(possiblePuzzleResponse), SHA_DIGEST_LENGTH);
+            sHashOfPossiblePuzzleResponse.erase(std::remove_if(sHashOfPossiblePuzzleResponse.begin(), sHashOfPossiblePuzzleResponse.end(), ::isspace), sHashOfPossiblePuzzleResponse.end());
+
+            if(sHashOfPossiblePuzzleResponse.substr(0, static_cast<size_t>(difficulty)) == strDifficulty){
+                sFinalResponseToPuzzle = sHashOfPossiblePuzzleResponse;
                 break;
             }
             i++;
         }
 
         // Now that the puzzle is solved, make RPC call to sendProofOfWorkPuzzleResponseToBootstrap
-        if(!sResponseToPuzzle.empty()){
+        if(!sFinalResponseToPuzzle.empty()){
             LOG_DEBUG("{}:{} successfully solved puzzle.", this->m_nodeInformation->getIp(), this->m_nodeInformation->getPort());
+
             capnp::EzRpcClient client2{node.getIp(), node.getPort()};
             auto cap2 = client2.getMain<Peer>();
             auto req2 = cap2.sendPoWPuzzleResponseToBootstrapAndGetSuccessorRequest();
             getPeerImpl().buildNode(req2.getNewNode(), m_nodeInformation->getNode());
-            req2.setHashOfproofOfWorkPuzzleResponse(sResponseToPuzzle.c_str());
-            req2.setProofOfWorkPuzzleResponse(tempStr.c_str());
+            req2.setHashOfproofOfWorkPuzzleResponse(sFinalResponseToPuzzle);
+            req2.setProofOfWorkPuzzleResponse(possiblePuzzleResponse);
 
             req2.send().then([LOG_CAPTURE, this, &node](capnp::Response<Peer::SendPoWPuzzleResponseToBootstrapAndGetSuccessorResults> &&response2){
                 if(response2.hasSuccessorOfNewNode()){
