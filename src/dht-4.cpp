@@ -71,6 +71,11 @@ int main(int argc, char *argv[])
             "s,startupScript",
             "Specify path for startup script.",
             cxxopts::value(startup_script)
+        )
+        (
+            "d, POWdifficulty",
+            "Specify difficulty to be set for Proof of work algorithm. \nUsage: -d {NUMBER_OF_LEADING_ZEROES <= 160}",
+            cxxopts::value<uint8_t>()
         );
     auto args = options.parse(argc, argv);
 
@@ -86,6 +91,11 @@ int main(int argc, char *argv[])
     // Get user input nodes to create
     if (args.count("testNodeAmount")) {
         conf.extra_debug_nodes = args["testNodeAmount"].as<uint64_t>();
+    }
+
+    // Get difficulty level for PoW
+    if (args.count("POWdifficulty")) {
+        conf.PoW_Difficulty = args["POWdifficulty"].as<uint8_t>();
     }
 
     // Initialize spdlog

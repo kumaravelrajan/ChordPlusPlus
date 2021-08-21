@@ -252,18 +252,57 @@ void Dht::join(const NodeInformation::Node &node)
 
     capnp::EzRpcClient client{node.getIp(), node.getPort()};
     auto cap = client.getMain<Peer>();
-    auto req = cap.getSuccessorRequest();
-    auto id = m_nodeInformation->getId();
-    req.setId(capnp::Data::Builder(
-        kj::heapArray<kj::byte>(id.begin(), id.end())));
+    auto req = cap.getPoWPuzzleOnJoinRequest();
+    getPeerImpl().buildNode(req.getNewNode(), m_nodeInformation->getNode());
+    
+    // Start RPC - get PoW puzzle from bootstrap
+    std::string sFinalResponseToPuzzle{};
+    req.send().then([LOG_CAPTURE, this, &sFinalResponseToPuzzle, &node](capnp::Response<Peer::GetPoWPuzzleOnJoinResults> &&response) {
+        LOG_DEBUG("got PoW puzzle from bootstrap");
+        auto puzzle = response.getProofOfWorkPuzzle();
+        std::string strPuzzle{puzzle};
 
-    return req.send().then([LOG_CAPTURE, this](capnp::Response<Peer::GetSuccessorResults> &&response) {
-        LOG_DEBUG("got response from node");
-        auto successor = PeerImpl::nodeFromReader(response.getNode());
-        m_nodeInformation->setSuccessor(successor);
+        auto difficulty = response.getDifficulty();
+        std::string strDifficulty(static_cast<size_t>(difficulty), '0');
 
-        /* Sync data items from successor for which new node is responsible. */
-        getPeerImpl().getDataItemsOnJoinHelper(m_nodeInformation->getSuccessor());
+        int i = 0;
+        std::string possiblePuzzleResponse{};
+        while(true){
+            possiblePuzzleResponse = strPuzzle;
+            possiblePuzzleResponse.append(std::to_string(i));
+
+            std::string sHashOfPossiblePuzzleResponse = util::bytedump(NodeInformation::hash_sha1(possiblePuzzleResponse), SHA_DIGEST_LENGTH);
+            sHashOfPossiblePuzzleResponse.erase(std::remove_if(sHashOfPossiblePuzzleResponse.begin(), sHashOfPossiblePuzzleResponse.end(), ::isspace), sHashOfPossiblePuzzleResponse.end());
+
+            if(sHashOfPossiblePuzzleResponse.substr(0, static_cast<size_t>(difficulty)) == strDifficulty){
+                sFinalResponseToPuzzle = sHashOfPossiblePuzzleResponse;
+                break;
+            }
+            i++;
+        }
+
+        // Now that the puzzle is solved, make RPC call to sendProofOfWorkPuzzleResponseToBootstrap
+        if(!sFinalResponseToPuzzle.empty()){
+            LOG_DEBUG("{}:{} successfully solved puzzle.", this->m_nodeInformation->getIp(), this->m_nodeInformation->getPort());
+
+            capnp::EzRpcClient client2{node.getIp(), node.getPort()};
+            auto cap2 = client2.getMain<Peer>();
+            auto req2 = cap2.sendPoWPuzzleResponseToBootstrapAndGetSuccessorRequest();
+            getPeerImpl().buildNode(req2.getNewNode(), m_nodeInformation->getNode());
+            req2.setHashOfproofOfWorkPuzzleResponse(sFinalResponseToPuzzle);
+            req2.setProofOfWorkPuzzleResponse(possiblePuzzleResponse);
+
+            req2.send().then([LOG_CAPTURE, this, &node](capnp::Response<Peer::SendPoWPuzzleResponseToBootstrapAndGetSuccessorResults> &&response2){
+                if(response2.hasSuccessorOfNewNode()){
+                    auto successor = this->getPeerImpl().nodeFromReader(response2.getSuccessorOfNewNode());
+                    this->m_nodeInformation->setSuccessor(successor);
+                } else {
+                    this->m_nodeInformation->setSuccessor();
+                }
+            }, [LOG_CAPTURE](const kj::Exception &e) {
+                LOG_ERR(e);
+            }).wait(client2.getWaitScope());
+        }
     }, [LOG_CAPTURE](const kj::Exception &e) {
         LOG_ERR(e);
     }).wait(client.getWaitScope());
