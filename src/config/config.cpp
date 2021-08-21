@@ -5,6 +5,7 @@
 
 // Define static variables
 uint8_t config::Configuration::PoW_Difficulty{DEFAULT_DIFFICULTY};
+uint8_t config::Configuration::defaultReplicationLimit{DEFAULT_REPLICATION_LIMIT};
 
 bool splitIP(const std::string &value, std::string &address, uint16_t &port)
 {
