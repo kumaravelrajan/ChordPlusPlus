@@ -4,7 +4,7 @@ set(MODULE_HEADERS rpc.h)
 
 set(MODULE_SOURCES rpc.cpp)
 
-capnp_generate_cpp(CAPNP_SRCS CAPNP_HDRS schemas/person.capnp)
+capnp_generate_cpp(CAPNP_SRCS CAPNP_HDRS schemas/example.capnp)
 
 add_library(${LIBRARY_NAME} ${MODULE_HEADERS} ${MODULE_SOURCES} ${CAPNP_SRCS} ${CAPNP_HDRS})
 add_library(lib::${LIBRARY_NAME} ALIAS ${LIBRARY_NAME})

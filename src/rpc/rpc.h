@@ -5,9 +5,8 @@ namespace rpc
 {
     class Rpc
     {
-        
+
     };
 }
-
 
 #endif //DHT_RPC_H
