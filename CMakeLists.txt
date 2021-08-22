@@ -112,6 +112,7 @@ add_subdirectory(src/config)
 add_subdirectory(src/dht)
 add_subdirectory(src/entry)
 add_subdirectory(src/logging)
+add_subdirectory(src/rpc)
 add_subdirectory(src/util)
 
 add_subdirectory(test)
