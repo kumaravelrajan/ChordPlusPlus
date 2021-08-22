@@ -9,10 +9,12 @@
 
 #if true
 #define LOG_GET const char * _func_ = SPDLOG_FUNCTION;
+#define LOG_SET(name) const char * _func_ = name;
 #define LOG_CAPTURE _func_
 #define LOG_FUNCTION _func_
 #else
 #define LOG_GET
+#define LOG_SET(name)
 #define LOG_CAPTURE _func_{0}
 #define LOG_FUNCTION SPDLOG_FUNCTION
 #endif
