@@ -42,7 +42,7 @@ public:
             : m_ip(std::move(ip)), m_port(port) { updateId(); }
 
         Node(std::string ip, uint16_t port, id_type id)
-            : m_ip(std::move(ip)), m_port(port), m_id(id) {}
+            : m_ip(std::move(ip)), m_port(port), m_id(id), m_explicit_id(id) {}
 
         void setIp(std::string ip);
         void setPort(uint16_t port);
@@ -95,8 +95,8 @@ public:
     [[nodiscard]] std::optional<Node> getBootstrapNode() const;
     void setBootstrapNode(const std::optional<Node> &);
     static void setReplicationIndex(const uint8_t &replicationIndex);
-    [[nodiscard]] static std::optional<uint8_t> getAverageReplicationIndex() ;
-    [[nodiscard]] static uint8_t getDifficulty() ;
+    [[nodiscard]] static std::optional<uint8_t> getAverageReplicationIndex();
+    [[nodiscard]] static uint8_t getDifficulty();
     static void setDifficulty(uint8_t &DifficultyToSet);
 
     /**
