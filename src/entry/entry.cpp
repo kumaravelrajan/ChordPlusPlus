@@ -106,7 +106,6 @@ Entry::~Entry()
 
 int Entry::mainLoop()
 {
-    // TODO: Maybe make the streams configurable
     std::istream &in = std::cin;
     std::ostream &os = std::cout;
     // std::ostream &err = std::cerr;
@@ -341,7 +340,7 @@ Entry::Entry() : m_commands{
             .usage= "add [PORT]",
             .execute=
             [this](const std::vector<std::string> &args, std::ostream &os, std::ostream &) {
-                bool isUserPortAvailable = true;
+                // bool isUserPortAvailable = true;
                 if (!args.empty()) {
                     auto port = parse_number<uint16_t>(args[0]);
                     if (port) {
@@ -449,7 +448,7 @@ Entry::Entry() : m_commands{
                         /* == == == == */,
                         *index,
                         format_node(node.getNode()),
-                        util::hexdump(node.getId(), 20, false, false),
+                        util::hexdump(node.getId(), 32, false, false),
                         format_node(node.getSuccessor()),
                         format_node(node.getPredecessor()),
                         format_node(node.getBootstrapNode())
@@ -490,9 +489,9 @@ Entry::Entry() : m_commands{
                             for (const auto &s : dataInNode) {
                                 // Hashing received key to convert it into length of 20 bytes
                                 std::string sKey{s.first.begin(), s.first.end()};
-                                NodeInformation::id_type finalHashedKey = NodeInformation::hash_sha1(sKey);
+                                NodeInformation::id_type finalHashedKey = util::hash_sha256(sKey);
                                 os << fmt::format("{}. key = {}\n", i,
-                                                  util::hexdump(finalHashedKey, 20, false, false));
+                                                  util::hexdump(finalHashedKey, 32, false, false));
                                 ++i;
                             }
                             os << fmt::format("{}\n", insertHighlighterSection());

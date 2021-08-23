@@ -32,6 +32,7 @@ void InitSpdlog(const int &consoleLogLevel, const std::string &logfilePath)
                                                                     spdlog::thread_pool(),
                                                                     spdlog::async_overflow_policy::block);
     async_file_logger->set_pattern("[%Y-%m-%d %H:%M:%S.%e] %^[%l] [%s::%!()-#%#] %v%$");
+    async_file_logger->set_level(spdlog::level::debug);
     spdlog::set_default_logger(async_file_logger);
 
     spdlog::flush_every(5s);

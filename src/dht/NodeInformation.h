@@ -24,8 +24,8 @@
 class NodeInformation
 {
 public:
-    static constexpr size_t key_bits = SHA_DIGEST_LENGTH * 8;
-    using id_type = std::array<uint8_t, SHA_DIGEST_LENGTH>;
+    static constexpr size_t key_bits = SHA256_DIGEST_LENGTH * 8;
+    using id_type = std::array<uint8_t, key_bits / 8>;
     using data_type = std::map<std::vector<uint8_t>, std::pair<std::vector<uint8_t>, std::chrono::system_clock::time_point>>;
 
     class Node
@@ -35,6 +35,8 @@ public:
 
         mutable bool id_valid{true};
         mutable id_type m_id{0};
+
+        std::optional<id_type> m_explicit_id{};
     public:
         explicit Node(std::string ip = "127.0.0.1", uint16_t port = 6969)
             : m_ip(std::move(ip)), m_port(port) { updateId(); }
@@ -44,13 +46,16 @@ public:
 
         void setIp(std::string ip);
         void setPort(uint16_t port);
+        void setId(std::optional<id_type> id = {});
 
         [[nodiscard]] std::string getIp() const;
         [[nodiscard]] uint16_t getPort() const;
         [[nodiscard]] id_type getId() const;
 
+    private:
         void updateId() const;
 
+    public:
         bool operator==(const Node &other) const { return m_ip == other.m_ip && m_port == other.m_port; }
         bool operator!=(const Node &other) const { return !(*this == other); }
     };
@@ -82,16 +87,17 @@ public:
     [[nodiscard]] const Node &getNode() const;
     void setNode(const Node &node);
     [[nodiscard]] id_type getId() const;
+    void setId(std::optional<id_type> id = {});
     [[nodiscard]] std::string getIp() const;
     void setIp(const std::string &mIp);
     [[nodiscard]] uint16_t getPort() const;
     void setPort(uint16_t mPort);
     [[nodiscard]] std::optional<Node> getBootstrapNode() const;
     void setBootstrapNode(const std::optional<Node> &);
-    void setReplicationIndex(const uint8_t &replicationIndex);
-    [[nodiscard]] std::optional<uint8_t> getAverageReplicationIndex() const;
-    uint8_t getDifficulty() const;
-    void setDifficulty(uint8_t &DifficultyToSet);
+    static void setReplicationIndex(const uint8_t &replicationIndex);
+    [[nodiscard]] static std::optional<uint8_t> getAverageReplicationIndex() ;
+    [[nodiscard]] static uint8_t getDifficulty() ;
+    static void setDifficulty(uint8_t &DifficultyToSet);
 
     /**
      * @throws std::out_of_range
@@ -115,14 +121,11 @@ public:
 
     [[nodiscard]] std::optional<NodeInformation::data_type> getDataItemsForNodeId(const Node &newNode) const;
     [[nodiscard]] NodeInformation::data_type getAllDataInNode() const;
-    [[nodiscard]] void deleteDataAssignedToPredecessor(std::vector<std::vector<uint8_t>> &keyOfDataItemsToDelete);
+    void deleteDataAssignedToPredecessor(std::vector<std::vector<uint8_t>> &keyOfDataItemsToDelete);
 public:
     // Constructor
     explicit NodeInformation(std::string host = "", uint16_t port = 0);
     ~NodeInformation();
-
-    // Methods
-    static id_type hash_sha1(const std::string &str);
 
     // Getters and setters
 };

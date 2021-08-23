@@ -132,7 +132,7 @@ std::vector<uint8_t> Dht::onDhtPut(const api::Message_DHT_PUT &message_data, std
 
     // Hashing received key to convert it into length of 20 bytes
     std::string sKey{message_data.key.begin(), message_data.key.end()};
-    NodeInformation::id_type finalHashedKey = NodeInformation::hash_sha1(sKey);
+    NodeInformation::id_type finalHashedKey = util::hash_sha256(sKey);
 
     auto ttl = message_data.m_headerExtend.ttl > 0
                ? std::chrono::seconds(message_data.m_headerExtend.ttl)
@@ -160,15 +160,18 @@ std::vector<uint8_t> Dht::onDhtPut(const api::Message_DHT_PUT &message_data, std
                 tempMessage_Data.key.push_back(static_cast<uint8_t>(i + 1));
 
                 // Hashing received key to convert it into length of 20 bytes
-                std::string sKey { tempMessage_Data.key.begin(), tempMessage_Data.key.end() };
-                NodeInformation::id_type finalHashedKey = NodeInformation::hash_sha1(sKey);
+                std::string sKey{tempMessage_Data.key.begin(), tempMessage_Data.key.end()};
+                NodeInformation::id_type finalHashedKey = util::hash_sha256(sKey);
                 auto replicationSuccessor = getSuccessor(finalHashedKey);
 
                 if (replicationSuccessor &&
-                    (std::end(nodesHavingReplicatedData) == std::find(nodesHavingReplicatedData.begin(), nodesHavingReplicatedData.end(), replicationSuccessor)) &&
+                    (std::end(nodesHavingReplicatedData) ==
+                     std::find(nodesHavingReplicatedData.begin(), nodesHavingReplicatedData.end(),
+                               replicationSuccessor)) &&
                     replicationSuccessor != successor) {
-                        nodesHavingReplicatedData.push_back(*replicationSuccessor);
-                        getPeerImpl().setData(*replicationSuccessor, tempMessage_Data.key, message_data.value, message_data.m_headerExtend.ttl);
+                    nodesHavingReplicatedData.push_back(*replicationSuccessor);
+                    getPeerImpl().setData(*replicationSuccessor, tempMessage_Data.key, message_data.value,
+                                          message_data.m_headerExtend.ttl);
                 }
             }
         });
@@ -193,7 +196,7 @@ std::vector<uint8_t> Dht::onDhtGet(const api::Message_KEY &message_data, std::at
 
     // Hashing received key to convert it into length of 20 bytes
     std::string sKey{message_data.key.begin(), message_data.key.end()};
-    NodeInformation::id_type finalHashedKey = NodeInformation::hash_sha1(sKey);
+    NodeInformation::id_type finalHashedKey = util::hash_sha256(sKey);
 
     auto successor = getSuccessor(finalHashedKey);
 
@@ -203,20 +206,21 @@ std::vector<uint8_t> Dht::onDhtGet(const api::Message_KEY &message_data, std::at
         SPDLOG_DEBUG("Successor found: {}:{}", successor->getIp(), successor->getPort());
         response = getPeerImpl().getData(*successor, message_data.key);
     }
-    
-    if(!response && m_nodeInformation->getAverageReplicationIndex() >= 1 ) {
+
+    if (!response && m_nodeInformation->getAverageReplicationIndex() >= 1) {
         /* Check if any of the replicated copies are present. */
         for (int i = 1; i <= m_nodeInformation->getAverageReplicationIndex(); ++i) {
             auto tempMessage_Data = message_data;
             tempMessage_Data.key.push_back(static_cast<uint8_t>(i));
 
             // Hashing received key to convert it into length of 20 bytes
-            std::string sReplicatedKey { tempMessage_Data.key.begin(), tempMessage_Data.key.end() };
-            NodeInformation::id_type finalReplicatedHashedKey = NodeInformation::hash_sha1(sReplicatedKey);
+            std::string sReplicatedKey{tempMessage_Data.key.begin(), tempMessage_Data.key.end()};
+            NodeInformation::id_type finalReplicatedHashedKey = util::hash_sha256(sReplicatedKey);
             auto replicationSuccessor = getSuccessor(finalReplicatedHashedKey);
 
             if (replicationSuccessor) {
-                SPDLOG_DEBUG("Successor found for replicated data: {}:{}", replicationSuccessor->getIp(), replicationSuccessor->getPort());
+                SPDLOG_DEBUG("Successor found for replicated data: {}:{}", replicationSuccessor->getIp(),
+                             replicationSuccessor->getPort());
                 response = m_peerImpl.value().get().getData(*replicationSuccessor, tempMessage_Data.key);
                 break;
             }
@@ -253,11 +257,12 @@ void Dht::join(const NodeInformation::Node &node)
     capnp::EzRpcClient client{node.getIp(), node.getPort()};
     auto cap = client.getMain<Peer>();
     auto req = cap.getPoWPuzzleOnJoinRequest();
-    getPeerImpl().buildNode(req.getNewNode(), m_nodeInformation->getNode());
-    
+    PeerImpl::buildNode(req.getNewNode(), m_nodeInformation->getNode());
+
     // Start RPC - get PoW puzzle from bootstrap
     std::string sFinalResponseToPuzzle{};
-    req.send().then([LOG_CAPTURE, this, &sFinalResponseToPuzzle, &node](capnp::Response<Peer::GetPoWPuzzleOnJoinResults> &&response) {
+    req.send().then([LOG_CAPTURE, this, &sFinalResponseToPuzzle, &node](
+        capnp::Response<Peer::GetPoWPuzzleOnJoinResults> &&response) {
         LOG_DEBUG("got PoW puzzle from bootstrap");
         auto puzzle = response.getProofOfWorkPuzzle();
         std::string strPuzzle{puzzle};
@@ -267,14 +272,17 @@ void Dht::join(const NodeInformation::Node &node)
 
         int i = 0;
         std::string possiblePuzzleResponse{};
-        while(true){
+        while (true) {
             possiblePuzzleResponse = strPuzzle;
             possiblePuzzleResponse.append(std::to_string(i));
 
-            std::string sHashOfPossiblePuzzleResponse = util::bytedump(NodeInformation::hash_sha1(possiblePuzzleResponse), SHA_DIGEST_LENGTH);
-            sHashOfPossiblePuzzleResponse.erase(std::remove_if(sHashOfPossiblePuzzleResponse.begin(), sHashOfPossiblePuzzleResponse.end(), ::isspace), sHashOfPossiblePuzzleResponse.end());
+            std::string sHashOfPossiblePuzzleResponse = util::bytedump(util::hash_sha1(possiblePuzzleResponse),
+                                                                       SHA_DIGEST_LENGTH);
+            sHashOfPossiblePuzzleResponse.erase(
+                std::remove_if(sHashOfPossiblePuzzleResponse.begin(), sHashOfPossiblePuzzleResponse.end(), ::isspace),
+                sHashOfPossiblePuzzleResponse.end());
 
-            if(sHashOfPossiblePuzzleResponse.substr(0, static_cast<size_t>(difficulty)) == strDifficulty){
+            if (sHashOfPossiblePuzzleResponse.substr(0, static_cast<size_t>(difficulty)) == strDifficulty) {
                 sFinalResponseToPuzzle = sHashOfPossiblePuzzleResponse;
                 break;
             }
@@ -282,19 +290,21 @@ void Dht::join(const NodeInformation::Node &node)
         }
 
         // Now that the puzzle is solved, make RPC call to sendProofOfWorkPuzzleResponseToBootstrap
-        if(!sFinalResponseToPuzzle.empty()){
-            LOG_DEBUG("{}:{} successfully solved puzzle.", this->m_nodeInformation->getIp(), this->m_nodeInformation->getPort());
+        if (!sFinalResponseToPuzzle.empty()) {
+            LOG_DEBUG("{}:{} successfully solved puzzle.", this->m_nodeInformation->getIp(),
+                      this->m_nodeInformation->getPort());
 
             capnp::EzRpcClient client2{node.getIp(), node.getPort()};
             auto cap2 = client2.getMain<Peer>();
             auto req2 = cap2.sendPoWPuzzleResponseToBootstrapAndGetSuccessorRequest();
-            getPeerImpl().buildNode(req2.getNewNode(), m_nodeInformation->getNode());
+            PeerImpl::buildNode(req2.getNewNode(), m_nodeInformation->getNode());
             req2.setHashOfproofOfWorkPuzzleResponse(sFinalResponseToPuzzle);
             req2.setProofOfWorkPuzzleResponse(possiblePuzzleResponse);
 
-            req2.send().then([LOG_CAPTURE, this, &node](capnp::Response<Peer::SendPoWPuzzleResponseToBootstrapAndGetSuccessorResults> &&response2){
-                if(response2.hasSuccessorOfNewNode()){
-                    auto successor = this->getPeerImpl().nodeFromReader(response2.getSuccessorOfNewNode());
+            req2.send().then([LOG_CAPTURE, this, &node](
+                capnp::Response<Peer::SendPoWPuzzleResponseToBootstrapAndGetSuccessorResults> &&response2) {
+                if (response2.hasSuccessorOfNewNode()) {
+                    auto successor = getPeerImpl().nodeFromReader(response2.getSuccessorOfNewNode());
                     this->m_nodeInformation->setSuccessor(successor);
                 } else {
                     this->m_nodeInformation->setSuccessor();
@@ -310,7 +320,7 @@ void Dht::join(const NodeInformation::Node &node)
 
 void Dht::stabilize()
 {
-    LOG_GET
+    LOG_GET;
     auto successor = m_nodeInformation->getSuccessor();
     if (!successor) {
         LOG_TRACE("no successor");
@@ -369,8 +379,9 @@ void Dht::stabilize()
 
 void Dht::fixFingers()
 {
+    LOG_GET;
     auto successor = getSuccessor(m_nodeInformation->getId() +
-                                  util::pow2<uint8_t, SHA_DIGEST_LENGTH>(nextFinger));
+                                  util::pow2<uint8_t, NodeInformation::key_bits / 8>(nextFinger));
     m_nodeInformation->setFinger(
         nextFinger,
         successor);
@@ -379,7 +390,7 @@ void Dht::fixFingers()
 
 void Dht::checkPredecessor()
 {
-    LOG_GET
+    LOG_GET;
     if (!m_nodeInformation->getPredecessor())
         return;
 

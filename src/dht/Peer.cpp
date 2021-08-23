@@ -19,7 +19,7 @@ PeerImpl::PeerImpl(std::shared_ptr<NodeInformation> nodeInformation) :
     auto id_ = context.getParams().getId();
     NodeInformation::id_type id{};
     std::copy_n(id_.begin(),
-                std::min(id_.size(), static_cast<size_t>(SHA_DIGEST_LENGTH)),
+                std::min(id_.size(), id.size()),
                 id.begin());
     return getSuccessor(id).then([KJ_CPCAP(context)](const std::optional<NodeInformation::Node> &successor) mutable {
         if (!successor) {
@@ -56,17 +56,18 @@ PeerImpl::PeerImpl(std::shared_ptr<NodeInformation> nodeInformation) :
     SPDLOG_TRACE("received notify request");
 
     auto node = nodeFromReader(context.getParams().getNode());
+    auto pred = m_nodeInformation->getPredecessor();
 
-    if (!m_nodeInformation->getPredecessor() ||
+    if (!pred ||
         util::is_in_range_loop(
             node.getId(),
-            m_nodeInformation->getPredecessor()->getId(),
+            pred->getId(),
             m_nodeInformation->getId(),
             false, false
         )) {
-        // std::cout << "[PEER.notify] update predecessor" << std::endl;
         m_nodeInformation->setPredecessor(node);
     }
+
     return kj::READY_NOW;
 }
 
@@ -122,7 +123,7 @@ PeerImpl::PeerImpl(std::shared_ptr<NodeInformation> nodeInformation) :
 
     /* Delete data items from current node which have been assigned to predecessor. */
     std::vector<std::vector<uint8_t>> keyOfDataItemsAssignedToPredecessor;
-    for(auto s : *dataForNewNode){
+    for (auto s : *dataForNewNode) {
         keyOfDataItemsAssignedToPredecessor.push_back(s.first);
     }
     m_nodeInformation->deleteDataAssignedToPredecessor(keyOfDataItemsAssignedToPredecessor);
@@ -134,9 +135,9 @@ PeerImpl::PeerImpl(std::shared_ptr<NodeInformation> nodeInformation) :
 
         // Iterate through map and store values in ::capnp::List
         for (kj::uint i = 0; i < dataForNewNode->size(); ++i) {
-            s[i].setKey(kj::heapArray<kj::byte>(iter->first.begin(), iter->first.end()));
-            s[i].setData(kj::heapArray<kj::byte>(iter->second.first.begin(), iter->second.first.end()));
-            s[i].setExpires(
+            s[i].setKey(kj::heapArray<kj::byte>(iter->first.begin(), iter->first.end()));                 // NOLINT
+            s[i].setData(kj::heapArray<kj::byte>(iter->second.first.begin(), iter->second.first.end()));  // NOLINT
+            s[i].setExpires(                                                                                   // NOLINT
                 static_cast<size_t>(std::chrono::duration_cast<std::chrono::seconds>(
                     iter->second.second.time_since_epoch()).count())
             );
@@ -147,50 +148,57 @@ PeerImpl::PeerImpl(std::shared_ptr<NodeInformation> nodeInformation) :
     return kj::READY_NOW;
 }
 
-::kj::Promise<void> PeerImpl::getPoWPuzzleOnJoin(GetPoWPuzzleOnJoinContext context){
+::kj::Promise<void> PeerImpl::getPoWPuzzleOnJoin(GetPoWPuzzleOnJoinContext context)
+{
     auto newNode = nodeFromReader(context.getParams().getNewNode());
     std::string strproofOfWorkPuzzle = newNode.getIp() + ":" + std::to_string(newNode.getPort());
-    context.getResults().setProofOfWorkPuzzle(strproofOfWorkPuzzle);
-    context.getResults().setDifficulty(m_nodeInformation->getDifficulty());
+    context.getResults().setProofOfWorkPuzzle(strproofOfWorkPuzzle);                                           // NOLINT
+    context.getResults().setDifficulty(m_nodeInformation->getDifficulty());                               // NOLINT
 
     return kj::READY_NOW;
 }
 
-::kj::Promise<void> PeerImpl::sendPoWPuzzleResponseToBootstrapAndGetSuccessor(SendPoWPuzzleResponseToBootstrapAndGetSuccessorContext context){
+::kj::Promise<void> PeerImpl::sendPoWPuzzleResponseToBootstrapAndGetSuccessor(
+    SendPoWPuzzleResponseToBootstrapAndGetSuccessorContext context)
+{
     std::string sPoW_Reponse(context.getParams().getProofOfWorkPuzzleResponse());
 
     std::string sPoW_HashOfResponse(context.getParams().getHashOfproofOfWorkPuzzleResponse());
 
     NodeInformation::Node newNode = nodeFromReader(context.getParams().getNewNode());
-    
+
     std::string sTestString = newNode.getIp() + ":" + std::to_string(newNode.getPort());
 
     // If new node is 127.0.0.1:6007, PoW_Reponse contains some string appended to "127.0.0.1:6007". 
     // Check if correct PoW_Reponse has been handed over by new node.
-    KJ_ASSERT(sPoW_Reponse.substr(0, sTestString.size()) == sTestString);
-    std::string sCalculatedHashOfPuzzleResponse = util::bytedump(NodeInformation::hash_sha1(sPoW_Reponse), SHA_DIGEST_LENGTH);
-    sCalculatedHashOfPuzzleResponse.erase(std::remove_if(sCalculatedHashOfPuzzleResponse.begin(), sCalculatedHashOfPuzzleResponse.end(), ::isspace), sCalculatedHashOfPuzzleResponse.end());
+        KJ_ASSERT(sPoW_Reponse.substr(0, sTestString.size()) == sTestString);
+    std::string sCalculatedHashOfPuzzleResponse = util::bytedump(util::hash_sha1(sPoW_Reponse), SHA_DIGEST_LENGTH);
+    sCalculatedHashOfPuzzleResponse.erase(
+        std::remove_if(sCalculatedHashOfPuzzleResponse.begin(), sCalculatedHashOfPuzzleResponse.end(), ::isspace),
+        sCalculatedHashOfPuzzleResponse.end());
 
     // Check if hash(sPoW_Reponse) == sPoW_HashOfResponse
-    KJ_ASSERT(sCalculatedHashOfPuzzleResponse == sPoW_HashOfResponse);
+        KJ_ASSERT(sCalculatedHashOfPuzzleResponse == sPoW_HashOfResponse);
 
     // Check if sPoW_HashOfResponse has correct number of leading zeroes
     std::string strDifficulty(static_cast<size_t>(m_nodeInformation->getDifficulty()), '0');
-    KJ_ASSERT(sPoW_HashOfResponse.substr(0, static_cast<size_t>(m_nodeInformation->getDifficulty())) == strDifficulty);
+        KJ_ASSERT(
+        sPoW_HashOfResponse.substr(0, static_cast<size_t>(m_nodeInformation->getDifficulty())) == strDifficulty);
 
     // If all checks passed, get successor of new node
-    return getSuccessor(newNode.getId()).then([KJ_CPCAP(context)](const std::optional<NodeInformation::Node> &successor) mutable {
-        if (!successor) {
-            context.getResults().getSuccessorOfNewNode().setEmpty();
-        } else {
-            auto node = context.getResults().getSuccessorOfNewNode().getValue();
-            node.setIp(successor->getIp());
-            node.setPort(successor->getPort());
-            auto id = successor->getId();
-            node.setId(
-                capnp::Data::Builder(kj::heapArray<kj::byte>(id.begin(), id.end())));
-        }
-    });
+    return getSuccessor(newNode.getId()).then(
+        [KJ_CPCAP(context)](const std::optional<NodeInformation::Node> &successor) mutable {
+            if (!successor) {
+                context.getResults().getSuccessorOfNewNode().setEmpty();
+            } else {
+                auto node = context.getResults().getSuccessorOfNewNode().getValue();
+                node.setIp(successor->getIp());
+                node.setPort(successor->getPort());
+                auto id = successor->getId();
+                node.setId(
+                    capnp::Data::Builder(kj::heapArray<kj::byte>(id.begin(), id.end())));
+            }
+        });
 }
 
 // Conversion
@@ -200,7 +208,7 @@ NodeInformation::Node PeerImpl::nodeFromReader(Node::Reader value)
     auto res_id_ = value.getId();
     NodeInformation::id_type res_id{};
     std::copy_n(res_id_.begin(),
-                std::min(res_id_.size(), static_cast<size_t>(SHA_DIGEST_LENGTH)),
+                std::min(res_id_.size(), res_id.size()),
                 res_id.begin());
     return NodeInformation::Node{
         value.getIp(),
