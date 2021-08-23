@@ -57,5 +57,8 @@ int main()
         }
     });
 
+    client.wait();
+    server.wait();
+
     return 0;
 }
