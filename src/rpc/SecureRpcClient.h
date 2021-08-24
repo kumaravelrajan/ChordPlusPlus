@@ -14,11 +14,12 @@ namespace rpc
      * @brief
      * Secure interface for setting up a Cap'n Proto RPC client.
      * TODO:
-     *   - Implement class
      *   - Implement alternative networking solution with encryption
      */
     class SecureRpcClient
     {
+    public:
+
         /**
          * @brief
          * Construct a new SecureRpcClient and connect to the given address. The connection is formed in

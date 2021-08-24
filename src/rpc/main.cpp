@@ -29,7 +29,7 @@ int main()
 
     auto client = std::async(std::launch::async, [&done, &started] {
         while (!started);
-        capnp::EzRpcClient client("127.0.0.1", 1234);
+        rpc::SecureRpcClient client("127.0.0.1", 1234);
         auto cap = client.getMain<Example>();
         auto req = cap.addRequest();
         int a = 123;
