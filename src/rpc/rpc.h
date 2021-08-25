@@ -2,6 +2,7 @@
 #define DHT_RPC_H
 
 #include "SecureRpcClient.h"
+#include "SecureRpcServer.h"
 
 namespace rpc
 {

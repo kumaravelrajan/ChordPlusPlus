@@ -1,8 +1,8 @@
 set(LIBRARY_NAME rpc)
 
-set(MODULE_HEADERS rpc.h SecureRpcClient.h SecureRpcContext.h)
+set(MODULE_HEADERS rpc.h SecureRpcClient.h SecureRpcContext.h SecureRpcServer.h)
 
-set(MODULE_SOURCES rpc.cpp SecureRpcClient.cpp)
+set(MODULE_SOURCES rpc.cpp SecureRpcClient.cpp SecureRpcServer.cpp)
 
 capnp_generate_cpp(CAPNP_SRCS CAPNP_HDRS schemas/example.capnp)
 

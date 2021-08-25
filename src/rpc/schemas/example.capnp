@@ -2,5 +2,5 @@
 
 interface Example
 {
-    add @0 (a :Int32, b :Int32) -> (sum :Int32);
+    add @0 (a :Int32, b :Int32) -> (a :Int32, b :Int32, sum :Int32);
 }

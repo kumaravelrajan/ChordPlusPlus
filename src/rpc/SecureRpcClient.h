@@ -6,6 +6,8 @@
 #include <capnp/capability.h>
 #include <kj/common.h>
 
+#include "SecureRpcContext.h"
+
 extern capnp::EzRpcClient a;
 
 namespace rpc
@@ -39,7 +41,9 @@ namespace rpc
          * both security and performance. See `ReaderOptions` in `message.h` for more details.
          */
         explicit SecureRpcClient(kj::StringPtr serverAddress, kj::uint defaultPort = 0,
-                                 capnp::ReaderOptions readerOpts = capnp::ReaderOptions());
+                                 capnp::ReaderOptions readerOpts = capnp::ReaderOptions(),
+                                 AsyncIoStreamFactory streamFactory =
+                                 [](kj::Own<kj::AsyncIoStream> str) { return kj::mv(str); });
 
         ~SecureRpcClient() noexcept(false);
 
@@ -73,7 +77,7 @@ namespace rpc
 
     private:
         struct Impl;
-        kj::Own <Impl> impl;
+        kj::Own<Impl> impl;
     };
 
     // ================================================= //

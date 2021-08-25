@@ -8,9 +8,13 @@
 #include <kj/common.h>
 #include <kj/refcount.h>
 #include <kj/threadlocal.h>
+#include <kj/async-io.h>
+#include <functional>
 
 namespace rpc
 {
+    using AsyncIoStreamFactory = std::function<kj::Own<kj::AsyncIoStream>(kj::Own<kj::AsyncIoStream>)>;
+
     class SecureRpcContext;
 
     inline KJ_THREADLOCAL_PTR(SecureRpcContext)threadSecureContext = nullptr;
@@ -56,7 +60,7 @@ namespace rpc
         }
 
     private:
-        kj::AsyncIoContext ioContext{};
+        kj::AsyncIoContext ioContext;
     };
 }
 

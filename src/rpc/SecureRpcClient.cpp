@@ -4,7 +4,6 @@
 #include <capnp/rpc-twoparty.h>
 
 #include "SecureRpcClient.h"
-#include "SecureRpcContext.h"
 
 using rpc::SecureRpcClient;
 using rpc::SecureRpcContext;
@@ -63,13 +62,15 @@ struct SecureRpcClient::Impl
     kj::Maybe<kj::Own<ClientContext>> clientContext;
 
     Impl(kj::StringPtr serverAddress, kj::uint defaultPort,
-         capnp::ReaderOptions readerOpts)
+         capnp::ReaderOptions readerOpts, AsyncIoStreamFactory streamFactory)
         : context(SecureRpcContext::getThreadLocal()),
           setupPromise(
               context->getIoProvider().getNetwork()
                   .parseAddress(serverAddress, defaultPort)
-                  .then([](kj::Own<kj::NetworkAddress> &&addr) {
-                      return connectAttach(kj::mv(addr));
+                  .then([streamFactory(kj::mv(streamFactory))](kj::Own<kj::NetworkAddress> &&addr) {
+                      return connectAttach(kj::mv(addr)).then([streamFactory(kj::mv(streamFactory))](
+                          kj::Own<kj::AsyncIoStream> &&str
+                      ) { return streamFactory(kj::mv(str)); });
                   }).then([this, readerOpts](kj::Own<kj::AsyncIoStream> &&stream) {
                       clientContext = kj::heap<ClientContext>(kj::mv(stream),
                                                               readerOpts);
@@ -77,8 +78,9 @@ struct SecureRpcClient::Impl
 };
 
 SecureRpcClient::SecureRpcClient(
-    kj::StringPtr serverAddress, kj::uint defaultPort, capnp::ReaderOptions readerOpts)
-    : impl(kj::heap<Impl>(serverAddress, defaultPort, readerOpts)) {}
+    kj::StringPtr serverAddress, kj::uint defaultPort, capnp::ReaderOptions readerOpts,
+    AsyncIoStreamFactory streamFactory)
+    : impl(kj::heap<Impl>(serverAddress, defaultPort, readerOpts, kj::mv(streamFactory))) {}
 
 SecureRpcClient::~SecureRpcClient() noexcept(false) {}
 
