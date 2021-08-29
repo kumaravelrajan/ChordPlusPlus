@@ -20,9 +20,12 @@ int main()
                 "\x15\x16\x17\x18"s  // key
                 "\x19\x1a\x1b\x1c"s  // key
                 "\x1d\x1e\x1f\x20"s; // key
+
             auto bytes = util::convertToBytes(byteString);
 
-            api::Request request(bytes);
+            api::MessageHeader header(reinterpret_cast<const api::MessageHeader::MessageHeaderRaw &>(bytes.front()));
+
+            api::Request request(header, bytes);
 
             auto *request_data = request.getData<api::Message_KEY>();
             assert_null(request.getData<api::Message_DHT_PUT>());
@@ -52,7 +55,9 @@ int main()
 
             auto bytes = util::convertToBytes(byteString);
 
-            api::Request request(bytes);
+            api::MessageHeader header(reinterpret_cast<const api::MessageHeader::MessageHeaderRaw &>(bytes.front()));
+
+            api::Request request(header, bytes);
 
             auto *request_data = request.getData<api::Message_DHT_PUT>();
             assert_null(request.getData<api::Message_KEY>());

@@ -4,6 +4,7 @@
 #include <kj/debug.h>
 #include <capnp/rpc-twoparty.h>
 #include <map>
+#include <utility>
 
 #include "SecureRpcServer.h"
 
@@ -37,7 +38,7 @@ struct SecureRpcServer::Impl final : public capnp::SturdyRefRestorer<capnp::AnyP
         capnp::Capability::Client cap = nullptr;
 
         ExportedCap(kj::StringPtr name, capnp::Capability::Client cap)
-            : name(kj::heapString(name)), cap(cap) {}
+            : name(kj::heapString(name)), cap(kj::mv(cap)) {}
 
         ExportedCap() = default;
         ExportedCap(const ExportedCap &) = delete;

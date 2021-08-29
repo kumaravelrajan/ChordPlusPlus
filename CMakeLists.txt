@@ -96,11 +96,21 @@ endif ()
 CPMAddPackage("gh:capnproto/capnproto@0.8.0")
 
 # pull openssl from github:
+if (False)
+    CPMAddPackage(
+            NAME openssl
+            VERSION 1.1.1
+            GITHUB_REPOSITORY janbar/openssl-cmake
+            GIT_TAG 1.1.1k-20210430
+    )
+endif ()
+
+# pull mbedtls from github:
 CPMAddPackage(
-        NAME openssl
-        VERSION 1.1.1
-        GITHUB_REPOSITORY janbar/openssl-cmake
-        GIT_TAG 1.1.1k-20210430
+        NAME mbedtls
+        VERSION 3.0.0
+        GITHUB_REPOSITORY ARMmbed/mbedtls
+        OPTIONS "ENABLE_TESTING OFF"
 )
 
 # pull spdlog from github:

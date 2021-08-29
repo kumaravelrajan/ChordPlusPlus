@@ -86,27 +86,31 @@ public:
 
     // Output
 
+    static kj::Promise<kj::Array<kj::byte>> convert(const kj::ArrayPtr<const kj::byte> &arr)
+    {
+        auto ret = kj::heapArray<kj::byte>(arr);
+        for (auto &num : ret) {
+            if (num == 123) num = 124;
+        }
+        return kj::mv(ret);
+    }
+
     kj::Promise<void> write(const void *buffer, size_t size) override
     {
-        auto b = std::make_unique<uint8_t[]>(size);
-        memcpy(b.get(), buffer, size);
-        for (size_t index = 0; index < size; ++index)
-            if (b[index] == 123) b[index] = 124;
-        return impl->write(b.get(), size).attach(std::move(b));
+        auto buf = kj::heapArray<kj::byte>((kj::byte *) buffer, size);
+        auto ptr = kj::heapArray<const kj::ArrayPtr<const kj::byte>>({buf});
+        return write(ptr).attach(kj::mv(buf), kj::mv(ptr));
     }
 
     kj::Promise<void> write(kj::ArrayPtr<const kj::ArrayPtr<const kj::byte>> pieces) override
     {
-        auto arr = kj::heapArray<kj::Array<kj::byte>>(pieces.size());
-        for (size_t index = 0; index < pieces.size(); ++index)
-            arr[index] = kj::heapArray(pieces[index]);
-        auto ptrs = kj::heapArray<const kj::ArrayPtr<const kj::byte>>(arr.begin(), arr.end());
-
-        for (auto &piece : arr)
-            for (auto &num : piece)
-                if (num == 123) num = 124;
-
-        return impl->write(ptrs.asPtr()).attach(kj::mv(arr), kj::mv(ptrs));
+        auto results = kj::heapArrayBuilder<kj::Promise<kj::Array<kj::byte>>>(pieces.size());
+        for (auto &piece : pieces)
+            results.add(convert(piece));
+        return kj::joinPromises(results.finish()).then([this](kj::Array<kj::Array<kj::byte>> &&arr) {
+            auto pointers = kj::heapArray<const kj::ArrayPtr<const kj::byte>>(arr.begin(), arr.end());
+            return impl->write(pointers.asPtr()).attach(kj::mv(arr), kj::mv(pointers));
+        }).attach(kj::mv(results));
     }
 
     kj::Maybe<kj::Promise<uint64_t>> tryPumpFrom(
@@ -123,6 +127,36 @@ public:
 
 int main()
 {
+    kj::EventLoop loop{};
+    kj::WaitScope waitScope{loop};
+
+    using namespace std::chrono_literals;
+
+    auto tasks = kj::heapArrayBuilder<kj::Promise<void>>(3);
+
+    tasks.add(kj::_::yield().then([](){
+        std::cout << "A1" << std::endl;
+        std::this_thread::sleep_for(1s);
+        std::cout << "A2" << std::endl;
+    }));
+
+    tasks.add(kj::_::yield().then([](){
+        std::cout << "B1" << std::endl;
+        std::this_thread::sleep_for(1s);
+        std::cout << "B2" << std::endl;
+    }));
+
+    tasks.add(kj::_::yield().then([](){
+        std::cout << "C1" << std::endl;
+        std::this_thread::sleep_for(1s);
+        std::cout << "C2" << std::endl;
+    }));
+
+    kj::joinPromises(tasks.finish()).wait(waitScope);
+
+    return 0;
+
+
     std::atomic_bool started{false};
     std::atomic_bool done{false};
 
