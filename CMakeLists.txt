@@ -99,13 +99,17 @@ CPMAddPackage(
         GITHUB_REPOSITORY janbar/openssl-cmake
         GIT_TAG 1.1.1k-20210430
 )
+if (openssl_ADDED)
+    add_library(OpenSSL::SSL ALIAS ssl)
+    add_library(OpenSSL::Crypto ALIAS crypto)
+endif()
 
 # pull cap'n proto from github:
 CPMAddPackage(
         NAME capnproto
-        VERSION 0.9.0
-        GITHUB_REPOSITORY capnproto/capnproto
-        OPTIONS "BUILD_TESTING OFF" "WITH_OPENSSL ON"
+        VERSION 0.10.0
+        GITHUB_REPOSITORY MixusMinimax/capnproto
+        OPTIONS "BUILD_TESTING OFF" "WITH_OPENSSL ON" "EXPORT_TARGETS OFF"
 )
 
 # pull spdlog from github:
