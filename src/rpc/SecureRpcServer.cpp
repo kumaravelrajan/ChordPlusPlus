@@ -100,12 +100,13 @@ struct SecureRpcServer::Impl final : public capnp::SturdyRefRestorer<capnp::AnyP
                                kj::Own<kj::AsyncIoStream> &&connection) {
                 acceptLoop(kj::mv(listener), readerOpts);
 
-                auto server = kj::heap<ServerContext>(streamFactory(kj::mv(connection)), *this,
-                                                      readerOpts);
+                return streamFactory(kj::mv(connection)).then([this, readerOpts](kj::Own<kj::AsyncIoStream> &&str) {
+                    auto server = kj::heap<ServerContext>(kj::mv(str), *this, readerOpts);
 
-                // Arrange to destroy the server context when all references are gone, or when the
-                // EzRpcServer is destroyed (which will destroy the TaskSet).
-                tasks.add(server->network.onDisconnect().attach(kj::mv(server)));
+                    // Arrange to destroy the server context when all references are gone, or when the
+                    // EzRpcServer is destroyed (which will destroy the TaskSet).
+                    tasks.add(server->network.onDisconnect().attach(kj::mv(server)));
+                });
             }))
         );
     }

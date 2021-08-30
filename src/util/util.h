@@ -14,8 +14,7 @@
 #include <sstream>
 #include <iomanip>
 #include <bitset>
-#include <mbedtls/sha1.h>
-#include <mbedtls/sha256.h>
+#include <openssl/sha.h>
 #include <array>
 
 namespace util
@@ -215,10 +214,10 @@ namespace util
     }
 
     template<typename T>
-    inline std::array<uint8_t, 20> hash_sha1(const T &bytes)
+    inline std::array<uint8_t, SHA_DIGEST_LENGTH> hash_sha1(const T &bytes)
     {
-        std::array<uint8_t, 20> ret{};
-        ::mbedtls_sha1(
+        std::array<uint8_t, SHA_DIGEST_LENGTH> ret{};
+        ::SHA1(
             reinterpret_cast<const unsigned char *>(&*bytes.cbegin()),
             bytes.size(),
             reinterpret_cast<unsigned char *>(&ret.front()));
@@ -226,14 +225,13 @@ namespace util
     }
 
     template<typename T>
-    inline std::array<uint8_t, 32> hash_sha256(const T &bytes)
+    inline std::array<uint8_t, SHA256_DIGEST_LENGTH> hash_sha256(const T &bytes)
     {
-        std::array<uint8_t, 32> ret{};
-        ::mbedtls_sha256(
+        std::array<uint8_t, SHA256_DIGEST_LENGTH> ret{};
+        ::SHA256(
             reinterpret_cast<const unsigned char *>(&*bytes.cbegin()),
             bytes.size(),
-            reinterpret_cast<unsigned char *>(&ret.front()),
-            false);
+            reinterpret_cast<unsigned char *>(&ret.front()));
         return ret;
     }
 } // namespace util

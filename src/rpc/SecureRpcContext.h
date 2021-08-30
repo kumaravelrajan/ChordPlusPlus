@@ -13,7 +13,7 @@
 
 namespace rpc
 {
-    using AsyncIoStreamFactory = std::function<kj::Own<kj::AsyncIoStream>(kj::Own<kj::AsyncIoStream>)>;
+    using AsyncIoStreamFactory = std::function<kj::Promise<kj::Own<kj::AsyncIoStream>>(kj::Own<kj::AsyncIoStream> &&)>;
 
     class SecureRpcContext;
 

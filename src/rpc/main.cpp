@@ -7,6 +7,8 @@
 #include <atomic>
 #include <chrono>
 #include <example.capnp.h>
+#include <kj/compat/tls.h>
+#include <kj/filesystem.h>
 
 #include "rpc.h"
 
@@ -127,46 +129,38 @@ public:
 
 int main()
 {
-    kj::EventLoop loop{};
-    kj::WaitScope waitScope{loop};
-
-    using namespace std::chrono_literals;
-
-    auto tasks = kj::heapArrayBuilder<kj::Promise<void>>(3);
-
-    tasks.add(kj::_::yield().then([](){
-        std::cout << "A1" << std::endl;
-        std::this_thread::sleep_for(1s);
-        std::cout << "A2" << std::endl;
-    }));
-
-    tasks.add(kj::_::yield().then([](){
-        std::cout << "B1" << std::endl;
-        std::this_thread::sleep_for(1s);
-        std::cout << "B2" << std::endl;
-    }));
-
-    tasks.add(kj::_::yield().then([](){
-        std::cout << "C1" << std::endl;
-        std::this_thread::sleep_for(1s);
-        std::cout << "C2" << std::endl;
-    }));
-
-    kj::joinPromises(tasks.finish()).wait(waitScope);
-
-    return 0;
-
-
     std::atomic_bool started{false};
     std::atomic_bool done{false};
 
-    auto client = std::async(std::launch::async, [&done, &started] {
+    auto fs = kj::newDiskFilesystem();
+
+    auto client = std::async(std::launch::async, [&done, &started, &fs] {
         while (!started);
+
+        kj::TlsContext::Options options{};
+        auto trusted = kj::heapArray<kj::TlsCertificate>(
+            {
+                kj::TlsCertificate{
+                    fs->getRoot().openFile(fs->getCurrentPath().eval("../../../hostcert.crt"))->readAllText()
+                }
+            }
+        );
+        // options.verifyClients = true;
+        options.useSystemTrustStore = true;
+        options.trustedCertificates = trusted;
+        kj::TlsContext tlsContext{options};
+
         rpc::SecureRpcClient client(
             "127.0.0.1", 1234, capnp::ReaderOptions(),
-            [](kj::Own<kj::AsyncIoStream> str) {
-                return kj::heap<ExampleAsyncIoStream>(kj::mv(str));
-            });
+            [&tlsContext](kj::Own<kj::AsyncIoStream> &&str) {
+                return tlsContext
+                    .wrapClient(kj::mv(str), "COLGATE")
+                    .then([](kj::Own<kj::AsyncIoStream> &&str) {
+                        std::cout << "wrapClient done" << std::endl;
+                        return kj::mv(str);
+                    });
+            }
+        );
         auto cap = client.getMain<Example>();
         auto req = cap.addRequest();
         req.setA(123);
@@ -187,8 +181,42 @@ int main()
         done = true;
     });
 
-    auto server = std::async(std::launch::async, [&done, &started] {
-        rpc::SecureRpcServer server(kj::heap<ExampleImpl>(), "127.0.0.1", 1234);
+    auto server = std::async(std::launch::async, [&done, &started, &fs] {
+        class CB final : public kj::TlsSniCallback
+        {
+        public:
+            explicit CB(kj::Filesystem &fs) : fs(fs) {}
+        private:
+            kj::Filesystem &fs;
+
+            kj::Maybe<kj::TlsKeypair> getKey(kj::StringPtr hostname) override
+            {
+                if (hostname == "COLGATE") {
+                    auto key = fs.getRoot().openFile(fs.getCurrentPath().eval("../../../hostkey.pem"))->readAllText();
+                    auto cert = fs.getRoot().openFile(fs.getCurrentPath().eval("../../../hostcert.crt"))->readAllText();
+
+                    return kj::TlsKeypair{
+                        kj::TlsPrivateKey(key, kj::StringPtr("asdf")),
+                        kj::TlsCertificate(cert)
+                    };
+                }
+                return nullptr;
+            }
+        };
+        CB cb(*fs);
+        kj::TlsContext::Options options{};
+        options.sniCallback = cb;
+        kj::TlsContext tlsContext{options};
+
+        rpc::SecureRpcServer server(
+            kj::heap<ExampleImpl>(), "127.0.0.1", 1234, capnp::ReaderOptions(),
+            [&tlsContext](kj::Own<kj::AsyncIoStream> &&str) {
+                return tlsContext.wrapServer(kj::mv(str)).then([](kj::Own<kj::AsyncIoStream> &&str) {
+                    std::cout << "wrapServer done" << std::endl;
+                    return kj::mv(str);
+                });
+            }
+        );
         while (!done) {
             server.getWaitScope().poll();
             if (!started) started = true;

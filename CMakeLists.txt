@@ -92,25 +92,20 @@ if (inipp_ADDED)
     target_include_directories(inipp INTERFACE ${inipp_SOURCE_DIR}/inipp)
 endif ()
 
-# pull cap'n proto from github:
-CPMAddPackage("gh:capnproto/capnproto@0.8.0")
-
 # pull openssl from github:
-if (False)
-    CPMAddPackage(
-            NAME openssl
-            VERSION 1.1.1
-            GITHUB_REPOSITORY janbar/openssl-cmake
-            GIT_TAG 1.1.1k-20210430
-    )
-endif ()
-
-# pull mbedtls from github:
 CPMAddPackage(
-        NAME mbedtls
-        VERSION 3.0.0
-        GITHUB_REPOSITORY ARMmbed/mbedtls
-        OPTIONS "ENABLE_TESTING OFF"
+        NAME openssl
+        VERSION 1.1.1
+        GITHUB_REPOSITORY janbar/openssl-cmake
+        GIT_TAG 1.1.1k-20210430
+)
+
+# pull cap'n proto from github:
+CPMAddPackage(
+        NAME capnproto
+        VERSION 0.9.0
+        GITHUB_REPOSITORY capnproto/capnproto
+        OPTIONS "BUILD_TESTING OFF" "WITH_OPENSSL ON"
 )
 
 # pull spdlog from github:
