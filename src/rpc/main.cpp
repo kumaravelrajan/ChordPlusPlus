@@ -147,7 +147,10 @@ int main()
         );
         // options.verifyClients = true;
         options.useSystemTrustStore = true;
-        options.trustedCertificates = trusted;
+        options.ignoreCertificates = false;
+        options.timer = rpc::SecureRpcContext::getThreadLocal()->getIoProvider().getTimer();
+        options.acceptTimeout = 1 * kj::SECONDS;
+        // options.trustedCertificates = trusted;
         kj::TlsContext tlsContext{options};
 
         rpc::SecureRpcClient client(
@@ -165,20 +168,29 @@ int main()
         auto req = cap.addRequest();
         req.setA(123);
         req.setB(297);
-        auto result = req.send().wait(client.getWaitScope());
-        int a = result.getA();
-        int b = result.getB();
-        int sum = result.getSum();
-        std::cout << fmt::format(
-            fmt::emphasis::bold,
-            "{} {} {} {} {}",
-            fmt::format(fg(fmt::color::aquamarine), "{}", a),
-            fmt::format(fg(fmt::color::dark_cyan), "+"),
-            fmt::format(fg(fmt::color::aquamarine), "{}", b),
-            fmt::format(fg(fmt::color::dark_cyan), "="),
-            fmt::format(fg(fmt::color::aqua), "{}", sum)
-        ) << std::endl;
-        done = true;
+        try {
+            auto result = req.send().then([](Example::AddResults::Reader &&reader) {
+                return reader;
+            }, [](kj::Exception &&err) -> Example::AddResults::Reader {
+                std::cout << fmt::format("send Exception: {}", err.getDescription().cStr()) << std::endl;
+                throw std::runtime_error("nah dude");
+            }).wait(client.getWaitScope());
+            int a = result.getA();
+            int b = result.getB();
+            int sum = result.getSum();
+            std::cout << fmt::format(
+                fmt::emphasis::bold,
+                "{} {} {} {} {}",
+                fmt::format(fg(fmt::color::aquamarine), "{}", a),
+                fmt::format(fg(fmt::color::dark_cyan), "+"),
+                fmt::format(fg(fmt::color::aquamarine), "{}", b),
+                fmt::format(fg(fmt::color::dark_cyan), "="),
+                fmt::format(fg(fmt::color::aqua), "{}", sum)
+            ) << std::endl;
+            done = true;
+        } catch (kj::Exception &err) {
+            std::cout << fmt::format("Error: {}", err.getDescription().cStr()) << std::endl;
+        }
     });
 
     auto server = std::async(std::launch::async, [&done, &started, &fs] {

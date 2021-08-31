@@ -94,12 +94,12 @@ endif ()
 
 # pull openssl from github:
 CPMAddPackage(
-        NAME openssl
-        VERSION 1.1.1
+        NAME OpenSSL
+        VERSION 1.1.1k
         GITHUB_REPOSITORY janbar/openssl-cmake
         GIT_TAG 1.1.1k-20210430
 )
-if (openssl_ADDED)
+if (OpenSSL_ADDED)
     add_library(OpenSSL::SSL ALIAS ssl)
     add_library(OpenSSL::Crypto ALIAS crypto)
 endif()
