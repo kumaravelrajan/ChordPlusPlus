@@ -147,9 +147,7 @@ int main()
         );
         // options.verifyClients = true;
         options.useSystemTrustStore = true;
-        options.ignoreCertificates = false;
-        options.timer = rpc::SecureRpcContext::getThreadLocal()->getIoProvider().getTimer();
-        options.acceptTimeout = 1 * kj::SECONDS;
+        options.ignoreCertificates = true;
         // options.trustedCertificates = trusted;
         kj::TlsContext tlsContext{options};
 
@@ -187,10 +185,10 @@ int main()
                 fmt::format(fg(fmt::color::dark_cyan), "="),
                 fmt::format(fg(fmt::color::aqua), "{}", sum)
             ) << std::endl;
-            done = true;
         } catch (kj::Exception &err) {
             std::cout << fmt::format("Error: {}", err.getDescription().cStr()) << std::endl;
         }
+        done = true;
     });
 
     auto server = std::async(std::launch::async, [&done, &started, &fs] {

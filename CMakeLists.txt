@@ -95,25 +95,21 @@ endif ()
 # pull openssl from github:
 CPMAddPackage(
         NAME OpenSSL
-        VERSION 1.1.1k
-        GITHUB_REPOSITORY janbar/openssl-cmake
-        GIT_TAG 1.1.1k-20210430
+        VERSION 1.1.1f
+        GITHUB_REPOSITORY MixusMinimax/openssl-cmake
+        GIT_TAG 1.1.1f-20210430
 )
-if (OpenSSL_ADDED)
-    add_library(OpenSSL::SSL ALIAS ssl)
-    add_library(OpenSSL::Crypto ALIAS crypto)
-endif()
 
 # pull cap'n proto from github:
 CPMAddPackage(
         NAME capnproto
         VERSION 0.10.0
         GITHUB_REPOSITORY MixusMinimax/capnproto
-        OPTIONS "BUILD_TESTING OFF" "WITH_OPENSSL ON" "EXPORT_TARGETS OFF"
+        OPTIONS "BUILD_TESTING OFF" "WITH_OPENSSL ON" "EXPORT_TARGETS ON"
 )
 
 # pull spdlog from github:
-CPMAddPackage("gh:gabime/spdlog@1.8.5")
+CPMAddPackage("gh:gabime/spdlog@1.9.2")
 
 add_subdirectory(src)
 add_subdirectory(src/api)
