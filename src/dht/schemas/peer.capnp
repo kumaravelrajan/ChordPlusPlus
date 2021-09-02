@@ -23,12 +23,13 @@ struct DataItem {
 }
 
 interface Peer {
-  getSuccessor       @0 (id :Data)      -> (node :Optional(Node));
-  getPredecessor     @1 ()              -> (node :Optional(Node));
-  notify             @2 (node :Node);
-  getData            @3 (key :Data)     -> (data :Optional(Data));
-  setData            @4 (key :Data, value :Data, ttl :UInt16 = 0);
-  getDataItemsOnJoin @5 (newNode :Node) -> (listOfDataItems :List(DataItem));
-  getPoWPuzzleOnJoin @6 (newNode :Node) -> (proofOfWorkPuzzle :Text, difficulty :UInt8);
+  getSuccessor        @0 (id :Data)      -> (node :Optional(Node));
+  getClosestPreceding @8 (id :Data)      -> (preceding :Optional(Node), directSuccessor :Optional(Node));
+  getPredecessor      @1 ()              -> (node :Optional(Node));
+  notify              @2 (node :Node);
+  getData             @3 (key :Data)     -> (data :Optional(Data));
+  setData             @4 (key :Data, value :Data, ttl :UInt16 = 0);
+  getDataItemsOnJoin  @5 (newNode :Node) -> (listOfDataItems :List(DataItem));
+  getPoWPuzzleOnJoin  @6 (newNode :Node) -> (proofOfWorkPuzzle :Text, difficulty :UInt8);
   sendPoWPuzzleResponseToBootstrapAndGetSuccessor @7 (newNode :Node, proofOfWorkPuzzleResponse :Text, hashOfproofOfWorkPuzzleResponse :Text) -> (successorOfNewNode :Optional(Node));
 }

@@ -18,6 +18,11 @@ namespace dht
         ::kj::Promise<void> getSuccessor(GetSuccessorContext context) override;
 
         /**
+         * @brief Returns the closest preceding node of the supplied key, in addition to the direct successor of this node.
+         */
+        ::kj::Promise<void> getClosestPreceding(GetClosestPrecedingContext context) override;
+
+        /**
          * @brief This function returns the predecessor of this node.
          */
         ::kj::Promise<void> getPredecessor(GetPredecessorContext context) override;
@@ -61,6 +66,9 @@ namespace dht
         static NodeInformation::Node nodeFromReader(Node::Reader node);
         static std::optional<NodeInformation::Node> nodeFromReader(Optional<Node>::Reader node);
         static void buildNode(Node::Builder builder, const NodeInformation::Node &node);
+        static void buildNode(Optional<Node>::Builder builder, const std::optional<NodeInformation::Node> &node);
+        static NodeInformation::id_type idFromReader(capnp::Data::Reader id);
+        static capnp::Data::Builder buildId(const NodeInformation::id_type &id);
 
         ::kj::Promise<std::optional<NodeInformation::Node>> getSuccessor(NodeInformation::id_type id);
         std::optional<NodeInformation::Node> getClosestPreceding(NodeInformation::id_type id);

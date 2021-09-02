@@ -16,11 +16,7 @@ PeerImpl::PeerImpl(std::shared_ptr<NodeInformation> nodeInformation) :
 ::kj::Promise<void> PeerImpl::getSuccessor(GetSuccessorContext context)
 {
     SPDLOG_TRACE("received getSuccessor request");
-    auto id_ = context.getParams().getId();
-    NodeInformation::id_type id{};
-    std::copy_n(id_.begin(),
-                std::min(id_.size(), id.size()),
-                id.begin());
+    auto id = idFromReader(context.getParams().getId());
     return getSuccessor(id).then([KJ_CPCAP(context)](const std::optional<NodeInformation::Node> &successor) mutable {
         if (!successor) {
             context.getResults().getNode().setEmpty();
@@ -35,6 +31,14 @@ PeerImpl::PeerImpl(std::shared_ptr<NodeInformation> nodeInformation) :
     });
 }
 
+::kj::Promise<void> PeerImpl::getClosestPreceding(GetClosestPrecedingContext context)
+{
+    auto id = idFromReader(context.getParams().getId());
+    buildNode(context.getResults().getPreceding(), getClosestPreceding(id));
+    buildNode(context.getResults().getDirectSuccessor(), m_nodeInformation->getSuccessor());
+    return kj::READY_NOW;
+}
+
 ::kj::Promise<void> PeerImpl::getPredecessor(GetPredecessorContext context)
 {
     SPDLOG_TRACE("received getPredecessor request");
@@ -43,8 +47,7 @@ PeerImpl::PeerImpl(std::shared_ptr<NodeInformation> nodeInformation) :
         auto node = context.getResults().getNode().getValue();
         node.setIp(pred->getIp());
         node.setPort(pred->getPort());
-        auto id = pred->getId();
-        node.setId(capnp::Data::Builder(kj::heapArray<kj::byte>(id.begin(), id.end())));
+        node.setId(buildId(pred->getId()));
     } else {
         context.getResults().getNode().setEmpty();
     }
@@ -123,7 +126,7 @@ PeerImpl::PeerImpl(std::shared_ptr<NodeInformation> nodeInformation) :
 
     /* Delete data items from current node which have been assigned to predecessor. */
     std::vector<std::vector<uint8_t>> keyOfDataItemsAssignedToPredecessor;
-    for (auto s : *dataForNewNode) {
+    for (const auto &s: *dataForNewNode) {
         keyOfDataItemsAssignedToPredecessor.push_back(s.first);
     }
     m_nodeInformation->deleteDataAssignedToPredecessor(keyOfDataItemsAssignedToPredecessor);
@@ -152,8 +155,8 @@ PeerImpl::PeerImpl(std::shared_ptr<NodeInformation> nodeInformation) :
 {
     auto newNode = nodeFromReader(context.getParams().getNewNode());
     std::string strproofOfWorkPuzzle = newNode.getIp() + ":" + std::to_string(newNode.getPort());
-    context.getResults().setProofOfWorkPuzzle(strproofOfWorkPuzzle);                                           // NOLINT
-    context.getResults().setDifficulty(m_nodeInformation->getDifficulty());                               // NOLINT
+    context.getResults().setProofOfWorkPuzzle(strproofOfWorkPuzzle); // NOLINT
+    context.getResults().setDifficulty(m_nodeInformation->getDifficulty()); // NOLINT
 
     return kj::READY_NOW;
 }
@@ -188,16 +191,7 @@ PeerImpl::PeerImpl(std::shared_ptr<NodeInformation> nodeInformation) :
     // If all checks passed, get successor of new node
     return getSuccessor(newNode.getId()).then(
         [KJ_CPCAP(context)](const std::optional<NodeInformation::Node> &successor) mutable {
-            if (!successor) {
-                context.getResults().getSuccessorOfNewNode().setEmpty();
-            } else {
-                auto node = context.getResults().getSuccessorOfNewNode().getValue();
-                node.setIp(successor->getIp());
-                node.setPort(successor->getPort());
-                auto id = successor->getId();
-                node.setId(
-                    capnp::Data::Builder(kj::heapArray<kj::byte>(id.begin(), id.end())));
-            }
+            buildNode(context.getResults().getSuccessorOfNewNode(), successor);
         });
 }
 
@@ -205,15 +199,10 @@ PeerImpl::PeerImpl(std::shared_ptr<NodeInformation> nodeInformation) :
 
 NodeInformation::Node PeerImpl::nodeFromReader(Node::Reader value)
 {
-    auto res_id_ = value.getId();
-    NodeInformation::id_type res_id{};
-    std::copy_n(res_id_.begin(),
-                std::min(res_id_.size(), res_id.size()),
-                res_id.begin());
     return NodeInformation::Node{
         value.getIp(),
         value.getPort(),
-        res_id
+        idFromReader(value.getId())
     };
 }
 
@@ -228,8 +217,29 @@ void PeerImpl::buildNode(Node::Builder builder, const NodeInformation::Node &nod
 {
     builder.setIp(node.getIp());
     builder.setPort(node.getPort());
-    auto id = node.getId();
-    builder.setId(capnp::Data::Builder(kj::heapArray<kj::byte>(id.begin(), id.end())));
+    builder.setId(buildId(node.getId()));
+}
+
+void PeerImpl::buildNode(Optional<Node>::Builder builder, const std::optional<NodeInformation::Node> &node)
+{
+    if (node)
+        buildNode(builder.getValue(), *node);
+    else
+        builder.setEmpty();
+}
+
+NodeInformation::id_type PeerImpl::idFromReader(capnp::Data::Reader id)
+{
+    NodeInformation::id_type ret{};
+    std::copy_n(id.begin(),
+                std::min(id.size(), ret.size()),
+                ret.begin());
+    return ret;
+}
+
+capnp::Data::Builder PeerImpl::buildId(const NodeInformation::id_type &id)
+{
+    return {kj::heapArray<kj::byte>(id.begin(), id.end())};
 }
 
 // Interface
@@ -369,7 +379,7 @@ void PeerImpl::getDataItemsOnJoinHelper(std::optional<NodeInformation::Node> suc
         std::map<std::vector<uint8_t>, std::pair<std::vector<uint8_t>, uint16_t>> mapDataItemsToReturn;
 
         Response.getListOfDataItems().size();
-        for (auto individualDataItem : Response.getListOfDataItems()) {
+        for (auto individualDataItem: Response.getListOfDataItems()) {
             const std::vector<uint8_t> key(individualDataItem.getKey().begin(), individualDataItem.getKey().end());
             std::vector<uint8_t> data(individualDataItem.getData().begin(), individualDataItem.getData().end());
             size_t expires_since_epoch = individualDataItem.getExpires();
