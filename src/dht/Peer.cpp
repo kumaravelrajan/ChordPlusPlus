@@ -1,5 +1,7 @@
 #include "Peer.h"
 #include <capnp/ez-rpc.h>
+#include <stack>
+#include <set>
 #include <util.h>
 #include <centralLogControl.h>
 
@@ -280,6 +282,16 @@ capnp::Data::Builder PeerImpl::buildId(const NodeInformation::id_type &id)
         );
     }
 
+    // Core Algorithm of Chord
+
+    std::stack<NodeInformation::Node> hops{{m_nodeInformation->getNode()}};
+    std::set<NodeInformation::Node> distrusted{};
+    // NOTE: this could be initialized using the rating system.
+    //   i.e.: With 50 random nodes from the 1000 worst rated nodes.
+    //   At the end, this set can be sent to the rating server.
+
+    // TODO: do not pass requests on to closest_preceding so that incorrect routing can be detected and mitigated.
+
     // Otherwise, pass the request to the closest preceding finger
     auto closest_preceding = getClosestPreceding(id);
 
@@ -363,6 +375,33 @@ void PeerImpl::setData(
         }, [LOG_CAPTURE](const kj::Exception &e) {
             LOG_DEBUG("Exception in request\n\t\t{}", e.getDescription().cStr());
         }).wait(client.getWaitScope());
+    }
+}
+
+// Helpers
+
+::kj::Promise<PeerImpl::ClosestPrecedingPair> PeerImpl::getClosestPrecedingHelper(const NodeInformation::Node &node)
+{
+    LOG_GET;
+    if (node == m_nodeInformation->getNode()) {
+        return ClosestPrecedingPair{
+            getClosestPreceding(node.getId()),
+            m_nodeInformation->getSuccessor()
+        };
+    } else {
+        auto client = kj::heap<capnp::EzRpcClient>(node.getIp(), node.getPort());
+        auto cap = client->getMain<Peer>();
+        auto req = cap.getClosestPrecedingRequest();
+        req.setId(buildId(node.getId()));
+        return req.send().attach(kj::mv(client)).then([](capnp::Response<Peer::GetClosestPrecedingResults> &&res) {
+            return ClosestPrecedingPair{
+                nodeFromReader(res.getPreceding()),
+                nodeFromReader(res.getDirectSuccessor())
+            };
+        }, [LOG_CAPTURE](kj::Exception &&e) {
+            LOG_DEBUG("Exception in request\n\t\t{}", e.getDescription().cStr());
+            return ClosestPrecedingPair{};
+        });
     }
 }
 

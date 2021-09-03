@@ -59,6 +59,20 @@ namespace dht
         ::kj::Promise<void> sendPoWPuzzleResponseToBootstrapAndGetSuccessor(
             SendPoWPuzzleResponseToBootstrapAndGetSuccessorContext context) override;
 
+        struct ClosestPrecedingPair
+        {
+            std::optional<NodeInformation::Node> closestPreceding{};
+            std::optional<NodeInformation::Node> successor{};
+        };
+
+        /**
+         * @brief
+         * If node refers to this node, returns results for this node.
+         * Otherwise makes request to the node in question.
+         * @return Promise of maybe closest preceding node and/or direct successor of the supplied node.
+         */
+        ::kj::Promise<ClosestPrecedingPair> getClosestPrecedingHelper(const NodeInformation::Node &node);
+
 
     public:
         explicit PeerImpl(std::shared_ptr<NodeInformation>);
