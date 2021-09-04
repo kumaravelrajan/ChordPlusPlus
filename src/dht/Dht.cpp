@@ -99,16 +99,20 @@ void Dht::setApi(std::unique_ptr<api::Api> api)
 
 std::optional<NodeInformation::Node> Dht::getSuccessor(NodeInformation::id_type key)
 {
+    auto started = std::chrono::system_clock::now();
     capnp::EzRpcClient client(m_nodeInformation->getIp(), m_nodeInformation->getPort());
     auto cap = client.getMain<Peer>();
     auto &waitScope = client.getWaitScope();
     auto req = cap.getSuccessorRequest();
     req.setId(capnp::Data::Builder(kj::heapArray<kj::byte>(key.begin(), key.end())));
-    return req.send().then([](capnp::Response<Peer::GetSuccessorResults> &&response) {
+    auto ret = req.send().then([](capnp::Response<Peer::GetSuccessorResults> &&response) {
         return PeerImpl::nodeFromReader(response.getNode());
     }, [](const kj::Exception &) {
         return std::optional<NodeInformation::Node>{};
     }).wait(waitScope);
+    auto length = std::chrono::system_clock::now() - started;
+    SPDLOG_DEBUG("getSuccessor() took {}us!", std::chrono::duration_cast<std::chrono::microseconds>(length).count());
+    return ret;
 }
 
 std::vector<uint8_t> Dht::onDhtPut(const api::Message_DHT_PUT &message_data, std::atomic_bool &cancelled)

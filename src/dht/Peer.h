@@ -74,7 +74,7 @@ namespace dht
          */
         ::kj::Promise<ClosestPrecedingPair>
         getClosestPrecedingHelper(const NodeInformation::Node &node, const NodeInformation::id_type &id,
-                                  std::shared_ptr<std::unordered_set<NodeInformation::Node, NodeInformation::Node::Node_hash>> distrusted);
+                                  const std::shared_ptr<std::unordered_set<NodeInformation::Node, NodeInformation::Node::Node_hash>> &distrusted);
 
     public:
         enum class GetSuccessorMethod
@@ -89,7 +89,11 @@ namespace dht
         static void buildNode(Node::Builder builder, const NodeInformation::Node &node);
         static void buildNode(Optional<Node>::Builder builder, const std::optional<NodeInformation::Node> &node);
         static NodeInformation::id_type idFromReader(capnp::Data::Reader id);
-        static capnp::Data::Builder buildId(const NodeInformation::id_type &id);
+        template<typename T, typename Cont>
+        inline static kj::Array<T> containerToArray(const Cont &cont)
+        {
+            return kj::heapArray<T>(cont.begin(), cont.end());
+        }
 
         ::kj::Promise<std::optional<NodeInformation::Node>> getSuccessor(NodeInformation::id_type id);
         std::optional<NodeInformation::Node> getClosestPreceding(NodeInformation::id_type id);

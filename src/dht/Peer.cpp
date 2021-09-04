@@ -49,7 +49,7 @@ PeerImpl::PeerImpl(std::shared_ptr<NodeInformation> nodeInformation, GetSuccesso
         auto node = context.getResults().getNode().getValue();
         node.setIp(pred->getIp());
         node.setPort(pred->getPort());
-        node.setId(buildId(pred->getId()));
+        node.setId(containerToArray<kj::byte>(pred->getId()));
     } else {
         context.getResults().getNode().setEmpty();
     }
@@ -228,7 +228,7 @@ void PeerImpl::buildNode(Node::Builder builder, const NodeInformation::Node &nod
 {
     builder.setIp(node.getIp());
     builder.setPort(node.getPort());
-    builder.setId(buildId(node.getId()));
+    builder.setId(containerToArray<kj::byte>(node.getId()));
 }
 
 void PeerImpl::buildNode(Optional<Node>::Builder builder, const std::optional<NodeInformation::Node> &node)
@@ -246,11 +246,6 @@ NodeInformation::id_type PeerImpl::idFromReader(capnp::Data::Reader id)
                 std::min(id.size(), ret.size()),
                 ret.begin());
     return ret;
-}
-
-capnp::Data::Builder PeerImpl::buildId(const NodeInformation::id_type &id)
-{
-    return {kj::heapArray<kj::byte>(id.begin(), id.end())};
 }
 
 // Interface
@@ -329,13 +324,13 @@ capnp::Data::Builder PeerImpl::buildId(const NodeInformation::id_type &id)
         return getClosestPrecedingHelper(current, id, distrusted).then(
             [LOG_CAPTURE, this, getSuccessorAlgorithm, id, hops, distrusted, current](
                 ClosestPrecedingPair &&result) mutable -> kj::Promise<std::optional<NodeInformation::Node>> {
-                // Responsible node has been found:
-                if (result.successor) return result.successor;
                 // In between node has been found:
                 if (result.closestPreceding) {
                     hops->push(*result.closestPreceding);
                     return getSuccessorAlgorithm(getSuccessorAlgorithm);
                 }
+                // Responsible node has been found:
+                if (result.successor) return result.successor;
                 distrusted->insert(current);
                 hops->pop();
                 return getSuccessorAlgorithm(getSuccessorAlgorithm);
@@ -418,54 +413,65 @@ void PeerImpl::setData(
 
 ::kj::Promise<PeerImpl::ClosestPrecedingPair>
 PeerImpl::getClosestPrecedingHelper(const NodeInformation::Node &node, const NodeInformation::id_type &id,
-                                    std::shared_ptr<std::unordered_set<NodeInformation::Node, NodeInformation::Node::Node_hash>> distrusted)
+                                    const std::shared_ptr<std::unordered_set<NodeInformation::Node, NodeInformation::Node::Node_hash>> &distrusted)
 {
     LOG_GET;
-    auto impl = [LOG_CAPTURE, this, node, distrusted](
+    auto checkResult = [LOG_CAPTURE, this, node, distrusted, id](
+        ClosestPrecedingPair result) mutable -> ::kj::Promise<PeerImpl::ClosestPrecedingPair> {
+        // Verify that preceding is between the asked node and the requested id,
+        // and if directSuccessor is populated, make sure it is responsible for the id!
+        if (result.closestPreceding &&
+            !util::is_in_range_loop(result.closestPreceding->getId(), node.getId(), id, false, false)) {
+            LOG_INFO("Returned closest preceding is not in between node and id!");
+            result.closestPreceding.reset();
+        }
+        if (result.successor && *result.successor == m_nodeInformation->getNode()) {
+            result.successor.reset();
+        } else if (result.successor) {
+            auto client = kj::heap<capnp::EzRpcClient>(result.successor->getIp(), result.successor->getPort());
+            auto cap = client->getMain<Peer>();
+            auto req = cap.getPredecessorRequest();
+            return req.send().attach(kj::mv(client)).then(
+                [LOG_CAPTURE, node, id, result](capnp::Response<Peer::GetPredecessorResults> &&res) mutable {
+                    auto pred = nodeFromReader(res.getNode());
+                    std::cout << "asd" << std::endl;
+                    if (!pred || (pred && !util::is_in_range_loop(id, pred->getId(), node.getId(), false, true))) {
+                        LOG_INFO("Returned direct successor is not responsible for the id [{}]!",
+                                 util::hexdump(id, 32, false, false));
+                        result.successor.reset();
+                    }
+                    return result;
+                }
+            );
+        }
+        return result;
+    };
+
+    auto impl = [LOG_CAPTURE, this, node, distrusted, checkResult](
         const NodeInformation::id_type &id) mutable -> ::kj::Promise<PeerImpl::ClosestPrecedingPair> {
+
         if (node == m_nodeInformation->getNode()) {
-            return ClosestPrecedingPair{
+            return checkResult(ClosestPrecedingPair{
                 getClosestPreceding(id),
                 m_nodeInformation->getSuccessor()
-            };
+            });
         } else {
             auto client = kj::heap<capnp::EzRpcClient>(node.getIp(), node.getPort());
             auto cap = client->getMain<Peer>();
             auto req = cap.getClosestPrecedingRequest();
-            req.setId(buildId(id));
-            return req.send().attach(kj::mv(client)).then([](capnp::Response<Peer::GetClosestPrecedingResults> &&res) {
-                return ClosestPrecedingPair{
-                    nodeFromReader(res.getPreceding()),
-                    nodeFromReader(res.getDirectSuccessor())
-                };
-            }, [LOG_CAPTURE](kj::Exception &&e) {
-                LOG_DEBUG("Exception in request\n\t\t{}", e.getDescription().cStr());
-                return ClosestPrecedingPair{};
-            }).then([LOG_CAPTURE, node, id](ClosestPrecedingPair result) -> kj::Promise<ClosestPrecedingPair> {
-                // Verify that preceding is between the asked node and the requested id,
-                // and if directSuccessor is populated, make sure it is responsible for the id!
-                if (result.closestPreceding &&
-                    !util::is_in_range_loop(result.closestPreceding->getId(), node.getId(), id, false, false)) {
-                    LOG_INFO("Returned closest preceding is not responsible in between node and id!");
-                    result.closestPreceding.reset();
+            req.setId(containerToArray<kj::byte>(id));
+            return req.send().attach(kj::mv(client)).then(
+                [](capnp::Response<Peer::GetClosestPrecedingResults> &&res) {
+                    return ClosestPrecedingPair{
+                        nodeFromReader(res.getPreceding()),
+                        nodeFromReader(res.getDirectSuccessor())
+                    };
+                }, [LOG_CAPTURE](kj::Exception &&e) {
+                    LOG_DEBUG("Exception in request\n\t\t{}", e.getDescription().cStr());
+                    return ClosestPrecedingPair{};
                 }
-                if (result.successor) {
-                    auto client = kj::heap<capnp::EzRpcClient>(result.successor->getIp(), result.successor->getPort());
-                    auto cap = client->getMain<Peer>();
-                    auto req = cap.getPredecessorRequest();
-                    return req.send().attach(kj::mv(client)).then(
-                        [LOG_CAPTURE, node, id, result](capnp::Response<Peer::GetPredecessorResults> &&res) mutable {
-                            auto pred = nodeFromReader(res.getNode());
-                            if (pred && !util::is_in_range_loop(id, pred->getId(), node.getId(), false, true)) {
-                                LOG_INFO("Returned direct successor is not responsible for the id [{}]!",
-                                         util::hexdump(id, 32, false, false));
-                                result.successor.reset();
-                            }
-                            return result;
-                        }
-                    );
-                }
-                return result;
+            ).then([checkResult](ClosestPrecedingPair &&result) mutable {
+                return checkResult(result);
             });
         }
     };

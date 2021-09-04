@@ -4,3 +4,9 @@ sleep 1
 add 6009
 sleep 10
 execute show_nodes.txt
+add 6010
+add 6011
+add 6012
+add 6013
+add 6014
+add 6015
