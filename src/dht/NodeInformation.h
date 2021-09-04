@@ -30,6 +30,34 @@ public:
 
     class Node
     {
+    public:
+        struct Node_hash
+        {
+            /**
+             * @brief
+             * interpret the array as if it consisted of size_t's by adding elements with increasing offsets.
+             * Once one size_t's worth of bytes was added, the result is xor-ed into the result.
+             * It is as if all the size_t's were xor-ed together.
+             * The important part is that if id.size() is not divisible by 8, this will still use all bytes.
+             */
+            std::size_t operator()(const Node &node) const
+            {
+                auto id = node.getId();
+                std::size_t ret = 0;
+                std::size_t tmp = 0;
+                for (uint32_t i = 0; i < id.size(); ++i) {
+                    tmp += static_cast<std::size_t>(id[i]) << (8 * (i % sizeof(std::size_t)));
+                    if ((i + 1) % sizeof(std::size_t) == 0) {
+                        ret ^= tmp;
+                        tmp = 0;
+                    }
+                }
+                ret ^= tmp;
+                return ret;
+            }
+        };
+
+    private:
         std::string m_ip;
         uint16_t m_port;
 
@@ -56,7 +84,7 @@ public:
         void updateId() const;
 
     public:
-        bool operator==(const Node &other) const { return m_ip == other.m_ip && m_port == other.m_port; }
+        bool operator==(const Node &other) const { return getId() == other.getId(); }
         bool operator!=(const Node &other) const { return !(*this == other); }
     };
 
@@ -84,7 +112,7 @@ private:
     static uint8_t m_difficulty;
 
 public:
-    [[nodiscard]] const Node &getNode() const;
+    [[nodiscard]] Node getNode() const;
     void setNode(const Node &node);
     [[nodiscard]] id_type getId() const;
     void setId(std::optional<id_type> id = {});
@@ -102,15 +130,15 @@ public:
     /**
      * @throws std::out_of_range
      */
-    [[nodiscard]] const std::optional<Node> &getFinger(size_t index) const;
+    [[nodiscard]] std::optional<Node> getFinger(size_t index) const;
     /**
      * @throws std::out_of_range
      */
     void setFinger(size_t index, const std::optional<Node> &node = {});
 
-    [[nodiscard]] const std::optional<Node> &getSuccessor();
+    [[nodiscard]] std::optional<Node> getSuccessor();
     void setSuccessor(const std::optional<Node> &node = {});
-    [[nodiscard]] const std::optional<Node> &getPredecessor() const;
+    [[nodiscard]] std::optional<Node> getPredecessor() const;
     void setPredecessor(const std::optional<Node> &node = {});
 
     [[nodiscard]] std::optional<std::vector<uint8_t>> getData(const std::vector<uint8_t> &key) const;

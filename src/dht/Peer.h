@@ -4,6 +4,7 @@
 #include <capnp/capability.h>
 #include <peer.capnp.h>
 #include <memory>
+#include <unordered_set>
 #include <atomic>
 #include "NodeInformation.h"
 
@@ -71,11 +72,17 @@ namespace dht
          * Otherwise makes request to the node in question.
          * @return Promise of maybe closest preceding node and/or direct successor of the supplied node.
          */
-        ::kj::Promise<ClosestPrecedingPair> getClosestPrecedingHelper(const NodeInformation::Node &node);
-
+        ::kj::Promise<ClosestPrecedingPair>
+        getClosestPrecedingHelper(const NodeInformation::Node &node, const NodeInformation::id_type &id,
+                                  std::shared_ptr<std::unordered_set<NodeInformation::Node, NodeInformation::Node::Node_hash>> distrusted);
 
     public:
-        explicit PeerImpl(std::shared_ptr<NodeInformation>);
+        enum class GetSuccessorMethod
+        {
+            PASS_ON, LOCAL
+        };
+
+        explicit PeerImpl(std::shared_ptr<NodeInformation>, GetSuccessorMethod = GetSuccessorMethod::LOCAL);
 
         static NodeInformation::Node nodeFromReader(Node::Reader node);
         static std::optional<NodeInformation::Node> nodeFromReader(Optional<Node>::Reader node);
@@ -95,6 +102,7 @@ namespace dht
         void getDataItemsOnJoinHelper(std::optional<NodeInformation::Node> successorNode);
 
     private:
+        GetSuccessorMethod m_getSuccessorMethod;
         std::shared_ptr<NodeInformation> m_nodeInformation;
     };
 }

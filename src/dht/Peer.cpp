@@ -1,7 +1,6 @@
 #include "Peer.h"
 #include <capnp/ez-rpc.h>
 #include <stack>
-#include <set>
 #include <util.h>
 #include <centralLogControl.h>
 
@@ -10,7 +9,8 @@ using dht::Peer;
 using dht::Node;
 
 
-PeerImpl::PeerImpl(std::shared_ptr<NodeInformation> nodeInformation) :
+PeerImpl::PeerImpl(std::shared_ptr<NodeInformation> nodeInformation, GetSuccessorMethod getSuccessorMethod) :
+    m_getSuccessorMethod{getSuccessorMethod},
     m_nodeInformation{std::move(nodeInformation)} {}
 
 // Server methods
@@ -166,6 +166,7 @@ PeerImpl::PeerImpl(std::shared_ptr<NodeInformation> nodeInformation) :
 ::kj::Promise<void> PeerImpl::sendPoWPuzzleResponseToBootstrapAndGetSuccessor(
     SendPoWPuzzleResponseToBootstrapAndGetSuccessorContext context)
 {
+
     std::string sPoW_Reponse(context.getParams().getProofOfWorkPuzzleResponse());
 
     std::string sPoW_HashOfResponse(context.getParams().getHashOfproofOfWorkPuzzleResponse());
@@ -176,23 +177,30 @@ PeerImpl::PeerImpl(std::shared_ptr<NodeInformation> nodeInformation) :
 
     // If new node is 127.0.0.1:6007, PoW_Reponse contains some string appended to "127.0.0.1:6007". 
     // Check if correct PoW_Reponse has been handed over by new node.
-        KJ_ASSERT(sPoW_Reponse.substr(0, sTestString.size()) == sTestString);
+        KJ_ASSERT(sPoW_Reponse.substr(0, sTestString.size()) == sTestString) {
+            return kj::READY_NOW;
+        }
+
     std::string sCalculatedHashOfPuzzleResponse = util::bytedump(util::hash_sha1(sPoW_Reponse), SHA_DIGEST_LENGTH);
     sCalculatedHashOfPuzzleResponse.erase(
         std::remove_if(sCalculatedHashOfPuzzleResponse.begin(), sCalculatedHashOfPuzzleResponse.end(), ::isspace),
         sCalculatedHashOfPuzzleResponse.end());
 
     // Check if hash(sPoW_Reponse) == sPoW_HashOfResponse
-        KJ_ASSERT(sCalculatedHashOfPuzzleResponse == sPoW_HashOfResponse);
+        KJ_ASSERT(sCalculatedHashOfPuzzleResponse == sPoW_HashOfResponse) {
+            return kj::READY_NOW;
+        }
 
     // Check if sPoW_HashOfResponse has correct number of leading zeroes
     std::string strDifficulty(static_cast<size_t>(m_nodeInformation->getDifficulty()), '0');
         KJ_ASSERT(
-        sPoW_HashOfResponse.substr(0, static_cast<size_t>(m_nodeInformation->getDifficulty())) == strDifficulty);
+        sPoW_HashOfResponse.substr(0, static_cast<size_t>(m_nodeInformation->getDifficulty())) == strDifficulty) {
+            return kj::READY_NOW;
+        }
 
     // If all checks passed, get successor of new node
     return getSuccessor(newNode.getId()).then(
-        [KJ_CPCAP(context)](const std::optional<NodeInformation::Node> &successor) mutable {
+        [KJ_CPCAP(context)](std::optional<NodeInformation::Node> &&successor) mutable {
             buildNode(context.getResults().getSuccessorOfNewNode(), successor);
         });
 }
@@ -203,8 +211,9 @@ NodeInformation::Node PeerImpl::nodeFromReader(Node::Reader value)
 {
     return NodeInformation::Node{
         value.getIp(),
-        value.getPort(),
-        idFromReader(value.getId())
+        value.getPort()
+        //
+        //, idFromReader(value.getId())
     };
 }
 
@@ -249,6 +258,7 @@ capnp::Data::Builder PeerImpl::buildId(const NodeInformation::id_type &id)
 ::kj::Promise<std::optional<NodeInformation::Node>> PeerImpl::getSuccessor(NodeInformation::id_type id)
 {
     LOG_GET
+
     // If this node is requested
     auto pred = m_nodeInformation->getPredecessor();
     if (pred &&
@@ -282,43 +292,69 @@ capnp::Data::Builder PeerImpl::buildId(const NodeInformation::id_type &id)
         );
     }
 
+    if (m_getSuccessorMethod == GetSuccessorMethod::PASS_ON) {
+        // Otherwise, pass the request to the closest preceding finger
+        auto closest_preceding = getClosestPreceding(id);
+
+        if (!closest_preceding) {
+            return std::optional<NodeInformation::Node>{};
+        }
+
+        auto client = kj::heap<capnp::EzRpcClient>(closest_preceding->getIp(), closest_preceding->getPort());
+        auto cap = client->getMain<Peer>();
+        auto req = cap.getSuccessorRequest();
+        req.setId(capnp::Data::Builder{kj::heapArray<kj::byte>(id.begin(), id.end())});
+        return req.send().attach(kj::mv(client)).then([](capnp::Response<Peer::GetSuccessorResults> &&response) {
+            return nodeFromReader(response.getNode());
+        }, [LOG_CAPTURE](const kj::Exception &e) {
+            LOG_DEBUG("Exception in request\n\t\t{}", e.getDescription().cStr());
+            return std::optional<NodeInformation::Node>{};
+        });
+    }
+
     // Core Algorithm of Chord
 
-    std::stack<NodeInformation::Node> hops{{m_nodeInformation->getNode()}};
-    std::set<NodeInformation::Node> distrusted{};
+    auto hops = std::make_shared<std::stack<NodeInformation::Node>>(std::deque{m_nodeInformation->getNode()});
+    auto distrusted = std::make_shared<std::unordered_set<NodeInformation::Node, NodeInformation::Node::Node_hash>>();
     // NOTE: this could be initialized using the rating system.
     //   i.e.: With 50 random nodes from the 1000 worst rated nodes.
     //   At the end, this set can be sent to the rating server.
 
-    // TODO: do not pass requests on to closest_preceding so that incorrect routing can be detected and mitigated.
+    auto getSuccessorAlgorithm = [LOG_CAPTURE, this, id, hops, distrusted](
+        auto getSuccessorAlgorithm
+    ) mutable -> kj::Promise<std::optional<NodeInformation::Node>> {
+        if (hops->empty())
+            return std::optional<NodeInformation::Node>{};
+        auto current = hops->top();
+        return getClosestPrecedingHelper(current, id, distrusted).then(
+            [LOG_CAPTURE, this, getSuccessorAlgorithm, id, hops, distrusted, current](
+                ClosestPrecedingPair &&result) mutable -> kj::Promise<std::optional<NodeInformation::Node>> {
+                // Responsible node has been found:
+                if (result.successor) return result.successor;
+                // In between node has been found:
+                if (result.closestPreceding) {
+                    hops->push(*result.closestPreceding);
+                    return getSuccessorAlgorithm(getSuccessorAlgorithm);
+                }
+                distrusted->insert(current);
+                hops->pop();
+                return getSuccessorAlgorithm(getSuccessorAlgorithm);
+            }
+        );
+    };
 
-    // Otherwise, pass the request to the closest preceding finger
-    auto closest_preceding = getClosestPreceding(id);
-
-    if (!closest_preceding) {
-        return std::optional<NodeInformation::Node>{};
-    }
-
-    auto client = kj::heap<capnp::EzRpcClient>(closest_preceding->getIp(), closest_preceding->getPort());
-    auto cap = client->getMain<Peer>();
-    auto req = cap.getSuccessorRequest();
-    req.setId(capnp::Data::Builder{kj::heapArray<kj::byte>(id.begin(), id.end())});
-    return req.send().then([client = kj::mv(client)](capnp::Response<Peer::GetSuccessorResults> &&response) {
-        return nodeFromReader(response.getNode());
-    }, [LOG_CAPTURE](const kj::Exception &e) {
-        LOG_DEBUG("Exception in request\n\t\t{}", e.getDescription().cStr());
-        return std::optional<NodeInformation::Node>{};
-    });
+    return getSuccessorAlgorithm(getSuccessorAlgorithm);
 }
 
 std::optional<NodeInformation::Node> PeerImpl::getClosestPreceding(NodeInformation::id_type id)
 {
     for (size_t i = NodeInformation::key_bits; i >= 1ull; --i) {
-        if (m_nodeInformation->getFinger(i - 1) && util::is_in_range_loop(
-            m_nodeInformation->getFinger(i - 1)->getId(), m_nodeInformation->getId(), id,
+        auto finger = m_nodeInformation->getFinger(i - 1);
+        if (finger && util::is_in_range_loop(
+            finger->getId(), m_nodeInformation->getId(), id,
             false, false
         ))
-            return m_nodeInformation->getFinger(i - 1);
+            return finger;
     }
     return {};
 }
@@ -380,29 +416,74 @@ void PeerImpl::setData(
 
 // Helpers
 
-::kj::Promise<PeerImpl::ClosestPrecedingPair> PeerImpl::getClosestPrecedingHelper(const NodeInformation::Node &node)
+::kj::Promise<PeerImpl::ClosestPrecedingPair>
+PeerImpl::getClosestPrecedingHelper(const NodeInformation::Node &node, const NodeInformation::id_type &id,
+                                    std::shared_ptr<std::unordered_set<NodeInformation::Node, NodeInformation::Node::Node_hash>> distrusted)
 {
     LOG_GET;
-    if (node == m_nodeInformation->getNode()) {
-        return ClosestPrecedingPair{
-            getClosestPreceding(node.getId()),
-            m_nodeInformation->getSuccessor()
-        };
-    } else {
-        auto client = kj::heap<capnp::EzRpcClient>(node.getIp(), node.getPort());
-        auto cap = client->getMain<Peer>();
-        auto req = cap.getClosestPrecedingRequest();
-        req.setId(buildId(node.getId()));
-        return req.send().attach(kj::mv(client)).then([](capnp::Response<Peer::GetClosestPrecedingResults> &&res) {
+    auto impl = [LOG_CAPTURE, this, node, distrusted](
+        const NodeInformation::id_type &id) mutable -> ::kj::Promise<PeerImpl::ClosestPrecedingPair> {
+        if (node == m_nodeInformation->getNode()) {
             return ClosestPrecedingPair{
-                nodeFromReader(res.getPreceding()),
-                nodeFromReader(res.getDirectSuccessor())
+                getClosestPreceding(id),
+                m_nodeInformation->getSuccessor()
             };
-        }, [LOG_CAPTURE](kj::Exception &&e) {
-            LOG_DEBUG("Exception in request\n\t\t{}", e.getDescription().cStr());
-            return ClosestPrecedingPair{};
+        } else {
+            auto client = kj::heap<capnp::EzRpcClient>(node.getIp(), node.getPort());
+            auto cap = client->getMain<Peer>();
+            auto req = cap.getClosestPrecedingRequest();
+            req.setId(buildId(id));
+            return req.send().attach(kj::mv(client)).then([](capnp::Response<Peer::GetClosestPrecedingResults> &&res) {
+                return ClosestPrecedingPair{
+                    nodeFromReader(res.getPreceding()),
+                    nodeFromReader(res.getDirectSuccessor())
+                };
+            }, [LOG_CAPTURE](kj::Exception &&e) {
+                LOG_DEBUG("Exception in request\n\t\t{}", e.getDescription().cStr());
+                return ClosestPrecedingPair{};
+            }).then([LOG_CAPTURE, node, id](ClosestPrecedingPair result) -> kj::Promise<ClosestPrecedingPair> {
+                // Verify that preceding is between the asked node and the requested id,
+                // and if directSuccessor is populated, make sure it is responsible for the id!
+                if (result.closestPreceding &&
+                    !util::is_in_range_loop(result.closestPreceding->getId(), node.getId(), id, false, false)) {
+                    LOG_INFO("Returned closest preceding is not responsible in between node and id!");
+                    result.closestPreceding.reset();
+                }
+                if (result.successor) {
+                    auto client = kj::heap<capnp::EzRpcClient>(result.successor->getIp(), result.successor->getPort());
+                    auto cap = client->getMain<Peer>();
+                    auto req = cap.getPredecessorRequest();
+                    return req.send().attach(kj::mv(client)).then(
+                        [LOG_CAPTURE, node, id, result](capnp::Response<Peer::GetPredecessorResults> &&res) mutable {
+                            auto pred = nodeFromReader(res.getNode());
+                            if (pred && !util::is_in_range_loop(id, pred->getId(), node.getId(), false, true)) {
+                                LOG_INFO("Returned direct successor is not responsible for the id [{}]!",
+                                         util::hexdump(id, 32, false, false));
+                                result.successor.reset();
+                            }
+                            return result;
+                        }
+                    );
+                }
+                return result;
+            });
+        }
+    };
+
+    auto iterate = [LOG_CAPTURE, this, node, distrusted, impl](
+        auto iterate,
+        const NodeInformation::id_type &id) mutable -> ::kj::Promise<PeerImpl::ClosestPrecedingPair> {
+        return impl(id).then([LOG_CAPTURE, this, node, distrusted, impl, iterate](
+            PeerImpl::ClosestPrecedingPair &&result) mutable -> ::kj::Promise<PeerImpl::ClosestPrecedingPair> {
+            if (result.closestPreceding && distrusted->contains(*result.closestPreceding)) {
+                LOG_DEBUG("Skipping closest preceding because of distrust!");
+                return iterate(iterate, result.closestPreceding->getId());
+            }
+            return result;
         });
-    }
+    };
+
+    return iterate(iterate, id);
 }
 
 void PeerImpl::getDataItemsOnJoinHelper(std::optional<NodeInformation::Node> successorNode)

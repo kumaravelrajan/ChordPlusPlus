@@ -38,7 +38,7 @@ NodeInformation::~NodeInformation()
 }
 
 // Getters and Setters
-const NodeInformation::Node &NodeInformation::getNode() const
+NodeInformation::Node NodeInformation::getNode() const
 {
     return m_node;
 }
@@ -70,7 +70,7 @@ void NodeInformation::setId(std::optional<id_type> id)
 {
     m_node.setId(id);
 }
-const std::optional<NodeInformation::Node> &NodeInformation::getFinger(size_t index) const
+std::optional<NodeInformation::Node> NodeInformation::getFinger(size_t index) const
 {
     std::shared_lock l{m_fingerTableMutex};
     if (index >= m_fingerTable.size())
@@ -84,10 +84,10 @@ void NodeInformation::setFinger(size_t index, const std::optional<Node> &node)
         throw std::out_of_range("index out of bounds");
     m_fingerTable[index] = node;
 }
-const std::optional<NodeInformation::Node> &NodeInformation::getSuccessor()
+std::optional<NodeInformation::Node> NodeInformation::getSuccessor()
 {
     std::shared_lock f{m_fingerTableMutex};
-    for (auto &finger : m_fingerTable)
+    for (auto &finger: m_fingerTable)
         if (finger) return finger;
     return m_fingerTable[0];
 }
@@ -96,7 +96,7 @@ void NodeInformation::setSuccessor(const std::optional<Node> &node)
     std::unique_lock f{m_fingerTableMutex};
     m_fingerTable[0] = node;
 }
-const std::optional<NodeInformation::Node> &NodeInformation::getPredecessor() const
+std::optional<NodeInformation::Node> NodeInformation::getPredecessor() const
 {
     std::shared_lock f{m_predecessorMutex};
     return m_predecessor;
@@ -151,7 +151,7 @@ std::optional<NodeInformation::data_type> NodeInformation::getDataItemsForNodeId
     id_type new_id = newNode.getId();
     auto pred = getPredecessor();
     id_type pred_id = pred ? pred->getId() : new_id;
-    for (auto &s : m_data) {
+    for (auto &s: m_data) {
         const std::string strDataKey{s.first.begin(), s.first.end()};
         id_type key_hash = util::hash_sha256(strDataKey);
 
@@ -170,7 +170,7 @@ NodeInformation::data_type NodeInformation::getAllDataInNode() const
 void NodeInformation::deleteDataAssignedToPredecessor(std::vector<std::vector<uint8_t>> &keyOfDataItemsToDelete)
 {
     std::unique_lock l{m_dataMutex};
-    for (const auto &s : keyOfDataItemsToDelete) {
+    for (const auto &s: keyOfDataItemsToDelete) {
         m_data.erase(s);
     }
 }

@@ -262,7 +262,7 @@ void Dht::join(const NodeInformation::Node &node)
     // Start RPC - get PoW puzzle from bootstrap
     std::string sFinalResponseToPuzzle{};
     req.send().then([LOG_CAPTURE, this, &sFinalResponseToPuzzle, &node](
-        capnp::Response<Peer::GetPoWPuzzleOnJoinResults> &&response) {
+        capnp::Response<Peer::GetPoWPuzzleOnJoinResults> &&response) -> kj::Promise<void> {
         LOG_DEBUG("got PoW puzzle from bootstrap");
         auto puzzle = response.getProofOfWorkPuzzle();
         std::string strPuzzle{puzzle};
@@ -294,26 +294,27 @@ void Dht::join(const NodeInformation::Node &node)
             LOG_DEBUG("{}:{} successfully solved puzzle.", this->m_nodeInformation->getIp(),
                       this->m_nodeInformation->getPort());
 
-            capnp::EzRpcClient client2{node.getIp(), node.getPort()};
-            auto cap2 = client2.getMain<Peer>();
-            auto req2 = cap2.sendPoWPuzzleResponseToBootstrapAndGetSuccessorRequest();
-            PeerImpl::buildNode(req2.getNewNode(), m_nodeInformation->getNode());
-            req2.setHashOfproofOfWorkPuzzleResponse(sFinalResponseToPuzzle);
-            req2.setProofOfWorkPuzzleResponse(possiblePuzzleResponse);
+            auto client = kj::heap<capnp::EzRpcClient>(node.getIp(), node.getPort());
+            auto cap = client->getMain<Peer>();
+            auto req = cap.sendPoWPuzzleResponseToBootstrapAndGetSuccessorRequest();
+            PeerImpl::buildNode(req.getNewNode(), m_nodeInformation->getNode());
+            req.setHashOfproofOfWorkPuzzleResponse(sFinalResponseToPuzzle);
+            req.setProofOfWorkPuzzleResponse(possiblePuzzleResponse);
 
-            req2.send().then([LOG_CAPTURE, this, &node](
-                capnp::Response<Peer::SendPoWPuzzleResponseToBootstrapAndGetSuccessorResults> &&response2) {
-                if (response2.hasSuccessorOfNewNode()) {
-                    auto successor = getPeerImpl().nodeFromReader(response2.getSuccessorOfNewNode());
+            return req.send().attach(kj::mv(client)).then([LOG_CAPTURE, this, node](
+                capnp::Response<Peer::SendPoWPuzzleResponseToBootstrapAndGetSuccessorResults> &&response) {
+                if (response.hasSuccessorOfNewNode()) {
+                    auto successor = PeerImpl::nodeFromReader(response.getSuccessorOfNewNode());
                     this->m_nodeInformation->setSuccessor(successor);
                 } else {
                     this->m_nodeInformation->setSuccessor();
                 }
             }, [LOG_CAPTURE](const kj::Exception &e) {
                 LOG_ERR(e);
-            }).wait(client2.getWaitScope());
+            });
         }
-    }, [LOG_CAPTURE](const kj::Exception &e) {
+        return kj::READY_NOW;
+    }, [LOG_CAPTURE](kj::Exception &&e) {
         LOG_ERR(e);
     }).wait(client.getWaitScope());
 }
