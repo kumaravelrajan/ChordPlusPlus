@@ -51,7 +51,7 @@ Entry::Entry(const config::Configuration &conf) : Entry()
     uint16_t dht_port = conf.p2p_port;
     uint16_t api_port = conf.api_port;
 
-    for (size_t i = 0; i <= conf.extra_debug_nodes; i++) {
+    for (size_t i = 0; i < conf.node_amount; i++) {
         {
             SPDLOG_DEBUG(
                 "\n"
@@ -214,7 +214,7 @@ void Entry::execute(std::vector<std::string> args, std::ostream &os, std::ostrea
     }
 }
 
-void Entry::addNodeDynamicallyToNetwork(std::optional<uint16_t> portParam, std::ostream &os)
+void Entry::addNode(std::optional<uint16_t> portParam, std::ostream &os)
 {
     uint16_t Port = portParam ? *portParam : (m_nodes.back()->getPort() + 1);
 
@@ -344,12 +344,12 @@ Entry::Entry() : m_commands{
                 if (!args.empty()) {
                     auto port = parse_number<uint16_t>(args[0]);
                     if (port) {
-                        addNodeDynamicallyToNetwork(*port, os);
+                        addNode(*port, os);
                     } else {
-                        addNodeDynamicallyToNetwork();
+                        addNode();
                     }
                 } else {
-                    addNodeDynamicallyToNetwork();
+                    addNode();
                 }
             }
         }

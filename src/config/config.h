@@ -16,7 +16,7 @@ namespace config
         uint16_t api_port{7002};
         std::string bootstrapNode_address{"127.0.0.1"};
         uint16_t bootstrapNode_port{6002};
-        uint64_t extra_debug_nodes{0};
+        uint64_t node_amount{1};
         std::optional<std::string> startup_script{};
         static uint8_t PoW_Difficulty;
     };
