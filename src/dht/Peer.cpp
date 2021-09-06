@@ -434,7 +434,6 @@ PeerImpl::getClosestPrecedingHelper(const NodeInformation::Node &node, const Nod
             return req.send().attach(kj::mv(client)).then(
                 [LOG_CAPTURE, node, id, result](capnp::Response<Peer::GetPredecessorResults> &&res) mutable {
                     auto pred = nodeFromReader(res.getNode());
-                    std::cout << "asd" << std::endl;
                     if (!pred || (pred && !util::is_in_range_loop(id, pred->getId(), node.getId(), false, true))) {
                         LOG_INFO("Returned direct successor is not responsible for the id [{}]!",
                                  util::hexdump(id, 32, false, false));
