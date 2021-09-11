@@ -6,15 +6,9 @@
 
 using namespace api;
 
-template<class T, std::enable_if_t<std::is_convertible_v<std::remove_cvref_t<T>, std::vector<uint8_t>>, int>>
-Request::Request(T &&bytes):
-    m_rawBytes(std::forward<T>(bytes))
+Request::Request(MessageHeader header, std::vector<uint8_t> bytes) :
+    m_rawBytes(std::move(bytes))
 {
-    if (m_rawBytes.size() < sizeof(MessageHeader::MessageHeaderRaw))
-        throw bad_buffer_size("buffer too small for header");
-
-    MessageHeader header(reinterpret_cast<MessageHeader::MessageHeaderRaw &>(m_rawBytes[0]));
-
     if (m_rawBytes.size() < header.size)
         throw bad_buffer_size("buffer smaller than specified in header");
 
@@ -48,7 +42,3 @@ std::vector<uint8_t> Request::getBytes() const
 {
     return m_rawBytes;
 }
-
-template Request::Request(std::vector<uint8_t> &&);
-template Request::Request(std::vector<uint8_t> &);
-template Request::Request(const std::vector<uint8_t> &);

@@ -32,6 +32,7 @@ void InitSpdlog(const int &consoleLogLevel, const std::string &logfilePath)
                                                                     spdlog::thread_pool(),
                                                                     spdlog::async_overflow_policy::block);
     async_file_logger->set_pattern("[%Y-%m-%d %H:%M:%S.%e] %^[%l] [%s::%!()-#%#] %v%$");
+    async_file_logger->set_level(spdlog::level::debug);
     spdlog::set_default_logger(async_file_logger);
 
     spdlog::flush_every(5s);
@@ -52,9 +53,9 @@ int main(int argc, char *argv[])
         )
         ("h,help", "Print usage")
         (
-            "n,testNodeAmount",
-            "Create multiple nodes on localhost for testing.\n0 means no extra nodes.",
-            cxxopts::value<uint64_t>()->default_value("0")
+            "n,node-amount",
+            "Create multiple nodes on localhost for testing.\n0 means no nodes at all. Default is 1.",
+            cxxopts::value<uint64_t>()->default_value("1")
         )
         (
             "l,logMode",
@@ -94,8 +95,8 @@ int main(int argc, char *argv[])
     conf.startup_script = conf.startup_script ? conf.startup_script : startup_script;
 
     // Get user input nodes to create
-    if (args.count("testNodeAmount")) {
-        conf.extra_debug_nodes = args["testNodeAmount"].as<uint64_t>();
+    if (args.count("node-amount")) {
+        conf.node_amount = args["node-amount"].as<uint64_t>();
     }
 
     // Get difficulty level for PoW

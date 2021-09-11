@@ -38,19 +38,8 @@ NodeInformation::~NodeInformation()
     m_dataCleaner.wait();
 }
 
-NodeInformation::id_type NodeInformation::hash_sha1(const std::string &str)
-{
-    unsigned char obuf[SHA_DIGEST_LENGTH] = {};
-
-    ::SHA1(reinterpret_cast<const unsigned char *>(str.c_str()), str.length(), obuf);
-
-    id_type ret{};
-    std::copy(obuf, obuf + SHA_DIGEST_LENGTH, ret.begin());
-    return ret;
-}
-
 // Getters and Setters
-const NodeInformation::Node &NodeInformation::getNode() const
+NodeInformation::Node NodeInformation::getNode() const
 {
     return m_node;
 }
@@ -78,7 +67,11 @@ NodeInformation::id_type NodeInformation::getId() const
 {
     return m_node.getId();
 }
-const std::optional<NodeInformation::Node> &NodeInformation::getFinger(size_t index) const
+void NodeInformation::setId(std::optional<id_type> id)
+{
+    m_node.setId(id);
+}
+std::optional<NodeInformation::Node> NodeInformation::getFinger(size_t index) const
 {
     std::shared_lock l{m_fingerTableMutex};
     if (index >= m_fingerTable.size())
@@ -92,10 +85,10 @@ void NodeInformation::setFinger(size_t index, const std::optional<Node> &node)
         throw std::out_of_range("index out of bounds");
     m_fingerTable[index] = node;
 }
-const std::optional<NodeInformation::Node> &NodeInformation::getSuccessor()
+std::optional<NodeInformation::Node> NodeInformation::getSuccessor()
 {
     std::shared_lock f{m_fingerTableMutex};
-    for (auto &finger : m_fingerTable)
+    for (auto &finger: m_fingerTable)
         if (finger) return finger;
     return m_fingerTable[0];
 }
@@ -104,7 +97,7 @@ void NodeInformation::setSuccessor(const std::optional<Node> &node)
     std::unique_lock f{m_fingerTableMutex};
     m_fingerTable[0] = node;
 }
-const std::optional<NodeInformation::Node> &NodeInformation::getPredecessor() const
+std::optional<NodeInformation::Node> NodeInformation::getPredecessor() const
 {
     std::shared_lock f{m_predecessorMutex};
     return m_predecessor;
@@ -159,9 +152,9 @@ std::optional<NodeInformation::data_type> NodeInformation::getDataItemsForNodeId
     id_type new_id = newNode.getId();
     auto pred = getPredecessor();
     id_type pred_id = pred ? pred->getId() : new_id;
-    for (auto &s : m_data) {
+    for (auto &s: m_data) {
         const std::string strDataKey{s.first.begin(), s.first.end()};
-        id_type key_hash = NodeInformation::hash_sha1(strDataKey);
+        id_type key_hash = util::hash_sha256(strDataKey);
 
         if (util::is_in_range_loop(key_hash, pred_id, new_id, false, true)) {
             dataToReturn.insert(s);
@@ -178,7 +171,7 @@ NodeInformation::data_type NodeInformation::getAllDataInNode() const
 void NodeInformation::deleteDataAssignedToPredecessor(std::vector<std::vector<uint8_t>> &keyOfDataItemsToDelete)
 {
     std::unique_lock l{m_dataMutex};
-    for (auto s : keyOfDataItemsToDelete) {
+    for (const auto &s: keyOfDataItemsToDelete) {
         m_data.erase(s);
     }
 }
@@ -186,9 +179,9 @@ void NodeInformation::setReplicationIndex(const uint8_t &replicationIndex)
 {
     NodeInformation::m_allReplicationIndices.push_back(replicationIndex);
 }
-std::optional<uint8_t> NodeInformation::getAverageReplicationIndex() const
+std::optional<uint8_t> NodeInformation::getAverageReplicationIndex()
 {
-    if (m_allReplicationIndices.size() > 0) {
+    if (!m_allReplicationIndices.empty()) {
         return static_cast<uint8_t>((std::accumulate(NodeInformation::m_allReplicationIndices.begin(),
                                                      NodeInformation::m_allReplicationIndices.end(),
                                                      static_cast<uint8_t>(0))) /
@@ -197,11 +190,13 @@ std::optional<uint8_t> NodeInformation::getAverageReplicationIndex() const
         return static_cast<uint8_t>(0);
     }
 }
-uint8_t NodeInformation::getDifficulty() const{
+uint8_t NodeInformation::getDifficulty()
+{
     return m_difficulty;
 }
-void NodeInformation::setDifficulty(uint8_t &DifficultyToSet){
-    if(m_difficulty == DEFAULT_DIFFICULTY){
+void NodeInformation::setDifficulty(uint8_t &DifficultyToSet)
+{
+    if (m_difficulty == DEFAULT_DIFFICULTY) {
         m_difficulty = DifficultyToSet;
     }
 }
@@ -226,6 +221,10 @@ void NodeInformation::Node::setPort(uint16_t port)
     m_port = port;
     id_valid = false;
 }
+void NodeInformation::Node::setId(std::optional<id_type> id)
+{
+    m_explicit_id = id;
+}
 
 std::string NodeInformation::Node::getIp() const { return m_ip; }
 uint16_t NodeInformation::Node::getPort() const { return m_port; }
@@ -238,5 +237,8 @@ NodeInformation::id_type NodeInformation::Node::getId() const
 void NodeInformation::Node::updateId() const
 {
     id_valid = true;
-    m_id = hash_sha1(m_ip + ":" + std::to_string(m_port));
+    if (m_explicit_id)
+        m_id = *m_explicit_id;
+    else
+        m_id = util::hash_sha256(m_ip + ":" + std::to_string(m_port));
 }

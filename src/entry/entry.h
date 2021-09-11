@@ -37,7 +37,7 @@ namespace entry
         int mainLoop();
 
         void execute(std::vector<std::string> args, std::ostream &os = std::cout, std::ostream &err = std::cerr);
-        void addNodeDynamicallyToNetwork(std::optional<uint16_t> port = {}, std::ostream &os = std::cout);
+        void addNode(std::optional<uint16_t> port = {}, std::ostream &os = std::cout);
 
     private:
         std::vector<std::unique_ptr<dht::Dht>> m_DHTs{};

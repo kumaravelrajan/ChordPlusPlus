@@ -17,20 +17,18 @@ namespace api
     class Request
     {
     public:
-        class bad_buffer_size: public std::runtime_error
+        class bad_buffer_size : public std::runtime_error
         {
             using std::runtime_error::runtime_error;
         };
 
-        class bad_request: public std::runtime_error
+        class bad_request : public std::runtime_error
         {
             using std::runtime_error::runtime_error;
         };
 
         // Constructors
-
-        template<class T, std::enable_if_t<std::is_convertible_v<std::remove_cvref_t<T>, std::vector<uint8_t>>, int> = 0>
-        explicit Request(T &&bytes);
+        Request(MessageHeader messageHeader, std::vector<uint8_t> bytes);
 
         Request(Request &&other) noexcept;
         Request(const Request &other) = delete;

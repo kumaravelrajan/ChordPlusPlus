@@ -92,19 +92,24 @@ if (inipp_ADDED)
     target_include_directories(inipp INTERFACE ${inipp_SOURCE_DIR}/inipp)
 endif ()
 
-# pull cap'n proto from github:
-CPMAddPackage("gh:capnproto/capnproto@0.8.0")
-
 # pull openssl from github:
 CPMAddPackage(
-        NAME openssl
-        VERSION 1.1.1
-        GITHUB_REPOSITORY janbar/openssl-cmake
-        GIT_TAG 1.1.1k-20210430
+        NAME OpenSSL
+        VERSION 1.1.1f
+        GITHUB_REPOSITORY MixusMinimax/openssl-cmake
+        GIT_TAG 1.1.1f-20210430
+)
+
+# pull cap'n proto from github:
+CPMAddPackage(
+        NAME capnproto
+        VERSION 0.10.0
+        GITHUB_REPOSITORY MixusMinimax/capnproto
+        OPTIONS "BUILD_TESTING OFF" "WITH_OPENSSL ON" "EXPORT_TARGETS ON"
 )
 
 # pull spdlog from github:
-CPMAddPackage("gh:gabime/spdlog@1.8.5")
+CPMAddPackage("gh:gabime/spdlog@1.9.2")
 
 add_subdirectory(src)
 add_subdirectory(src/api)
@@ -112,6 +117,7 @@ add_subdirectory(src/config)
 add_subdirectory(src/dht)
 add_subdirectory(src/entry)
 add_subdirectory(src/logging)
+add_subdirectory(src/rpc)
 add_subdirectory(src/util)
 
 add_subdirectory(test)

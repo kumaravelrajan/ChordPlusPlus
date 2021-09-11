@@ -45,8 +45,8 @@ config::Configuration config::parseConfigFile(const std::string &path)
         splitIP(str, config.api_address, config.api_port);
     if (inipp::get_value(ini.sections["dht"], "bootstrapNode_address", str = ""))
         splitIP(str, config.bootstrapNode_address, config.bootstrapNode_port);
-    if (inipp::get_value(ini.sections["dht"], "extra_debug_nodes", uint64))
-        config.extra_debug_nodes = uint64;
+    if (inipp::get_value(ini.sections["dht"], "node_amount", uint64))
+        config.node_amount = uint64;
     if (inipp::get_value(ini.sections["dht"], "startup_script", str = ""))
         config.startup_script = str;
     return config;

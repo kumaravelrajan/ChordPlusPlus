@@ -51,7 +51,7 @@ Entry::Entry(const config::Configuration &conf) : Entry()
     uint16_t dht_port = conf.p2p_port;
     uint16_t api_port = conf.api_port;
 
-    for (size_t i = 0; i <= conf.extra_debug_nodes; i++) {
+    for (size_t i = 0; i < conf.node_amount; i++) {
         {
             SPDLOG_DEBUG(
                 "\n"
@@ -71,7 +71,7 @@ Entry::Entry(const config::Configuration &conf) : Entry()
             );
 
             // Set PoW difficulty only once at the start.
-            if(i == 0){
+            if (i == 0) {
                 m_nodes[i]->setDifficulty(config::Configuration::PoW_Difficulty);
                 m_nodes[i]->setReplicationLimitOnEachNode(config::Configuration::defaultReplicationLimit);
             }
@@ -107,7 +107,6 @@ Entry::~Entry()
 
 int Entry::mainLoop()
 {
-    // TODO: Maybe make the streams configurable
     std::istream &in = std::cin;
     std::ostream &os = std::cout;
     // std::ostream &err = std::cerr;
@@ -216,7 +215,7 @@ void Entry::execute(std::vector<std::string> args, std::ostream &os, std::ostrea
     }
 }
 
-void Entry::addNodeDynamicallyToNetwork(std::optional<uint16_t> portParam, std::ostream &os)
+void Entry::addNode(std::optional<uint16_t> portParam, std::ostream &os)
 {
     uint16_t Port = portParam ? *portParam : (m_nodes.back()->getPort() + 1);
 
@@ -250,7 +249,7 @@ Entry::Entry() : m_commands{
             [this](const std::vector<std::string> &args, std::ostream &os, std::ostream &) {
                 if (args.empty()) {
                     os << "Commands:\n";
-                    for (const auto &item : m_commands) {
+                    for (const auto &item: m_commands) {
                         if (item.first.find(":") != std::string::npos) continue;
                         os << fmt::format("{:<12} : {}", item.first, item.second.brief) << std::endl;
                     }
@@ -342,16 +341,16 @@ Entry::Entry() : m_commands{
             .usage= "add [PORT]",
             .execute=
             [this](const std::vector<std::string> &args, std::ostream &os, std::ostream &) {
-                bool isUserPortAvailable = true;
+                // bool isUserPortAvailable = true;
                 if (!args.empty()) {
                     auto port = parse_number<uint16_t>(args[0]);
                     if (port) {
-                        addNodeDynamicallyToNetwork(*port, os);
+                        addNode(*port, os);
                     } else {
-                        addNodeDynamicallyToNetwork();
+                        addNode();
                     }
                 } else {
-                    addNodeDynamicallyToNetwork();
+                    addNode();
                 }
             }
         }
@@ -450,7 +449,7 @@ Entry::Entry() : m_commands{
                         /* == == == == */,
                         *index,
                         format_node(node.getNode()),
-                        util::hexdump(node.getId(), 20, false, false),
+                        util::hexdump(node.getId(), 32, false, false),
                         format_node(node.getSuccessor()),
                         format_node(node.getPredecessor()),
                         format_node(node.getBootstrapNode())
@@ -488,12 +487,12 @@ Entry::Entry() : m_commands{
                         if (!dataInNode.empty()) {
                             os << "Data items in node:\n";
                             int i = 1;
-                            for (const auto &s : dataInNode) {
+                            for (const auto &s: dataInNode) {
                                 // Hashing received key to convert it into length of 20 bytes
                                 std::string sKey{s.first.begin(), s.first.end()};
-                                NodeInformation::id_type finalHashedKey = NodeInformation::hash_sha1(sKey);
+                                NodeInformation::id_type finalHashedKey = util::hash_sha256(sKey);
                                 os << fmt::format("{}. key = {}\n", i,
-                                                  util::hexdump(finalHashedKey, 20, false, false));
+                                                  util::hexdump(finalHashedKey, 32, false, false));
                                 ++i;
                             }
                             os << fmt::format("{}\n", insertHighlighterSection());
@@ -525,12 +524,14 @@ Entry::Entry() : m_commands{
 
                 const auto &node = *m_nodes[*index];
 
-                const std::optional<NodeInformation::Node> *last_finger = nullptr;
+                std::optional<std::optional<NodeInformation::Node>> last_finger{};
                 bool printed_star = false;
                 for (size_t i = 0; i < NodeInformation::key_bits; ++i) {
-                    const auto &finger = node.getFinger(i);
-                    const auto *next_finger = (i < NodeInformation::key_bits - 1) ? &node.getFinger(i + 1)
-                                                                                  : nullptr;
+                    std::optional<NodeInformation::Node> finger = node.getFinger(i);
+                    std::optional<std::optional<NodeInformation::Node>> next_finger =
+                        (i < NodeInformation::key_bits - 1)
+                        ? node.getFinger(i + 1)
+                        : std::optional<std::optional<NodeInformation::Node>>{};
                     if (next_finger && last_finger && *last_finger == finger && *next_finger == finger) {
                         if (!printed_star) {
                             os << "*\n";
@@ -543,7 +544,7 @@ Entry::Entry() : m_commands{
                         ) << std::endl;
                         printed_star = false;
                     }
-                    last_finger = &finger;
+                    last_finger = finger;
                 }
             }
         }
