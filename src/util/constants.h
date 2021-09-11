@@ -11,6 +11,7 @@ namespace util
         constexpr uint16_t DHT_GET { 651 };
         constexpr uint16_t DHT_SUCCESS { 652 };
         constexpr uint16_t DHT_FAILURE { 653 };
+        constexpr uint16_t DHT_PUT_KEY_IS_HASH_OF_DATA { 654 };
     } // namespace Constants
 } // namespace util
 

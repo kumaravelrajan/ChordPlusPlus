@@ -69,6 +69,15 @@ namespace api
                         uint16_t ttl = 0, uint8_t replication = 0);
     };
 
+    struct Message_DHT_PUT_KEY_IS_HASH_OF_DATA : MessageData
+    {
+        MessageHeaderExtend m_headerExtend{};
+
+        std::vector<uint8_t> key, value;
+
+        Message_DHT_PUT_KEY_IS_HASH_OF_DATA(std::vector<uint8_t> bytes); // NOLINT
+    };
+
     struct Message_DHT_SUCCESS : MessageData
     {
         std::vector<uint8_t> key, value;
@@ -100,6 +109,12 @@ namespace api
     struct message_type_from_int<util::constants::DHT_PUT>
     {
         using type = Message_DHT_PUT;
+    };
+
+    template<>
+    struct message_type_from_int<util::constants::DHT_PUT_KEY_IS_HASH_OF_DATA>
+    {
+        using type = Message_DHT_PUT_KEY_IS_HASH_OF_DATA;
     };
 
     template<uint16_t i>

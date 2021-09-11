@@ -95,6 +95,10 @@ void Dht::setApi(std::unique_ptr<api::Api> api)
         [this](const api::Message_KEY &m, std::atomic_bool &cancelled) {
             return onDhtGet(m, cancelled);
         });
+    m_api->on<util::constants::DHT_PUT_KEY_IS_HASH_OF_DATA>(
+        [this](const api::Message_DHT_PUT_KEY_IS_HASH_OF_DATA &m, std::atomic_bool &cancelled) {
+            return onDhtPutKeyIsHashOfData(m, cancelled);
+        });
 }
 
 std::optional<NodeInformation::Node> Dht::getSuccessor(NodeInformation::id_type key)
@@ -255,6 +259,92 @@ std::vector<uint8_t> Dht::onDhtGet(const api::Message_KEY &message_data, std::at
     }
 }
 
+std::vector<uint8_t> Dht::onDhtPutKeyIsHashOfData(const api::Message_DHT_PUT_KEY_IS_HASH_OF_DATA &message_data,
+                                                  std::atomic_bool &cancelled)
+{
+    SPDLOG_INFO(
+        "DHT PUT\n"
+        "\t\tsize:        {}\n"
+        "\t\ttype:        {}\n"
+        "\t\tttl:         {}\n"
+        "\t\treplication: {}\n"
+        "\t\treserved:    {}",
+        std::to_string(message_data.m_header.size),
+        std::to_string(message_data.m_header.msg_type),
+        std::to_string(message_data.m_headerExtend.ttl),
+        std::to_string(message_data.m_headerExtend.replication),
+        std::to_string(message_data.m_headerExtend.reserved)
+        );
+
+    // Setting replication index value
+    m_nodeInformation->setReplicationIndex(message_data.m_headerExtend.replication);
+
+    // Hashing received key to convert it into length of 20 bytes
+    std::string sKey{message_data.key.begin(), message_data.key.end()};
+    NodeInformation::id_type finalHashedKey = util::hash_sha256(sKey);
+
+    auto ttl = message_data.m_headerExtend.ttl > 0
+        ? std::chrono::seconds(message_data.m_headerExtend.ttl)
+        : std::chrono::system_clock::duration::max();
+
+    auto successor = getSuccessor(finalHashedKey);
+
+    if (successor) {
+        SPDLOG_DEBUG("Successor found: {}:{}", successor->getIp(), successor->getPort());
+        getPeerImpl().setData(*successor, message_data.key, message_data.value,
+                              message_data.m_headerExtend.ttl);
+    } else {
+        SPDLOG_DEBUG("No Successor found!");
+    }
+
+    /* If replicationIndex == 0 or 1, no replication done. replicationIndex defines
+     * on how many nodes the value should be stored, ignoring a value of 0 */
+    if (message_data.m_headerExtend.replication >= 2) {
+
+        m_replicationFuture = std::async(std::launch::async, [this, message_data, successor]() {
+            // For given dataItemId
+            // Map[NodeId] = {numOfReplicationsOnNodeId1}
+            std::map<NodeInformation::id_type, uint8_t> ReplicationOfEachDataItemOnEachNode;
+
+            if(successor){
+                ReplicationOfEachDataItemOnEachNode.insert(std::make_pair(successor->getId(), 1));
+            }
+
+            for (int i = 0; i < message_data.m_headerExtend.replication - 1; ++i) {
+                auto tempMessage_Data = message_data;
+                tempMessage_Data.key.push_back(static_cast<uint8_t>(i + 1));
+
+                // Hashing received key to convert it into length of 20 bytes
+                std::string sKey{tempMessage_Data.key.begin(), tempMessage_Data.key.end()};
+                NodeInformation::id_type finalHashedKey = util::hash_sha256(sKey);
+                auto replicationSuccessor = getSuccessor(finalHashedKey);
+
+                if (replicationSuccessor) {
+
+                    // Permit replication iff
+                    // 1. Map contains key sReplicationSuccessorId (AND) corresponding value of sReplicationSuccessorId <= replication limit
+                    // (OR)
+                    // 2. Map does not contain key sReplicationSuccessorId
+                    if((ReplicationOfEachDataItemOnEachNode.contains(replicationSuccessor->getId()) &&
+                    ReplicationOfEachDataItemOnEachNode.at(replicationSuccessor->getId()) < m_nodeInformation->getReplicationLimitOnEachNode()) ||
+                    !ReplicationOfEachDataItemOnEachNode.contains(replicationSuccessor->getId())){
+
+                        if(!ReplicationOfEachDataItemOnEachNode.contains(replicationSuccessor->getId())){
+                            ReplicationOfEachDataItemOnEachNode.insert({replicationSuccessor->getId(), 1});
+                        } else {
+                            ReplicationOfEachDataItemOnEachNode[replicationSuccessor->getId()] = ++ReplicationOfEachDataItemOnEachNode.at(replicationSuccessor->getId());
+                        }
+                        getPeerImpl().setData(*replicationSuccessor, tempMessage_Data.key, message_data.value, message_data.m_headerExtend.ttl);
+                    }
+                }
+            }
+        });
+    }
+
+    for (uint8_t i{0}; !cancelled && i < 10; ++i)
+        std::this_thread::sleep_for(1s);
+    return message_data.m_bytes;
+}
 
 // ===============================
 // ======[ DHT MAINTENANCE ]======
