@@ -11,10 +11,12 @@
 #include <map>
 #include <future>
 #include <numeric>
+#include <deque>
 
 // Also declared in config.h.
 #define DEFAULT_DIFFICULTY 1
 #define DEFAULT_REPLICATION_LIMIT 5
+#define DEFAULT_NUM_OF_REPLICATION_TO_CALCULATE_AVERAGE 50
 
 
 /**
@@ -105,7 +107,7 @@ private:
     std::optional<Node> m_bootstrapNodeAddress{};
 
     /* Used for DHT GET */
-    static std::vector<uint8_t> m_allReplicationIndices;
+    static std::deque<uint8_t> m_allReplicationIndices;
 
     // Used for PoW
     static uint8_t m_difficulty;

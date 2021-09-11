@@ -6,7 +6,7 @@
 using namespace std::chrono_literals;
 
 /* Initialize static variables */
-std::vector<uint8_t> NodeInformation::m_allReplicationIndices;
+std::deque<uint8_t> NodeInformation::m_allReplicationIndices;
 uint8_t NodeInformation::m_difficulty = DEFAULT_DIFFICULTY;
 uint8_t NodeInformation::m_replicationLimit = DEFAULT_REPLICATION_LIMIT;
 
@@ -177,7 +177,12 @@ void NodeInformation::deleteDataAssignedToPredecessor(std::vector<std::vector<ui
 }
 void NodeInformation::setReplicationIndex(const uint8_t &replicationIndex)
 {
-    NodeInformation::m_allReplicationIndices.push_back(replicationIndex);
+    if(NodeInformation::m_allReplicationIndices.size() < DEFAULT_NUM_OF_REPLICATION_TO_CALCULATE_AVERAGE){
+        NodeInformation::m_allReplicationIndices.push_back(replicationIndex);
+    } else {
+        NodeInformation::m_allReplicationIndices.pop_front();
+        NodeInformation::m_allReplicationIndices.push_back(replicationIndex);
+    }
 }
 std::optional<uint8_t> NodeInformation::getAverageReplicationIndex()
 {
