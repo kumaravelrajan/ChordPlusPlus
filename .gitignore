@@ -7,3 +7,5 @@ Testing/
 *log.txt
 config.ini
 venv/
+hostkey.pem
+hostcert.crt
