@@ -94,7 +94,7 @@ endif ()
 
 # pull openssl from github:
 CPMAddPackage(
-        NAME OPENSSL
+        NAME OpenSSL
         VERSION 1.1.1f
         GITHUB_REPOSITORY MixusMinimax/openssl-cmake
         GIT_TAG 1.1.1f-20210430
