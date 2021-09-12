@@ -1,6 +1,6 @@
-This is the final report for DHT-4 project.
+# FINAL REPORT
 
-[[_TOC_]]
+[TOC]
 
 # What is a Distributed hash table (DHT)?
 A distributed hash table (DHT) is a distributed storage for key-value pairs. An implementation of a DHT forms a structured overlay to optimize the placement and retrieval of the key-value pairs. Certain well established designs for DHT are the Chord, Pastry, Kademlia, and GNUnet’s R5N. Our implementation used the Chord algorithm. 
@@ -356,9 +356,12 @@ todo -
 1. [Rescola - Intro to DHT](https://www.ietf.org/proceedings/65/slides/plenaryt-2.pdf)
 1. [Security Considerations for Peer-to-Peer Distributed Hash Tables](https://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.11.7175&rep=rep1&type=pdf)
 
+# Team - 
+1. Maximilian Barmetler
+1. Kumaravel Rajan
 
-# Workload distribution 
+## Workload distribution 
 todo
 
-# Effort spent on project 
+## Effort spent on project 
 todo
