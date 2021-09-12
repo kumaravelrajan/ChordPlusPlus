@@ -258,8 +258,8 @@ void Dht::join(const NodeInformation::Node &node)
     LOG_GET
     m_nodeInformation->setPredecessor();
 
-    capnp::EzRpcClient client{node.getIp(), node.getPort()};
-    auto cap = client.getMain<Peer>();
+    auto client = getClient(node.getIp(), node.getPort());
+    auto cap = client->getMain<Peer>();
     auto req = cap.getPoWPuzzleOnJoinRequest();
     PeerImpl::buildNode(req.getNewNode(), m_nodeInformation->getNode());
 
@@ -298,7 +298,7 @@ void Dht::join(const NodeInformation::Node &node)
             LOG_DEBUG("{}:{} successfully solved puzzle.", this->m_nodeInformation->getIp(),
                       this->m_nodeInformation->getPort());
 
-            auto client = kj::heap<capnp::EzRpcClient>(node.getIp(), node.getPort());
+            auto client = getClient(node.getIp(), node.getPort());
             auto cap = client->getMain<Peer>();
             auto req = cap.sendPoWPuzzleResponseToBootstrapAndGetSuccessorRequest();
             PeerImpl::buildNode(req.getNewNode(), m_nodeInformation->getNode());
@@ -320,7 +320,7 @@ void Dht::join(const NodeInformation::Node &node)
         return kj::READY_NOW;
     }, [LOG_CAPTURE](kj::Exception &&e) {
         LOG_ERR(e);
-    }).wait(client.getWaitScope());
+    }).wait(client->getWaitScope());
 }
 
 void Dht::stabilize()
@@ -332,8 +332,8 @@ void Dht::stabilize()
         return;
     }
 
-    capnp::EzRpcClient client{successor->getIp(), successor->getPort()};
-    auto cap = client.getMain<Peer>();
+    auto client = getClient(successor->getIp(), successor->getPort());
+    auto cap = client->getMain<Peer>();
     auto req = cap.getPredecessorRequest();
 
     /* Request pre(suc(cur)). */
@@ -346,7 +346,7 @@ void Dht::stabilize()
     }, [LOG_CAPTURE](const kj::Exception &e) {
         LOG_DEBUG("connection issue with successor\n\t\t{}", e.getDescription().cStr());
         return std::optional<NodeInformation::Node>{};
-    }).wait(client.getWaitScope());
+    }).wait(client->getWaitScope());
 
     /* If pred(suc(cur)) == cur, no need to do further processing. */
     if (!(predOfSuccessor && predOfSuccessor->getId() == m_nodeInformation->getId())) {
@@ -357,27 +357,27 @@ void Dht::stabilize()
             false, false
         )) {
             m_nodeInformation->setSuccessor(predOfSuccessor);
-            capnp::EzRpcClient client2{predOfSuccessor->getIp(), predOfSuccessor->getPort()};
-            auto cap2 = client2.getMain<Peer>();
+            auto client2 = getClient(predOfSuccessor->getIp(), predOfSuccessor->getPort());
+            auto cap2 = client2->getMain<Peer>();
             auto req2 = cap2.notifyRequest();
             PeerImpl::buildNode(req2.getNode(), m_nodeInformation->getNode());
             return req2.send().then([LOG_CAPTURE, this](capnp::Response<Peer::NotifyResults> &&) {
                 LOG_TRACE("got response from predecessor of successor");
             }, [LOG_CAPTURE](const kj::Exception &e) {
                 LOG_DEBUG("connection issue with predecessor of successor\n\t\t{}", e.getDescription().cStr());
-            }).wait(client2.getWaitScope());
+            }).wait(client2->getWaitScope());
         } else {
             /* if ( pred(suc(cur)) [called PSC] == null  || ( PSC!=null && PSC not in range (cur, suc) ) )
              * then cur is predecessor of suc(cur). */
-            capnp::EzRpcClient client2{successor->getIp(), successor->getPort()};
-            auto cap2 = client2.getMain<Peer>();
+            auto client2 = getClient(successor->getIp(), successor->getPort());
+            auto cap2 = client2->getMain<Peer>();
             auto req2 = cap2.notifyRequest();
             PeerImpl::buildNode(req2.getNode(), m_nodeInformation->getNode());
             return req2.send().then([LOG_CAPTURE, this](capnp::Response<Peer::NotifyResults> &&) {
                 LOG_TRACE("got response from successor");
             }, [LOG_CAPTURE](const kj::Exception &e) {
                 LOG_DEBUG("connection issue with successor\n\t\t{}", e.getDescription().cStr());
-            }).wait(client2.getWaitScope());
+            }).wait(client2->getWaitScope());
         }
     }
 }
@@ -399,10 +399,10 @@ void Dht::checkPredecessor()
     if (!m_nodeInformation->getPredecessor())
         return;
 
-    capnp::EzRpcClient client{
+    auto client = getClient(
         m_nodeInformation->getPredecessor()->getIp(), m_nodeInformation->getPredecessor()->getPort()
-    };
-    auto cap = client.getMain<Peer>();
+    );
+    auto cap = client->getMain<Peer>();
     auto req = cap.getPredecessorRequest(); // This request doesn't matter, it is used as a ping
     return req.send().then([LOG_CAPTURE](capnp::Response<Peer::GetPredecessorResults> &&) {
         LOG_TRACE("got response from predecessor");
@@ -410,5 +410,5 @@ void Dht::checkPredecessor()
         LOG_ERR(e);
         // Delete predecessor
         m_nodeInformation->setPredecessor();
-    }).wait(client.getWaitScope());
+    }).wait(client->getWaitScope());
 }

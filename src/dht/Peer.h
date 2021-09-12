@@ -2,6 +2,7 @@
 #define DHT_PEER_H
 
 #include <capnp/capability.h>
+#include <capnp/ez-rpc.h>
 #include <peer.capnp.h>
 #include <memory>
 #include <unordered_set>
@@ -109,6 +110,8 @@ namespace dht
         GetSuccessorMethod m_getSuccessorMethod;
         std::shared_ptr<NodeInformation> m_nodeInformation;
     };
+
+    [[nodiscard]] kj::Own<capnp::EzRpcClient> getClient(const std::string &ip, uint16_t port);
 }
 
 
