@@ -105,7 +105,7 @@ CPMAddPackage(
         NAME capnproto
         VERSION 0.10.0
         GITHUB_REPOSITORY MixusMinimax/capnproto
-        OPTIONS "BUILD_TESTING OFF" "WITH_OPENSSL ON" "EXPORT_TARGETS ON"
+        OPTIONS "WITH_OPENSSL ON" "BUILD_TESTING OFF" "EXPORT_TARGETS ON"
 )
 
 # pull spdlog from github:
