@@ -142,7 +142,7 @@ The Project is separated into libraries, which speeds up compilation, makes unit
 - logging
   - Has spdlog specific configuration files.
 - rpc
-  - Todo
+  - Replaces capnp/ez-rpc by wrapping streams in tls-encrypted ones (experimental)
 - util
   - A collection of utility functions, as well as constants
 - dht-4
@@ -190,12 +190,12 @@ These libraries are downloaded and updated using [cpm-cmake/CPM.cmake](https://g
 
 ## Logical structure
 ### API
-Todo - API class diagram
+![api uml diagram](./assets/UML_API.png)
 
 The core of the api library is the `Api` class. It listens for incoming connections, and maintains a list of currently open connections. These connections then read and parse incoming requests, and pass those on to the appropriate `RequestHandler` (This depends on the message type). Those `RequestHandler`s are passed into the api from the outside.
 
 ### DHT
-todo - DHT class diagram
+![dht uml diagram](./assets/UML_DHT.png)
 
 The `Dht` class sets up the interface with the api by defining request handlers. The api now shares access to an instance of `NodeInformation` with the dht itself.  
 `NodeInformation` stores the actual state of the node; including but not limited to:
@@ -215,27 +215,27 @@ Most of the synchronized access happens within `NodeInformation`, which uses `st
 ![](./f_assets/Activity-Diagram_-_Copy.png)
 
 ## Networking
-This project has two network interfaces: The Api for module-module communication using libasio standalone, and the Dht CapnProto interface for peer-peer communication, which uses (todo (explain tls rpc)). Also, capnproto has no (de)serialization of data, so any type of xss cannot occur. 
+This project has two network interfaces: The Api for module-module communication using libasio standalone, and the Dht CapnProto interface for peer-peer communication, which can use TLS. Also, capnproto has no (de)serialization of data, so any type of xss cannot occur. 
 
 ## Security measures
-1. TLS security - todo
+1. TLS security: Encrypt peer-to-peer connections using TLS
 
-1. Proof of Work to protect against constant churn- 
+2. Proof of Work to protect against constant churn- 
    When a new node joins the network, it has to solve a Proof of Work puzzle supplied by the bootstrap node. The puzzle is different for each node and the difficulty of the puzzle can be set via a cmd argument.
    
    PoW protects against constant churn from disrupting the correct operation of the chord ring.
 
-1. New DHT PUT & DHT GET message to maintain data integrity - 
+3. New DHT PUT & DHT GET message to maintain data integrity - 
    The new DHT PUT message accepts only the value and no key. The key to this data is sha256Hash(value). For retrieval of data the user supplies sha256Hash(value) to new DHT GET. The new DHT GET searches for sha256Hash(value). Upon retrieval, new DHT GET checks if sha256Hash(Retrieved value) == keyFromUser. This maintains data integrity.
 
-1. Considering (public_key + IP + Port) for calculating Node ID to prevent ID mapping attack - 
+4. Considering (public_key + IP + Port) for calculating Node ID to prevent ID mapping attack - 
    ID mapping attacks aim at nodes trying to manipulate their IDs to gain responsibility over data items they usually would not have. Future requests for data items under the malicious node's control can simply be ignored leading to DoS. This is protected against in our implementation by computing the Node ID as : 
    Node ID = sha256Hash(PublicKeyOfNewNode + IP + Port)
 
    There always exists the possibility that the attacker can generate multiple public-private key pairs or manipulate its IP and port. However, each new joinee has to solve the PoW puzzle. With a high difficulty for the PoW puzzle, it becomes very difficult to successfully execute a ID mapping attack.
 
-1. Using a distrusted set to protect the network from malicious nodes - 
-   todo (How does getSuccessor work in brief and how the distrust set protects against eclipse attacks) - 
+5. Using a distrusted set to protect the network from malicious nodes - 
+   Instead of passing getSuccessor-requests on to the next hop, all hops are done on one node iteratively. If the next hop returned by a node is not closer to the target, that node is added to the distrusted set and ignored from then on.
 
 ## Peer to Peer protocol
 ### Message formats
@@ -288,24 +288,36 @@ Also, the integrity of the stored data in the DHT can be maintained by using the
 1. Implemented new DHT PUT and new DHT GET messaged to prevent data integrity.
 1. Implemented logging using spdlog library
 1. Implemented runtime shell for easy monitoring.
-1. Changed getSuccessor mechanism - todo
+1. Changed getSuccessor mechanism to run on one node iteratively
 
 ## Known issues 
 1. The network has currently been tested by spawning different nodes in a chord network on different ports of the localhost and testing the chord features. The system has not been tested in a real world network where two peers might be several hundred kilometers away. Testing the system with such a network might bring to light performance issues or new bugs.
 
 ## Future work
-1. Rating system for nodes - 
-   todo - 
+1. Rating system for nodes:  
+   Central Servers could rate nodes based on bandwidth, and incorrect routing.
+   
+3. Distrusted set currently empty at each call to getSuccessor(). These can be prefilled.  
+   As previously explained, the new getSuccessor algorithm has a set of distrusted nodes. This set can be initialized using a centralized rating server, and can serve to update these ratings as well.
 
-1. Distrusted set currently empty at each call to getSuccessor(). These can be prefilled.
-   todo - explain further
-
-1. Caching - 
+4. Caching:  
    No caching mechanism has been implemented currently. If nodes start caching frequently requested key-value pairs, RPC calls would not need to be made every request. This would hence improve performance.
 
 # Setup & use
 ## How to install and run the software 
-todo - 
+Using Cmake:
+```sh
+mkdir build
+cmake ..
+make
+sudo make install
+```
+
+Using docker:
+```sh
+docker build -t dht .
+docker run -it -p7112:7112 --mount type=bind,source="$(pwd)",target=/app/workdir dht -c config.ini
+```
 
 ## Command line arguments
 1. -c, --config : Configuration file path
@@ -360,8 +372,23 @@ todo -
 1. Maximilian Barmetler
 1. Kumaravel Rajan
 
-## Workload distribution 
-todo
+## Workload Distribution — Who did what
+- Maxi Barmetler
+    - CMake Project and Library Selection
+    - Api to let other Modules interface with the Dht
+    - Dht Logic
+    - Networking and Thread Management
+- Kumaravel Rajan
+    - Gitlab Issues for Workload Planning and Distribution
+    - Parse Configuration File and Command-line Arguments
+    - Dht Logic
+    - Main Entry Point
 
-## Effort spent on project 
-todo
+## Effort spent for the project (please specify individual effort)
+
+- Maxi Barmetler
+    - At first about 15hrs/week, but project setup and boilerplate code is more time-consuming than complicated
+    - Then between 5 and 10hrs/week, excluding time spent on research
+- Kumaravel Rajan
+    - At the start around 20 hours/week to brush up on multithreading and synchronization concepts in C++ apart from setting the project up.
+    - Later around 10 hrs / week excluding time spent on looking at sample implementations for reference and other research.
