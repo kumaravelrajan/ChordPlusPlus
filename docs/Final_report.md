@@ -217,7 +217,7 @@ Most of the synchronized access happens within `NodeInformation`, which uses `st
 todok - activity diagram
 
 ### Networking
-This project has two network interfaces: The Api for module-module communication using libasio standalone, and the Dht CapnProto interface for peer-peer communication, which uses ez-rpc for now.
+This project has two network interfaces: The Api for module-module communication using libasio standalone, and the Dht CapnProto interface for peer-peer communication, which uses (todo (explain tls rpc)). Also, capnproto has no (de)serialization of data, so any type of xss cannot occur. 
 
 ### Security measures
 1. TLS security - todo
@@ -236,7 +236,7 @@ This project has two network interfaces: The Api for module-module communication
 
    There always exists the possibility that the attacker can generate multiple public-private key pairs or manipulate its IP and port. However, each new joinee has to solve the PoW puzzle. With a high difficulty for the PoW puzzle, it becomes very difficult to successfully execute a ID mapping attack.
 
-1. Using a distrusted set to protect against eclipse attacks - 
+1. Using a distrusted set to protect the network from malicious nodes - 
    todo (How does getSuccessor work in brief and how the distrust set protects against eclipse attacks) - 
 
 ### Peer to Peer protocol
@@ -244,22 +244,28 @@ This project has two network interfaces: The Api for module-module communication
 The messages except DHT_PUT_KEY_IS_HASH_OF_DATA and DHT_GET_KEY_IS_HASH_OF_DATA are defined in the specification. DHT_PUT_KEY_IS_HASH_OF_DATA and DHT_GET_KEY_IS_HASH_OF_DATA are required to preserve data integrity and serve as an alternative to the traditional DHT_PUT and DHT_GET messages as explained in [Security Measures](#Security-measures). As for the CapnProto Schema, all of the interface methods are required by the Chord algorithm.
 
 ##### DHT_PUT
-todo
+---
+![DHT PUT](./assets/MSG_DHT_PUT.png)
 
 ##### DHT_GET
-todo
+---
+![DHT GET](./assets/MSG_DHT_GET.png)
 
 ##### DHT_SUCCESS
-todo
+---
+![DHT SUCCESS](./assets/MSG_DHT_SUCCESS.png)
 
 ##### DHT_FAILURE
-todo
+---
+![DHT FAILURE](./assets/MSG_DHT_FAILURE.png)
 
 ##### DHT_PUT_KEY_IS_HASH_OF_DATA
-todo
+---
+![DHT_PUT_KEY_IS_HASH_OF_DATA](./f_assets/DHT_PUT_KEY_IS_HASH_OF_DATA.png)
 
 ##### DHT_GET_KEY_IS_HASH_OF_DATA
-todo
+---
+![DHT GET](./assets/MSG_DHT_GET.png)
 
 #### Peer to peer communication
 The Message schema for inter-peer communication is defined in ../src/dht/schemas/peer.capnp
@@ -274,3 +280,19 @@ DHT_PUT_KEY_IS_HASH_OF_DATA: 0x28e
 DHT_GET_KEY_IS_HASH_OF_DATA: 0x28f
 ```
 
+#### Exception handling (Churn, connection breaks, corrupted data, ...)
+Chord usually fixes itself in cases of Churn or Connection breaks. The only problem would be if a lot of nodes in the finger table suddenly go offline, but in that case the dht tries to re-join using the bootstrapping node. Corrupted data is dealt with in part by CapnProto, but since the underlaying protocol is TCP, we can assume to some extent that the data coming from the tcp layer is valid.
+Also, the integrity of the stored data in the DHT can be maintained by using the DHT_PUT_KEY_IS_HASH_OF_DATA and DHT_GET_KEY_IS_HASH_OF_DATA messages as explained in [Security measures](#Security-measures).
+
+### Known issues 
+1. The network has currently been tested by spawning different nodes in a chord network on different ports of the localhost and testing the chord features. The system has not been tested in a real world network where two peers might be several hundred kilometers away. Testing the system with such a network might bring to light performance issues or new bugs.
+
+### Future work
+1. Rating system for nodes - 
+   todo - 
+
+1. Distrusted set currently empty at each call to getSuccessor(). These can be prefilled.
+   todo - explain further
+
+1. Caching - 
+   No caching mechanism has been implemented currently. If nodes start caching frequently requested key-value pairs, RPC calls would not need to be made every request. This would hence improve performance.
