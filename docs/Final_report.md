@@ -241,7 +241,7 @@ This project has two network interfaces: The Api for module-module communication
 
 ### Peer to Peer protocol
 #### Message formats
-The messages except DHT_PUT_KEY_IS_HASH_OF_DATA and DHT_GET_KEY_IS_HASH_OF_DATA are defined in the specification. DHT_PUT_KEY_IS_HASH_OF_DATA and DHT_GET_KEY_IS_HASH_OF_DATA are required to preserve data integrity and serve as an alternative to the traditional DHT_PUT and DHT_GET messages as explained in [Security Measures](#Security measures). As for the CapnProto Schema, all of the interface methods are required by the Chord algorithm.
+The messages except DHT_PUT_KEY_IS_HASH_OF_DATA and DHT_GET_KEY_IS_HASH_OF_DATA are defined in the specification. DHT_PUT_KEY_IS_HASH_OF_DATA and DHT_GET_KEY_IS_HASH_OF_DATA are required to preserve data integrity and serve as an alternative to the traditional DHT_PUT and DHT_GET messages as explained in [Security Measures](#Security-measures). As for the CapnProto Schema, all of the interface methods are required by the Chord algorithm.
 
 ##### DHT_PUT
 todo
