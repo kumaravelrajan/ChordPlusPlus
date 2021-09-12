@@ -92,6 +92,11 @@ int main(int argc, char *argv[])
             "d, POWdifficulty",
             "Specify difficulty to be set for Proof of work algorithm. \nUsage: -d {NUMBER_OF_LEADING_ZEROES <= 160}",
             cxxopts::value<uint8_t>()
+        )
+        (
+            "r, replicationLimit",
+            "Specify replication limit for the same data item on one node",
+            cxxopts::value<uint8_t>()
         );
     auto args = options.parse(argc, argv);
 
@@ -116,6 +121,11 @@ int main(int argc, char *argv[])
     // Get difficulty level for PoW
     if (args.count("POWdifficulty")) {
         config::Configuration::PoW_Difficulty = args["POWdifficulty"].as<uint8_t>();
+    }
+
+    // Get replication limit for the same data item on each node
+    if(args.count("replicationLimit")){
+        conf.defaultReplicationLimit = args["replicationLimit"].as<uint8_t>();
     }
 
     // Initialize spdlog

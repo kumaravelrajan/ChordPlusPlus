@@ -11,11 +11,12 @@
 #include <map>
 #include <future>
 #include <numeric>
-
-#define SHA1_CONSIDERATION_LIMIT 9
+#include <deque>
 
 // Also declared in config.h.
 #define DEFAULT_DIFFICULTY 1
+#define DEFAULT_REPLICATION_LIMIT 5
+#define DEFAULT_NUM_OF_REPLICATION_TO_CALCULATE_AVERAGE 50
 
 
 /**
@@ -106,10 +107,14 @@ private:
     std::optional<Node> m_bootstrapNodeAddress{};
 
     /* Used for DHT GET */
-    static std::vector<uint8_t> m_allReplicationIndices;
+    static std::deque<uint8_t> m_allReplicationIndices;
 
     // Used for PoW
     static uint8_t m_difficulty;
+
+    // Used for maintaining limit on replication of one data item on each node.
+    // If m_replicationLimit = 5, the same data item can be replicated on the same node a maximum of 10 times.
+    static uint8_t m_replicationLimit;
 
 public:
     [[nodiscard]] Node getNode() const;
@@ -126,6 +131,8 @@ public:
     [[nodiscard]] static std::optional<uint8_t> getAverageReplicationIndex();
     [[nodiscard]] static uint8_t getDifficulty();
     static void setDifficulty(uint8_t &DifficultyToSet);
+    uint8_t getReplicationLimitOnEachNode() const;
+    void setReplicationLimitOnEachNode(uint8_t &replicationLimit);
 
     /**
      * @throws std::out_of_range
@@ -149,7 +156,7 @@ public:
 
     [[nodiscard]] std::optional<NodeInformation::data_type> getDataItemsForNodeId(const Node &newNode) const;
     [[nodiscard]] NodeInformation::data_type getAllDataInNode() const;
-    void deleteDataAssignedToPredecessor(std::vector<std::vector<uint8_t>> &keyOfDataItemsToDelete);
+    [[nodiscard]] void deleteDataAssignedToPredecessor(std::vector<std::vector<uint8_t>> &keyOfDataItemsToDelete);
 public:
     // Constructor
     explicit NodeInformation(std::string host = "", uint16_t port = 0);

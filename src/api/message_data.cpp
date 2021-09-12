@@ -78,6 +78,20 @@ api::Message_DHT_PUT::Message_DHT_PUT(const std::vector<uint8_t> &key, const std
     );
 }
 
+api::Message_DHT_PUT_KEY_IS_HASH_OF_DATA::Message_DHT_PUT_KEY_IS_HASH_OF_DATA(std::vector<uint8_t> bytes) :
+    MessageData(std::move(bytes)),
+    m_headerExtend(MessageHeaderExtend(
+        reinterpret_cast<MessageHeaderExtend::MessageHeaderRaw &>(m_bytes[sizeof(MessageHeader::MessageHeaderRaw)]))),
+    value(m_bytes.begin() +
+    (sizeof(MessageHeader::MessageHeaderRaw) + sizeof(MessageHeaderExtend::MessageHeaderRaw)),
+    m_bytes.begin() + m_header.size)
+{
+    key = value;
+
+    if (m_header.size < sizeof(MessageHeader::MessageHeaderRaw) + sizeof(MessageHeaderExtend::MessageHeaderRaw))
+        throw std::runtime_error("Message is too small!");
+}
+
 api::Message_DHT_SUCCESS::Message_DHT_SUCCESS(std::vector<uint8_t> bytes) :
     MessageData(std::move(bytes)),
     key(m_bytes.begin() + sizeof(MessageHeader::MessageHeaderRaw) + sizeof(MessageHeaderExtend::MessageHeaderRaw),

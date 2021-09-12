@@ -7,7 +7,8 @@
 
 namespace config
 {
-#define DEFAULT_DIFFICULTY 1
+    #define DEFAULT_DIFFICULTY 1
+    #define DEFAULT_REPLICATION_LIMIT 5
 
     struct Configuration
     {
@@ -25,6 +26,7 @@ namespace config
         uint64_t node_amount{1};
         std::optional<std::string> startup_script{};
         static uint8_t PoW_Difficulty;
+        static uint8_t defaultReplicationLimit;
     };
 
     Configuration parseConfigFile(const std::string &path);

@@ -42,6 +42,13 @@ int main()
             return message_data.m_bytes;
         });
 
+        api->on<DHT_PUT_KEY_IS_HASH_OF_DATA>([](const Message_DHT_PUT_KEY_IS_HASH_OF_DATA &message_data, auto &cancelled) {
+            std::cout << "[apiMain] DHT_PUT_KEY_IS_HASH_OF_DATA" << std::endl;
+            for (uint8_t i { 0 }; !cancelled && i < 10; ++i)
+                std::this_thread::sleep_for(1s);
+            return message_data.m_bytes;
+        });
+
         while (!sigIntReceived)
             std::this_thread::sleep_for(1s);
         std::cout << "sigint received" << std::endl;

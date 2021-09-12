@@ -73,6 +73,7 @@ Entry::Entry(const config::Configuration &conf) : Entry()
             // Set PoW difficulty only once at the start.
             if (i == 0) {
                 m_nodes[i]->setDifficulty(config::Configuration::PoW_Difficulty);
+                m_nodes[i]->setReplicationLimitOnEachNode(config::Configuration::defaultReplicationLimit);
             }
 
             // The constructor of Dht starts mainLoop asynchronously.
