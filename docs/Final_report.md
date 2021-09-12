@@ -239,7 +239,7 @@ This project has two network interfaces: The Api for module-module communication
 
 ## Peer to Peer protocol
 ### Message formats
-The messages except DHT_PUT_KEY_IS_HASH_OF_DATA and DHT_GET_KEY_IS_HASH_OF_DATA are defined in the specification. DHT_PUT_KEY_IS_HASH_OF_DATA and DHT_GET_KEY_IS_HASH_OF_DATA are required to preserve data integrity and serve as an alternative to the traditional DHT_PUT and DHT_GET messages as explained in [Security Measures](#Security-measures). As for the CapnProto Schema, all of the interface methods are required by the Chord algorithm.
+The messages except DHT_PUT_KEY_IS_HASH_OF_DATA and DHT_GET_KEY_IS_HASH_OF_DATA are defined in the specification. DHT_PUT_KEY_IS_HASH_OF_DATA and DHT_GET_KEY_IS_HASH_OF_DATA are required to preserve data integrity and serve as an alternative to the traditional DHT_PUT and DHT_GET messages as explained in [Security Measures](#security-measures). As for the CapnProto Schema, all of the interface methods are required by the Chord algorithm.
 
 #### DHT_PUT
 ---
@@ -280,10 +280,10 @@ DHT_GET_KEY_IS_HASH_OF_DATA: 0x28f
 
 ### Exception handling (Churn, connection breaks, corrupted data, ...)
 Chord usually fixes itself in cases of Churn or Connection breaks. The only problem would be if a lot of nodes in the finger table suddenly go offline, but in that case the dht tries to re-join using the bootstrapping node. Corrupted data is dealt with in part by CapnProto, but since the underlaying protocol is TCP, we can assume to some extent that the data coming from the tcp layer is valid.
-Also, the integrity of the stored data in the DHT can be maintained by using the DHT_PUT_KEY_IS_HASH_OF_DATA and DHT_GET_KEY_IS_HASH_OF_DATA messages as explained in [Security measures](#Security-measures).
+Also, the integrity of the stored data in the DHT can be maintained by using the DHT_PUT_KEY_IS_HASH_OF_DATA and DHT_GET_KEY_IS_HASH_OF_DATA messages as explained in [Security measures](#security-measures).
 
 ## Changes from implementation in midterm report
-1. Hardened system against the attacks mentioned in [System security](#Security-measures)
+1. Hardened system against the attacks mentioned in [System security](#security-measures)
 1. Changed hash function from SHA1 to sha256.
 1. Implemented new DHT PUT and new DHT GET messaged to prevent data integrity.
 1. Implemented logging using spdlog library
