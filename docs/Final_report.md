@@ -125,3 +125,6 @@ n.check_predecessor()
     if predecessor has failed then
         predecessor := nil
 ```
+
+
+## The implementation
