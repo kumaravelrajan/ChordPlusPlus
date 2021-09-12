@@ -12,3 +12,5 @@ target_link_libraries(${LIBRARY_NAME} INTERFACE lib::entry)
 
 add_executable(${BINARY_NAME} dht-4.cpp)
 target_link_libraries(${BINARY_NAME} ${LIBRARY_NAME})
+
+install(TARGETS ${BINARY_NAME} DESTINATION bin)

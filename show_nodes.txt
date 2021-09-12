@@ -1,7 +1,0 @@
-show nodes
-sleep 1
-show nodes 0
-sleep 1
-show nodes 1
-sleep 1
-show nodes 2

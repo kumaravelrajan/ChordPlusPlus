@@ -1,7 +1,7 @@
 .idea/
 .vscode/
 .cache/
-build/
+build*/
 cmake-build-*/
 Testing/
 *log.txt
