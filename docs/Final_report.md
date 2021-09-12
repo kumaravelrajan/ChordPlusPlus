@@ -128,3 +128,149 @@ n.check_predecessor()
 
 
 ## The implementation
+### Architecture of modules
+The Project is separated into libraries, which speeds up compilation, makes unit testing easier, and reduces the risk of merge conflicts. Said libraries are:
+- api
+  - Responsible for inter-module communication.
+  - Uses libasio for cross-platform networking.
+- config
+  - Uses inipp to parse the configuration file.
+- dht
+  - The actual distributed hash table.
+  - Responsible for p2p communication, maintaining the finger table, and storing/retrieving data.
+- entry
+  - Starts the DHT
+  - Offers a runtime shell to monitor the chord ring.
+- logging
+  - Has spdlog specific configuration files.
+- rpc
+  - Todo
+- util
+  - A collection of utility functions, as well as constants
+- dht-4
+  - The actual entrypoint of the program.
+  - Parses command-line arguments and accoring to these calls entry module.
+
+### Folder Structure
+```
+.
+├── cmake
+│   └── CPM.cmake
+├── docs
+├── src
+│   ├── api
+│   │   └── CMakeLists.txt
+│   ├── config
+│   │   └── CMakeLists.txt
+│   ├── dht
+│   │   └── CMakeLists.txt
+│   ├── entry
+│   │   └── CMakeLists.txt
+│   ├── logging
+│   │   └── CMakeLists.txt
+│   ├── rpc
+│   │   └── CMakeLists.txt
+│   ├── util
+│   │   └── CMakeLists.txt
+│   ├── dht-4.cpp
+│   └── CMakeLists.txt
+├── test
+│   └── CMakeLists.txt
+├── CMakeLists.txt
+├── config.ini
+└── README.md
+```
+
+### Available libraries
+These libraries are downloaded and updated using [cpm-cmake/CPM.cmake](https://github.com/cpm-cmake/CPM.cmake).
+- [mcmtroffaes/inipp](https://github.com/mcmtroffaes/inipp) instead of inih
+- [cap'n proto](https://capnproto.org/)
+- [asio standalone](https://think-async.com/Asio/asio-1.18.2/doc/)
+- [jarro2783/cxxopts](https://github.com/jarro2783/cxxopts)
+- [gabime/spdlog](https://github.com/gabime/spdlog)
+- [janbar/openssl-cmake](https://github.com/janbar/openssl-cmake)
+
+### Logical structure
+#### API
+Todo - API class diagram
+
+The core of the api library is the `Api` class. It listens for incoming connections, and maintains a list of currently open connections. These connections then read and parse incoming requests, and pass those on to the appropriate `RequestHandler` (This depends on the message type). Those `RequestHandler`s are passed into the api from the outside.
+
+#### DHT
+todo - DHT class diagram
+
+The `Dht` class sets up the interface with the api by defining request handlers. The api now shares access to an instance of `NodeInformation` with the dht itself.  
+`NodeInformation` stores the actual state of the node; including but not limited to:
+
+- ip/port/id
+- finger table
+- predecessor
+- the actual hash table to store data
+
+The interface between peers is defined using a CapnProto schema, and the server-side of that is implemented in `PeerImpl`. This is where most of the actual dht logic takes place.
+
+### Process architecture
+
+The entire program takes place in one process, but using multithreading for asynchronicity. This is realized with `<future>` and `std::async`.
+Most of the synchronized access happens within `NodeInformation`, which uses `std::shared_mutex`, `std::unique_lock`, and `std::shared_lock` for read-write locking. In some cases, a simple `std::atomic_bool` suffices.
+
+todok - activity diagram
+
+### Networking
+This project has two network interfaces: The Api for module-module communication using libasio standalone, and the Dht CapnProto interface for peer-peer communication, which uses ez-rpc for now.
+
+### Security measures
+1. TLS security - todo
+
+1. Proof of Work to protect against constant churn- 
+   When a new node joins the network, it has to solve a Proof of Work puzzle supplied by the bootstrap node. The puzzle is different for each node and the difficulty of the puzzle can be set via a cmd argument.
+   
+   PoW protects against constant churn from disrupting the correct operation of the chord ring.
+
+1. New DHT PUT & DHT GET message to maintain data integrity - 
+   The new DHT PUT message accepts only the value and no key. The key to this data is sha256Hash(value). For retrieval of data the user supplies sha256Hash(value) to new DHT GET. The new DHT GET searches for sha256Hash(value). Upon retrieval, new DHT GET checks if sha256Hash(Retrieved value) == keyFromUser. This maintains data integrity.
+
+1. Considering (public_key + IP + Port) for calculating Node ID to prevent ID mapping attack - 
+   ID mapping attacks aim at nodes trying to manipulate their IDs to gain responsibility over data items they usually would not have. Future requests for data items under the malicious node's control can simply be ignored leading to DoS. This is protected against in our implementation by computing the Node ID as : 
+   Node ID = sha256Hash(PublicKeyOfNewNode + IP + Port)
+
+   There always exists the possibility that the attacker can generate multiple public-private key pairs or manipulate its IP and port. However, each new joinee has to solve the PoW puzzle. With a high difficulty for the PoW puzzle, it becomes very difficult to successfully execute a ID mapping attack.
+
+1. Using a distrusted set to protect against eclipse attacks - 
+   todo (How does getSuccessor work in brief and how the distrust set protects against eclipse attacks) - 
+
+### Peer to Peer protocol
+#### Message formats
+The messages except DHT_PUT_KEY_IS_HASH_OF_DATA and DHT_GET_KEY_IS_HASH_OF_DATA are defined in the specification. DHT_PUT_KEY_IS_HASH_OF_DATA and DHT_GET_KEY_IS_HASH_OF_DATA are required to preserve data integrity and serve as an alternative to the traditional DHT_PUT and DHT_GET messages as explained in [Security Measures](https://gitlab.lrz.de/netintum/teaching/p2psec_projects_2021/DHT-4/-/edit/develop/docs/Final_report.md#security-measures). As for the CapnProto Schema, all of the interface methods are required by the Chord algorithm.
+
+##### DHT_PUT
+todo
+
+##### DHT_GET
+todo
+
+##### DHT_SUCCESS
+todo
+
+##### DHT_FAILURE
+todo
+
+##### DHT_PUT_KEY_IS_HASH_OF_DATA
+todo
+
+##### DHT_GET_KEY_IS_HASH_OF_DATA
+todo
+
+#### Peer to peer communication
+The Message schema for inter-peer communication is defined in ../src/dht/schemas/peer.capnp
+
+#### Constants
+```yaml
+DHT_PUT:     0x028a
+DHT_GET:     0x028b
+DHT_SUCCESS: 0x028c
+DHT_FAILURE: 0x028d
+DHT_PUT_KEY_IS_HASH_OF_DATA: 0x28e
+DHT_GET_KEY_IS_HASH_OF_DATA: 0x28f
+```
+
