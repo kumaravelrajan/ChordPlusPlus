@@ -354,6 +354,6 @@ todo -
 
 ## References
 1. [Stoica, I.; Morris, R.; Kaashoek, M. F.; Balakrishnan, H. (2001). "Chord: A scalable peer-to-peer lookup service for internet applications" (PDF). ACM SIGCOMM Computer Communication Review.](https://pdos.csail.mit.edu/papers/chord:sigcomm01/chord_sigcomm.pdf)
-1. [Wikipedia](https://en.wikipedia.org/wiki/Chord_(peer-to-peer) <br> We recognize that wikipedia isn't a trustworthy source of reference especially for academic papers. This is why all the information referenced from Wikipedia has been cross referenced with the other scientific papers mentioned here.
-1. [Rescola](https://www.ietf.org/proceedings/65/slides/plenaryt-2.pdf)
+1. [Wikipedia](https://en.wikipedia.org/wiki/Chord_(peer-to-peer)) <br> We recognize that wikipedia isn't a trustworthy source of reference especially for academic papers. This is why all the information referenced from Wikipedia has been cross referenced with the other scientific papers mentioned here.
+1. [Rescola - Intro to DHT](https://www.ietf.org/proceedings/65/slides/plenaryt-2.pdf)
 1. [Security Considerations for Peer-to-Peer Distributed Hash Tables](https://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.11.7175&rep=rep1&type=pdf)
