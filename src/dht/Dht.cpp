@@ -258,7 +258,7 @@ void Dht::join(const NodeInformation::Node &node)
     LOG_GET
     m_nodeInformation->setPredecessor();
 
-    auto client = getClient(node.getIp(), node.getPort());
+    auto client = getPeerImpl().getClient(node.getIp(), node.getPort());
     auto cap = client->getMain<Peer>();
     auto req = cap.getPoWPuzzleOnJoinRequest();
     PeerImpl::buildNode(req.getNewNode(), m_nodeInformation->getNode());
@@ -298,7 +298,7 @@ void Dht::join(const NodeInformation::Node &node)
             LOG_DEBUG("{}:{} successfully solved puzzle.", this->m_nodeInformation->getIp(),
                       this->m_nodeInformation->getPort());
 
-            auto client = getClient(node.getIp(), node.getPort());
+            auto client = getPeerImpl().getClient(node.getIp(), node.getPort());
             auto cap = client->getMain<Peer>();
             auto req = cap.sendPoWPuzzleResponseToBootstrapAndGetSuccessorRequest();
             PeerImpl::buildNode(req.getNewNode(), m_nodeInformation->getNode());
@@ -332,7 +332,7 @@ void Dht::stabilize()
         return;
     }
 
-    auto client = getClient(successor->getIp(), successor->getPort());
+    auto client = getPeerImpl().getClient(successor->getIp(), successor->getPort());
     auto cap = client->getMain<Peer>();
     auto req = cap.getPredecessorRequest();
 
@@ -357,7 +357,7 @@ void Dht::stabilize()
             false, false
         )) {
             m_nodeInformation->setSuccessor(predOfSuccessor);
-            auto client2 = getClient(predOfSuccessor->getIp(), predOfSuccessor->getPort());
+            auto client2 = getPeerImpl().getClient(predOfSuccessor->getIp(), predOfSuccessor->getPort());
             auto cap2 = client2->getMain<Peer>();
             auto req2 = cap2.notifyRequest();
             PeerImpl::buildNode(req2.getNode(), m_nodeInformation->getNode());
@@ -369,7 +369,7 @@ void Dht::stabilize()
         } else {
             /* if ( pred(suc(cur)) [called PSC] == null  || ( PSC!=null && PSC not in range (cur, suc) ) )
              * then cur is predecessor of suc(cur). */
-            auto client2 = getClient(successor->getIp(), successor->getPort());
+            auto client2 = getPeerImpl().getClient(successor->getIp(), successor->getPort());
             auto cap2 = client2->getMain<Peer>();
             auto req2 = cap2.notifyRequest();
             PeerImpl::buildNode(req2.getNode(), m_nodeInformation->getNode());
@@ -399,7 +399,7 @@ void Dht::checkPredecessor()
     if (!m_nodeInformation->getPredecessor())
         return;
 
-    auto client = getClient(
+    auto client = getPeerImpl().getClient(
         m_nodeInformation->getPredecessor()->getIp(), m_nodeInformation->getPredecessor()->getPort()
     );
     auto cap = client->getMain<Peer>();

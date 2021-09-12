@@ -106,12 +106,12 @@ namespace dht
 
         void getDataItemsOnJoinHelper(std::optional<NodeInformation::Node> successorNode);
 
+        kj::Own<capnp::EzRpcClient> getClient(const std::string &ip, uint16_t port);
+
     private:
         GetSuccessorMethod m_getSuccessorMethod;
         std::shared_ptr<NodeInformation> m_nodeInformation;
     };
-
-    [[nodiscard]] kj::Own<capnp::EzRpcClient> getClient(const std::string &ip, uint16_t port);
 }
 
 

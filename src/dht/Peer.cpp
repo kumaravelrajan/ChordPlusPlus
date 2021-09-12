@@ -516,7 +516,7 @@ void PeerImpl::getDataItemsOnJoinHelper(std::optional<NodeInformation::Node> suc
     }).wait(client->getWaitScope());
 }
 
-kj::Own<capnp::EzRpcClient> dht::getClient(const std::string &ip, uint16_t port)
+kj::Own<capnp::EzRpcClient> PeerImpl::getClient(const std::string &ip, uint16_t port)
 {
     return kj::heap<capnp::EzRpcClient>(ip, port);
 }

@@ -7,9 +7,14 @@
 
 namespace config
 {
-    #define DEFAULT_DIFFICULTY 1
+#define DEFAULT_DIFFICULTY 1
+
     struct Configuration
     {
+        std::string private_key_path{"./hostkey.pem"};
+
+        std::string certificate_path{"./hostcert.crt"};
+        bool use_tls{false};
         std::string p2p_address{"127.0.0.1"};
         uint16_t p2p_port{6002};
         std::string api_address{"127.0.0.1"};

@@ -44,12 +44,22 @@ int main(int argc, char *argv[])
 {
     std::optional<std::string> startup_script{};
     std::optional<std::string> configPath{};
+    std::optional<std::string> privateKeyPath{};
+    std::optional<std::string> certificatePath{};
 
     cxxopts::Options options("dht-4", "DHT module for the VoidPhone project");
     options.add_options()
         (
             "c,config", "Configuration file path",
             cxxopts::value(configPath)->default_value("./config.ini")
+        )
+        (
+            "k,hostkey", "Path to private key",
+            cxxopts::value(privateKeyPath)
+        )
+        (
+            "certificate", "Path to certificate",
+            cxxopts::value(certificatePath)
         )
         ("h,help", "Print usage")
         (
@@ -87,6 +97,9 @@ int main(int argc, char *argv[])
 
     auto conf = configPath ? config::parseConfigFile(*configPath) : config::Configuration{};
 
+    if (privateKeyPath) conf.private_key_path = *privateKeyPath;
+    if (certificatePath) conf.certificate_path = *certificatePath;
+
     conf.startup_script = conf.startup_script ? conf.startup_script : startup_script;
 
     // Get user input nodes to create
@@ -96,7 +109,7 @@ int main(int argc, char *argv[])
 
     // Get difficulty level for PoW
     if (args.count("POWdifficulty")) {
-        conf.PoW_Difficulty = args["POWdifficulty"].as<uint8_t>();
+        config::Configuration::PoW_Difficulty = args["POWdifficulty"].as<uint8_t>();
     }
 
     // Initialize spdlog
