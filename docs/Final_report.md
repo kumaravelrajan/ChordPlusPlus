@@ -25,7 +25,7 @@ Since the successor (or predecessor) of a node may disappear from the network (b
 ![](./f_assets/ChordOverview.png "https://upload.wikimedia.org/wikipedia/commons/thumb/1/16/Chord_project.svg/525px-Chord_project.svg.png")*Overview of chord algorithm*
 
 ### Protocol details 
-![](./f_assets/Chord_network.png "https://upload.wikimedia.org/wikipedia/commons/thumb/2/20/Chord_network.png/375px-Chord_network.png")*A 16-node Chord network. The "fingers" for one of the nodes are highlighted.*
+![](./f_assets/Chord_network.png "https://upload.wikimedia.org/wikipedia/commons/thumb/2/20/Chord_network.png/375px-Chord_network.png")<br>*The "fingers" for one of the nodes are highlighted in a 16-node ring.*
 
 #### Basic query
 The core usage of the Chord protocol is to query a key from a client (generally a node as well), i.e. to find $`successor(k)`$. The basic approach is to pass the query to a node's successor, if it cannot find the key locally. This will lead to a $`O(N)`$ query time where $`N`$ is the number of machines in the ring.
