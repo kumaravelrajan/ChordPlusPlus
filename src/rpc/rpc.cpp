@@ -5,6 +5,9 @@
 kj::Own<rpc::SecureRpcClient>
 rpc::getClient(const config::Configuration &conf, const std::string &ip, uint16_t defaultPort)
 {
+    if (!conf.use_tls)
+        return kj::heap<rpc::SecureRpcClient>(ip, defaultPort);
+
     auto fs = kj::newDiskFilesystem();
     kj::TlsContext::Options options{};
     options.ignoreCertificates = true;
@@ -33,6 +36,9 @@ kj::Own<rpc::SecureRpcServer>
 rpc::getServer(const config::Configuration &conf, capnp::Capability::Client mainInterface,
                kj::StringPtr bindAddress, kj::uint defaultPort)
 {
+    if (!conf.use_tls)
+        return kj::heap<rpc::SecureRpcServer>(kj::mv(mainInterface), bindAddress, defaultPort);
+
     auto fs = kj::newDiskFilesystem();
     kj::TlsContext::Options options{};
     auto key = fs->getRoot().openFile(fs->getCurrentPath().eval(conf.private_key_path))->readAllText();

@@ -35,6 +35,7 @@ int main()
     conf.private_key_password = "asdf";
     conf.private_key_path = "../../../hostkey.pem";
     conf.certificate_path = "../../../hostcert.crt";
+    conf.use_tls = true;
 
     auto client = std::async(std::launch::async, [&done, &started, &conf] {
         while (!started);
