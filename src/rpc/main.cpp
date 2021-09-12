@@ -31,25 +31,17 @@ int main()
 
     auto fs = kj::newDiskFilesystem();
 
-    auto client = std::async(std::launch::async, [&done, &started] {
+    config::Configuration conf{};
+    conf.private_key_password = "asdf";
+    conf.private_key_path = "../../../hostkey.pem";
+    conf.certificate_path = "../../../hostcert.crt";
+    conf.use_tls = true;
+
+    auto client = std::async(std::launch::async, [&done, &started, &conf] {
         while (!started);
 
-        kj::TlsContext::Options options{};
-        options.ignoreCertificates = true;
-        kj::TlsContext tlsContext{options};
-
-        rpc::SecureRpcClient client(
-            "127.0.0.1", 1234, capnp::ReaderOptions(),
-            [&tlsContext](kj::Own<kj::AsyncIoStream> &&str) {
-                return tlsContext
-                    .wrapClient(kj::mv(str), "COLGATE")
-                    .then([](kj::Own<kj::AsyncIoStream> &&str) {
-                        std::cout << "wrapClient done" << std::endl;
-                        return kj::mv(str);
-                    });
-            }
-        );
-        auto cap = client.getMain<Example>();
+        auto client = rpc::getClient(conf, "127.0.0.1", 1234);
+        auto cap = client->getMain<Example>();
         auto req = cap.addRequest();
         req.setA(123);
         req.setB(297);
@@ -59,7 +51,7 @@ int main()
             }, [](kj::Exception &&err) -> Example::AddResults::Reader {
                 std::cout << fmt::format("send Exception: {}", err.getDescription().cStr()) << std::endl;
                 throw std::runtime_error("nah dude");
-            }).wait(client.getWaitScope());
+            }).wait(client->getWaitScope());
             int a = result.getA();
             int b = result.getB();
             int sum = result.getSum();
@@ -78,28 +70,10 @@ int main()
         done = true;
     });
 
-    auto server = std::async(std::launch::async, [&done, &started, &fs] {
-        kj::TlsContext::Options options{};
-        auto key = fs->getRoot().openFile(fs->getCurrentPath().eval("../../../hostkey.pem"))->readAllText();
-        auto cert = fs->getRoot().openFile(fs->getCurrentPath().eval("../../../hostcert.crt"))->readAllText();
-        kj::TlsKeypair kp{
-            kj::TlsPrivateKey(key, kj::StringPtr("asdf")),
-            kj::TlsCertificate(cert)
-        };
-        options.defaultKeypair = kp;
-        kj::TlsContext tlsContext{options};
-
-        rpc::SecureRpcServer server(
-            kj::heap<ExampleImpl>(), "127.0.0.1", 1234, capnp::ReaderOptions(),
-            [&tlsContext](kj::Own<kj::AsyncIoStream> &&str) {
-                return tlsContext.wrapServer(kj::mv(str)).then([](kj::Own<kj::AsyncIoStream> &&str) {
-                    std::cout << "wrapServer done" << std::endl;
-                    return kj::mv(str);
-                });
-            }
-        );
+    auto server = std::async(std::launch::async, [&done, &started, &fs, &conf] {
+        auto server = rpc::getServer(conf, kj::heap<ExampleImpl>(), "127.0.0.1", 1234);
         while (!done) {
-            server.getWaitScope().poll();
+            server->getWaitScope().poll();
             if (!started) started = true;
         }
     });

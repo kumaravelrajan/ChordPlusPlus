@@ -44,12 +44,27 @@ int main(int argc, char *argv[])
 {
     std::optional<std::string> startup_script{};
     std::optional<std::string> configPath{};
+    std::optional<std::string> privateKeyPath{};
+    std::optional<std::string> certificatePath{};
+    std::optional<std::string> keyPassword{};
 
     cxxopts::Options options("dht-4", "DHT module for the VoidPhone project");
     options.add_options()
         (
             "c,config", "Configuration file path",
             cxxopts::value(configPath)->default_value("./config.ini")
+        )
+        (
+            "k,hostkey", "Path to private key",
+            cxxopts::value(privateKeyPath)
+        )
+        (
+            "password", "Password for the private key",
+            cxxopts::value(keyPassword)
+        )
+        (
+            "certificate", "Path to certificate",
+            cxxopts::value(certificatePath)
         )
         ("h,help", "Print usage")
         (
@@ -92,6 +107,10 @@ int main(int argc, char *argv[])
 
     auto conf = configPath ? config::parseConfigFile(*configPath) : config::Configuration{};
 
+    if (privateKeyPath) conf.private_key_path = *privateKeyPath;
+    if (certificatePath) conf.certificate_path = *certificatePath;
+    if (keyPassword) conf.private_key_password = keyPassword;
+
     conf.startup_script = conf.startup_script ? conf.startup_script : startup_script;
 
     // Get user input nodes to create
@@ -101,7 +120,7 @@ int main(int argc, char *argv[])
 
     // Get difficulty level for PoW
     if (args.count("POWdifficulty")) {
-        conf.PoW_Difficulty = args["POWdifficulty"].as<uint8_t>();
+        config::Configuration::PoW_Difficulty = args["POWdifficulty"].as<uint8_t>();
     }
 
     // Get replication limit for the same data item on each node

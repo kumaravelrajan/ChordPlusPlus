@@ -77,7 +77,7 @@ Entry::Entry(const config::Configuration &conf) : Entry()
             }
 
             // The constructor of Dht starts mainLoop asynchronously.
-            m_DHTs.push_back(std::make_unique<dht::Dht>(m_nodes[i]));
+            m_DHTs.push_back(std::make_unique<dht::Dht>(m_nodes[i], m_conf));
 
             m_DHTs[i]->setApi(std::make_unique<api::Api>(api::Options{
                 .port= api_port,
@@ -227,7 +227,7 @@ void Entry::addNode(std::optional<uint16_t> portParam, std::ostream &os)
     );
 
     // The constructor of Dht starts mainLoop asynchronously.
-    m_DHTs.push_back(std::make_unique<dht::Dht>(m_nodes.back()));
+    m_DHTs.push_back(std::make_unique<dht::Dht>(m_nodes.back(), m_conf));
 
     m_DHTs.back()->setApi(std::make_unique<api::Api>(api::Options{
         .port= static_cast<uint16_t>(m_nodes.back()->getPort() + static_cast<uint16_t>(1000)),
