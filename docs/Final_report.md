@@ -214,7 +214,7 @@ The interface between peers is defined using a CapnProto schema, and the server-
 The entire program takes place in one process, but using multithreading for asynchronicity. This is realized with `<future>` and `std::async`.
 Most of the synchronized access happens within `NodeInformation`, which uses `std::shared_mutex`, `std::unique_lock`, and `std::shared_lock` for read-write locking. In some cases, a simple `std::atomic_bool` suffices.
 
-todok - activity diagram
+![](./f_assets/Activity-Diagram_-_Copy.png)
 
 ### Networking
 This project has two network interfaces: The Api for module-module communication using libasio standalone, and the Dht CapnProto interface for peer-peer communication, which uses (todo (explain tls rpc)). Also, capnproto has no (de)serialization of data, so any type of xss cannot occur. 
