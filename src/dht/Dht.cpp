@@ -14,14 +14,15 @@ using namespace std::chrono_literals;
 
 void Dht::runServer()
 {
-    auto peerImpl = kj::heap<PeerImpl>(m_nodeInformation);
+    auto peerImpl = kj::heap<PeerImpl>(m_nodeInformation, m_conf);
     m_peerImpl = *peerImpl;
-    ::capnp::EzRpcServer peerServer{
+    auto peerServer = rpc::getServer(
+        m_conf,
         std::move(peerImpl),
         m_nodeInformation->getIp(),
         m_nodeInformation->getPort()
-    };
-    auto &waitScope = peerServer.getWaitScope();
+    );
+    auto &waitScope = peerServer->getWaitScope();
 
     // from kj/async.h - Use `kj::getCurrentThreadExecutor()` to get an executor that schedules calls on the current
     // thread's event loop.

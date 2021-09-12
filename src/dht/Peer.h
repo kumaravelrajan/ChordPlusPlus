@@ -2,7 +2,7 @@
 #define DHT_PEER_H
 
 #include <capnp/capability.h>
-#include <capnp/ez-rpc.h>
+#include <rpc.h>
 #include <peer.capnp.h>
 #include <memory>
 #include <unordered_set>
@@ -83,7 +83,7 @@ namespace dht
             PASS_ON, LOCAL
         };
 
-        explicit PeerImpl(std::shared_ptr<NodeInformation>, GetSuccessorMethod = GetSuccessorMethod::LOCAL);
+        explicit PeerImpl(std::shared_ptr<NodeInformation>, config::Configuration conf, GetSuccessorMethod = GetSuccessorMethod::LOCAL);
 
         static NodeInformation::Node nodeFromReader(Node::Reader node);
         static std::optional<NodeInformation::Node> nodeFromReader(Optional<Node>::Reader node);
@@ -106,11 +106,12 @@ namespace dht
 
         void getDataItemsOnJoinHelper(std::optional<NodeInformation::Node> successorNode);
 
-        kj::Own<capnp::EzRpcClient> getClient(const std::string &ip, uint16_t port);
+        kj::Own<rpc::SecureRpcClient> getClient(const std::string &ip, uint16_t port);
 
     private:
         GetSuccessorMethod m_getSuccessorMethod;
         std::shared_ptr<NodeInformation> m_nodeInformation;
+        const config::Configuration m_conf;
     };
 }
 

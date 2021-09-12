@@ -8,9 +8,11 @@ using dht::Peer;
 using dht::Node;
 
 
-PeerImpl::PeerImpl(std::shared_ptr<NodeInformation> nodeInformation, GetSuccessorMethod getSuccessorMethod) :
+PeerImpl::PeerImpl(std::shared_ptr<NodeInformation> nodeInformation, config::Configuration conf,
+                   GetSuccessorMethod getSuccessorMethod) :
     m_getSuccessorMethod{getSuccessorMethod},
-    m_nodeInformation{std::move(nodeInformation)} {}
+    m_nodeInformation{std::move(nodeInformation)},
+    m_conf{std::move(conf)} {}
 
 // Server methods
 
@@ -516,7 +518,7 @@ void PeerImpl::getDataItemsOnJoinHelper(std::optional<NodeInformation::Node> suc
     }).wait(client->getWaitScope());
 }
 
-kj::Own<capnp::EzRpcClient> PeerImpl::getClient(const std::string &ip, uint16_t port)
+kj::Own<rpc::SecureRpcClient> PeerImpl::getClient(const std::string &ip, uint16_t port)
 {
-    return kj::heap<capnp::EzRpcClient>(ip, port);
+    return rpc::getClient(m_conf, ip, port);
 }

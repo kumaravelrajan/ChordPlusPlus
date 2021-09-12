@@ -20,16 +20,17 @@ namespace dht
     class Dht
     {
     public:
-        explicit Dht(std::shared_ptr<NodeInformation> nodeInformation) :
+        explicit Dht(std::shared_ptr<NodeInformation> nodeInformation, config::Configuration conf) :
             m_nodeInformation(std::move(nodeInformation)),
-            m_mainLoop(std::async(std::launch::async, [this]() { runServer(); })) {}
+            m_mainLoop(std::async(std::launch::async, [this]() { runServer(); })),
+            m_conf(std::move(conf)) {}
         ~Dht()
         {
             m_dhtCancelled = true;
             m_api = nullptr;
             m_mainLoop.wait(); // This happens after the destructor anyway, but this way it is clearer
 
-            if(m_replicationFuture.valid()){
+            if (m_replicationFuture.valid()) {
                 m_replicationFuture.wait();
             }
         };
@@ -72,6 +73,7 @@ namespace dht
         std::optional<std::reference_wrapper<PeerImpl>> m_peerImpl;
         std::optional<std::reference_wrapper<const kj::Executor>> m_executor;
         std::atomic<size_t> nextFinger{0};
+        const config::Configuration m_conf;
 
         // Getters
 

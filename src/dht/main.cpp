@@ -23,7 +23,7 @@ int main()
 
     {
         // The constructor of Dht starts mainLoop asynchronously.
-        auto dht = std::make_unique<dht::Dht>(N);
+        auto dht = std::make_unique<dht::Dht>(N, config::Configuration{});
 
         dht->setApi(std::make_unique<api::Api>(api::Options{
             .port= 1234,
