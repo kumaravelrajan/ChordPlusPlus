@@ -22,9 +22,11 @@ The concept of successor can be used for keys as well. The successor node of a k
 
 Since the successor (or predecessor) of a node may disappear from the network (because of failure or departure), each node records a whole segment of the circle adjacent to it, i.e., the $`r`$ nodes preceding it and the $`r`$ nodes following it. This list results in a high probability that a node is able to correctly locate its successor or predecessor, even if the network in question suffers from a high failure rate.
 
-![](./ChordOverview.png "https://upload.wikimedia.org/wikipedia/commons/thumb/1/16/Chord_project.svg/525px-Chord_project.svg.png")*Overview of chord algorithm*
+![](./f_assets/ChordOverview.png "https://upload.wikimedia.org/wikipedia/commons/thumb/1/16/Chord_project.svg/525px-Chord_project.svg.png")*Overview of chord algorithm*
 
 ### Protocol details 
+![](./f_assets/Chord_network.png "https://upload.wikimedia.org/wikipedia/commons/thumb/2/20/Chord_network.png/375px-Chord_network.png")*A 16-node Chord network. The "fingers" for one of the nodes are highlighted.*
+
 #### Basic query
 The core usage of the Chord protocol is to query a key from a client (generally a node as well), i.e. to find $`successor(k)`$. The basic approach is to pass the query to a node's successor, if it cannot find the key locally. This will lead to a $`O(N)`$ query time where $`N`$ is the number of machines in the ring.
 
