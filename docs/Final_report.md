@@ -284,6 +284,14 @@ DHT_GET_KEY_IS_HASH_OF_DATA: 0x28f
 Chord usually fixes itself in cases of Churn or Connection breaks. The only problem would be if a lot of nodes in the finger table suddenly go offline, but in that case the dht tries to re-join using the bootstrapping node. Corrupted data is dealt with in part by CapnProto, but since the underlaying protocol is TCP, we can assume to some extent that the data coming from the tcp layer is valid.
 Also, the integrity of the stored data in the DHT can be maintained by using the DHT_PUT_KEY_IS_HASH_OF_DATA and DHT_GET_KEY_IS_HASH_OF_DATA messages as explained in [Security measures](#Security-measures).
 
+### Changes from implementation in midterm report
+1. Hardened system against the attacks mentioned in [System security](#Security-measures)
+1. Changed hash function from SHA1 to sha256.
+1. Implemented new DHT PUT and new DHT GET messaged to prevent data integrity.
+1. Implemented logging using spdlog library
+1. Implemented runtime shell for easy monitoring.
+1. Changed getSuccessor mechanism - todo
+
 ### Known issues 
 1. The network has currently been tested by spawning different nodes in a chord network on different ports of the localhost and testing the chord features. The system has not been tested in a real world network where two peers might be several hundred kilometers away. Testing the system with such a network might bring to light performance issues or new bugs.
 
@@ -296,3 +304,50 @@ Also, the integrity of the stored data in the DHT can be maintained by using the
 
 1. Caching - 
    No caching mechanism has been implemented currently. If nodes start caching frequently requested key-value pairs, RPC calls would not need to be made every request. This would hence improve performance.
+
+## Setup & use
+### How to install and run the software 
+todo - 
+
+### Command line arguments
+1. -c, --config : Configuration file path
+1. -h, --help : Print usage
+1. -n, --node-amount : Create multiple nodes on localhost for testing. 0 means no nodes at all. Default is 1.
+1. -l, --logMode : Set console log mode visibility (int): 0 - trace; 1 - debug; 2 - info; 3 - warning; 4 - error; 5 - critical; 6 - off and complete logs are present in ./async-log.txt
+1. -o, --logOutput : Specify path for log file. Default: ./log.txt
+1. -s, --startupScript : Specify path for startup script. The script should consist of commands which the runtime shell accepts.
+1. -d, --POWdifficulty : Specify difficulty to be set for Proof of work algorithm. Usage: -d {NUMBER_OF_LEADING_ZEROES <= 160}
+1. -r, --replicationLimit : Specify replication limit for the same data item on one node
+
+### Runtime shell 
+1. help
+  1. brief= "Print help for a command"
+  1. usage= "help [COMMAND]"
+1. exit
+  1. brief= "Exit the program"
+  1. usage= "exit"
+1. sleep
+  1. brief= "Wait some time before accepting new input"
+  1. usage= "sleep <SECONDS>"
+1. repeat
+  1. brief= "Repeat the previous command"
+  1. usage= "repeat"
+1. execute
+  1. brief= "Execute a script"
+  1. usage= "execute <PATH>"
+1. add
+  1. brief= "Add node to the chord ring"
+  1. usage= "add [PORT]"
+1. remove
+  1. brief= "Remove node(s) from the chord ring"
+  1. usage= "remove <INDEX> [COUNT]"
+1. show
+  1. show nodes
+    1. brief= "List all Nodes, or information of one Node"
+    1. usage= "show nodes [INDEX]"
+  1. show data
+    1. brief="List all data items contained in Node"
+    1. usage="show nodes [INDEX]"
+  1. show fingers
+    1. brief= "Show finger table of a node"
+    1. usage= "show fingers <INDEX>"
