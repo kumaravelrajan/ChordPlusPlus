@@ -321,36 +321,36 @@ todo -
 
 ### Runtime shell 
 1. help
-  1. brief= "Print help for a command"
-  1. usage= "help [COMMAND]"
+   - brief= "Print help for a command"
+   - usage= "help [COMMAND]"
 1. exit
-  1. brief= "Exit the program"
-  1. usage= "exit"
+   -  brief= "Exit the program"
+   -  usage= "exit"
 1. sleep
-  1. brief= "Wait some time before accepting new input"
-  1. usage= "sleep <SECONDS>"
+   -  brief= "Wait some time before accepting new input"
+   -  usage= "sleep <SECONDS>"
 1. repeat
-  1. brief= "Repeat the previous command"
-  1. usage= "repeat"
+   -  brief= "Repeat the previous command"
+   -  usage= "repeat"
 1. execute
-  1. brief= "Execute a script"
-  1. usage= "execute <PATH>"
+   -  brief= "Execute a script"
+   -  usage= "execute <PATH>"
 1. add
-  1. brief= "Add node to the chord ring"
-  1. usage= "add [PORT]"
+   -  brief= "Add node to the chord ring"
+   -  usage= "add [PORT]"
 1. remove
-  1. brief= "Remove node(s) from the chord ring"
-  1. usage= "remove <INDEX> [COUNT]"
+   -  brief= "Remove node(s) from the chord ring"
+   -  usage= "remove <INDEX> [COUNT]"
 1. show
-  1. show nodes
-    1. brief= "List all Nodes, or information of one Node"
-    1. usage= "show nodes [INDEX]"
-  1. show data
-    1. brief="List all data items contained in Node"
-    1. usage="show nodes [INDEX]"
-  1. show fingers
-    1. brief= "Show finger table of a node"
-    1. usage= "show fingers <INDEX>"
+   1. show nodes
+      -  brief= "List all Nodes, or information of one Node"
+      -  usage= "show nodes [INDEX]"
+   1. show data
+      -  brief="List all data items contained in Node"
+      -  usage="show nodes [INDEX]"
+   1. show fingers
+      -  brief= "Show finger table of a node"
+      -  usage= "show fingers <INDEX>"
 
 ## References
 1. [Stoica, I.; Morris, R.; Kaashoek, M. F.; Balakrishnan, H. (2001). "Chord: A scalable peer-to-peer lookup service for internet applications" (PDF). ACM SIGCOMM Computer Communication Review.](https://pdos.csail.mit.edu/papers/chord:sigcomm01/chord_sigcomm.pdf)
