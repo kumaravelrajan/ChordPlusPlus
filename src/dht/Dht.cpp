@@ -415,6 +415,9 @@ void Dht::join(const NodeInformation::Node &node)
                 if (response.hasSuccessorOfNewNode()) {
                     auto successor = PeerImpl::nodeFromReader(response.getSuccessorOfNewNode());
                     this->m_nodeInformation->setSuccessor(successor);
+
+                    /* Sync data items from successor for which new node is responsible. */
+                    getPeerImpl().getDataItemsOnJoinHelper(m_nodeInformation->getSuccessor());
                 } else {
                     this->m_nodeInformation->setSuccessor();
                 }
