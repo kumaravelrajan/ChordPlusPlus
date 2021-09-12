@@ -378,11 +378,17 @@ docker run -it -p7112:7112 --mount type=bind,source="$(pwd)",target=/app/workdir
     - Api to let other Modules interface with the Dht
     - Dht Logic
     - Networking and Thread Management
+    - TLS security
+    - Dockerization
+    - Runtime shell
 - Kumaravel Rajan
     - Gitlab Issues for Workload Planning and Distribution
     - Parse Configuration File and Command-line Arguments
     - Dht Logic
     - Main Entry Point
+    - Runtime shell
+    - Replication
+    - Proof of Work
 
 ## Effort spent for the project (please specify individual effort)
 
