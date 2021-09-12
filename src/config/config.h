@@ -12,6 +12,7 @@ namespace config
     struct Configuration
     {
         std::string private_key_path{"./hostkey.pem"};
+        std::optional<std::string> private_key_password{};
 
         std::string certificate_path{"./hostcert.crt"};
         bool use_tls{false};
