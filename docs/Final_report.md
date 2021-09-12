@@ -2,16 +2,14 @@ This is the final report for DHT-4 project.
 
 [[_TOC_]]
 
-# Overview
-
-## What is a Distributed hash table (DHT)?
+# What is a Distributed hash table (DHT)?
 A distributed hash table (DHT) is a distributed storage for key-value pairs. An implementation of a DHT forms a structured overlay to optimize the placement and retrieval of the key-value pairs. Certain well established designs for DHT are the Chord, Pastry, Kademlia, and GNUnet’s R5N. Our implementation used the Chord algorithm. 
 
 A DHT implementation supports storing a key-value pair and retrieval of the value given the corresponding key at any later point. The key-value pair can expire after a predefined timeout (TTL - Time to live). In our implementation, the keys are all 256 bit in length in accordance with the specification. To account for churn our implementation supports replication while storing a key-value pair.
 
 ![](./f_assets/DHT.png "https://upload.wikimedia.org/wikipedia/commons/thumb/9/98/DHT_en.svg/750px-DHT_en.svg.png")*Distributed hash table*
 
-## The Chord algorithm
+# The Chord algorithm
 Nodes and keys are assigned an $`m-bit`$ identifier using consistent hashing. The SHA-1 algorithm is the base hashing function for consistent hashing. Consistent hashing is integral to the robustness and performance of Chord because both keys and nodes (in fact, their IP addresses) are uniformly distributed in the same identifier space with a negligible possibility of collision. Thus, it also allows nodes to join and leave the network without disruption. In the protocol, the term node is used to refer to both a node itself and its identifier (ID) without ambiguity. So is the term key.
 
 Using the Chord lookup protocol, nodes and keys are arranged in an identifier circle that has at most $`2^{m}`$ nodes, ranging from $`0`$ to $`2^m - 1`$. $`m`$ should be large enough to avoid collision.) Some of these nodes will map to machines or keys while others (most) will be empty.
@@ -24,18 +22,18 @@ Since the successor (or predecessor) of a node may disappear from the network (b
 
 ![](./f_assets/ChordOverview.png "https://upload.wikimedia.org/wikipedia/commons/thumb/1/16/Chord_project.svg/525px-Chord_project.svg.png")*Overview of chord algorithm*
 
-### Protocol details 
+## Protocol details 
 ![](./f_assets/Chord_network.png "https://upload.wikimedia.org/wikipedia/commons/thumb/2/20/Chord_network.png/375px-Chord_network.png")<br>*The "fingers" for one of the nodes are highlighted in a 16-node ring.*
 
-#### Basic query
+### Basic query
 The core usage of the Chord protocol is to query a key from a client (generally a node as well), i.e. to find $`successor(k)`$. The basic approach is to pass the query to a node's successor, if it cannot find the key locally. This will lead to a $`O(N)`$ query time where $`N`$ is the number of machines in the ring.
 
-#### Finger table
+### Finger table
 To avoid the linear search above, Chord implements a faster search method by requiring each node to keep a finger table containing up to $`m`$ entries($`m`$ being the number of bits in the hash key). The $`i^{th}`$ entry of node $`n`$ will contain $`successor((n + 2^{i-1}) mod \enspace 2^m)`$. The first entry of finger table is actually the node's immediate successor (and therefore an extra successor field is not needed). Every time a node wants to look up a key $`k`$, it will pass the query to the closest successor or predecessor (depending on the finger table) of $`k`$ in its finger table (the "largest" one on the circle whose ID is smaller than $`k`$), until a node finds out the key is stored in its immediate successor.
 
 With such a finger table, the number of nodes that must be contacted to find a successor in an N-node network is $`O(log N)`$.
 
-#### Node join
+### Node join
 Whenever a new node joins, three invariants should be maintained (the first two ensure correctness and the last one keeps querying fast):
 
 1. Each node's successor points to its immediate successor correctly.
@@ -50,7 +48,7 @@ To satisfy these invariants, a predecessor field is maintained for each node. As
 
 The predecessor of $`n`$ can be easily obtained from the predecessor of $`successor(n)`$ (in the previous circle). As for its finger table, there are various initialization methods. The simplest one is to execute find successor queries for all $`m`$ entries, resulting in $`O(M \enspace log N)`$ initialization time. A better method is to check whether $`i^{th}`$ entry in the finger table is still correct for the $`(i+1)^{th}`$ entry. This will lead to $`O(log^2 N)`$. The best method is to initialize the finger table from its immediate neighbours and make some updates, which is $`O(log N)`$.
 
-#### Stabilization
+### Stabilization
 To ensure correct lookups, all successor pointers must be up to date. Therefore, a stabilization protocol is running periodically in the background which updates finger tables and successor pointers.
 
 The stabilization protocol works as follows:
@@ -59,13 +57,13 @@ The stabilization protocol works as follows:
 1. Notify(): notifies n‘s successor of its existence, so it can change its predecessor to n
 1. Fix_fingers(): updates finger tables
 
-#### Pseudocode
-##### Definitions for pseudocode
+### Pseudocode
+#### Definitions for pseudocode
 1. finger[k] : first node that succeeds $`(n+2^{k-1}) \enspace mod \enspace 2^m, 1 \leq k \leq m`$
 1. successor : the next node from the node in question on the identifier ring
 1. predecessor : the previous node from the node in question on the identifier ring
 
-##### 1. Find the successor node of an id
+#### 1. Find the successor node of an id
 ```
 // ask node n to find the successor of id
 n.find_successor(id)
@@ -86,7 +84,7 @@ n.closest_preceding_node(id)
     return n
 ```
 
-##### 2. Stabilize the chord ring/circle after node joins and departures
+#### 2. Stabilize the chord ring/circle after node joins and departures
 ```
 // create a new Chord ring.
 n.create()
@@ -127,8 +125,8 @@ n.check_predecessor()
 ```
 
 
-## The implementation
-### Architecture of modules
+# The implementation
+## Architecture of modules
 The Project is separated into libraries, which speeds up compilation, makes unit testing easier, and reduces the risk of merge conflicts. Said libraries are:
 - api
   - Responsible for inter-module communication.
@@ -151,7 +149,7 @@ The Project is separated into libraries, which speeds up compilation, makes unit
   - The actual entrypoint of the program.
   - Parses command-line arguments and accoring to these calls entry module.
 
-### Folder Structure
+## Folder Structure
 ```
 .
 ├── cmake
@@ -181,7 +179,7 @@ The Project is separated into libraries, which speeds up compilation, makes unit
 └── README.md
 ```
 
-### Available libraries
+## Available libraries
 These libraries are downloaded and updated using [cpm-cmake/CPM.cmake](https://github.com/cpm-cmake/CPM.cmake).
 - [mcmtroffaes/inipp](https://github.com/mcmtroffaes/inipp) instead of inih
 - [cap'n proto](https://capnproto.org/)
@@ -190,13 +188,13 @@ These libraries are downloaded and updated using [cpm-cmake/CPM.cmake](https://g
 - [gabime/spdlog](https://github.com/gabime/spdlog)
 - [janbar/openssl-cmake](https://github.com/janbar/openssl-cmake)
 
-### Logical structure
-#### API
+## Logical structure
+### API
 Todo - API class diagram
 
 The core of the api library is the `Api` class. It listens for incoming connections, and maintains a list of currently open connections. These connections then read and parse incoming requests, and pass those on to the appropriate `RequestHandler` (This depends on the message type). Those `RequestHandler`s are passed into the api from the outside.
 
-#### DHT
+### DHT
 todo - DHT class diagram
 
 The `Dht` class sets up the interface with the api by defining request handlers. The api now shares access to an instance of `NodeInformation` with the dht itself.  
@@ -209,17 +207,17 @@ The `Dht` class sets up the interface with the api by defining request handlers.
 
 The interface between peers is defined using a CapnProto schema, and the server-side of that is implemented in `PeerImpl`. This is where most of the actual dht logic takes place.
 
-### Process architecture
+## Process architecture
 
 The entire program takes place in one process, but using multithreading for asynchronicity. This is realized with `<future>` and `std::async`.
 Most of the synchronized access happens within `NodeInformation`, which uses `std::shared_mutex`, `std::unique_lock`, and `std::shared_lock` for read-write locking. In some cases, a simple `std::atomic_bool` suffices.
 
 ![](./f_assets/Activity-Diagram_-_Copy.png)
 
-### Networking
+## Networking
 This project has two network interfaces: The Api for module-module communication using libasio standalone, and the Dht CapnProto interface for peer-peer communication, which uses (todo (explain tls rpc)). Also, capnproto has no (de)serialization of data, so any type of xss cannot occur. 
 
-### Security measures
+## Security measures
 1. TLS security - todo
 
 1. Proof of Work to protect against constant churn- 
@@ -239,38 +237,38 @@ This project has two network interfaces: The Api for module-module communication
 1. Using a distrusted set to protect the network from malicious nodes - 
    todo (How does getSuccessor work in brief and how the distrust set protects against eclipse attacks) - 
 
-### Peer to Peer protocol
-#### Message formats
+## Peer to Peer protocol
+### Message formats
 The messages except DHT_PUT_KEY_IS_HASH_OF_DATA and DHT_GET_KEY_IS_HASH_OF_DATA are defined in the specification. DHT_PUT_KEY_IS_HASH_OF_DATA and DHT_GET_KEY_IS_HASH_OF_DATA are required to preserve data integrity and serve as an alternative to the traditional DHT_PUT and DHT_GET messages as explained in [Security Measures](#Security-measures). As for the CapnProto Schema, all of the interface methods are required by the Chord algorithm.
 
-##### DHT_PUT
+#### DHT_PUT
 ---
 ![DHT PUT](./assets/MSG_DHT_PUT.png)
 
-##### DHT_GET
+#### DHT_GET
 ---
 ![DHT GET](./assets/MSG_DHT_GET.png)
 
-##### DHT_SUCCESS
+#### DHT_SUCCESS
 ---
 ![DHT SUCCESS](./assets/MSG_DHT_SUCCESS.png)
 
-##### DHT_FAILURE
+#### DHT_FAILURE
 ---
 ![DHT FAILURE](./assets/MSG_DHT_FAILURE.png)
 
-##### DHT_PUT_KEY_IS_HASH_OF_DATA
+#### DHT_PUT_KEY_IS_HASH_OF_DATA
 ---
 ![DHT_PUT_KEY_IS_HASH_OF_DATA](./f_assets/DHT_PUT_KEY_IS_HASH_OF_DATA.png)
 
-##### DHT_GET_KEY_IS_HASH_OF_DATA
+#### DHT_GET_KEY_IS_HASH_OF_DATA
 ---
 ![DHT GET](./assets/MSG_DHT_GET.png)
 
-#### Peer to peer communication
+### Peer to peer communication
 The Message schema for inter-peer communication is defined in ../src/dht/schemas/peer.capnp
 
-#### Constants
+### Constants
 ```yaml
 DHT_PUT:     0x028a
 DHT_GET:     0x028b
@@ -280,11 +278,11 @@ DHT_PUT_KEY_IS_HASH_OF_DATA: 0x28e
 DHT_GET_KEY_IS_HASH_OF_DATA: 0x28f
 ```
 
-#### Exception handling (Churn, connection breaks, corrupted data, ...)
+### Exception handling (Churn, connection breaks, corrupted data, ...)
 Chord usually fixes itself in cases of Churn or Connection breaks. The only problem would be if a lot of nodes in the finger table suddenly go offline, but in that case the dht tries to re-join using the bootstrapping node. Corrupted data is dealt with in part by CapnProto, but since the underlaying protocol is TCP, we can assume to some extent that the data coming from the tcp layer is valid.
 Also, the integrity of the stored data in the DHT can be maintained by using the DHT_PUT_KEY_IS_HASH_OF_DATA and DHT_GET_KEY_IS_HASH_OF_DATA messages as explained in [Security measures](#Security-measures).
 
-### Changes from implementation in midterm report
+## Changes from implementation in midterm report
 1. Hardened system against the attacks mentioned in [System security](#Security-measures)
 1. Changed hash function from SHA1 to sha256.
 1. Implemented new DHT PUT and new DHT GET messaged to prevent data integrity.
@@ -292,10 +290,10 @@ Also, the integrity of the stored data in the DHT can be maintained by using the
 1. Implemented runtime shell for easy monitoring.
 1. Changed getSuccessor mechanism - todo
 
-### Known issues 
+## Known issues 
 1. The network has currently been tested by spawning different nodes in a chord network on different ports of the localhost and testing the chord features. The system has not been tested in a real world network where two peers might be several hundred kilometers away. Testing the system with such a network might bring to light performance issues or new bugs.
 
-### Future work
+## Future work
 1. Rating system for nodes - 
    todo - 
 
@@ -305,11 +303,11 @@ Also, the integrity of the stored data in the DHT can be maintained by using the
 1. Caching - 
    No caching mechanism has been implemented currently. If nodes start caching frequently requested key-value pairs, RPC calls would not need to be made every request. This would hence improve performance.
 
-## Setup & use
-### How to install and run the software 
+# Setup & use
+## How to install and run the software 
 todo - 
 
-### Command line arguments
+## Command line arguments
 1. -c, --config : Configuration file path
 1. -h, --help : Print usage
 1. -n, --node-amount : Create multiple nodes on localhost for testing. 0 means no nodes at all. Default is 1.
@@ -319,7 +317,7 @@ todo -
 1. -d, --POWdifficulty : Specify difficulty to be set for Proof of work algorithm. Usage: -d {NUMBER_OF_LEADING_ZEROES <= 160}
 1. -r, --replicationLimit : Specify replication limit for the same data item on one node
 
-### Runtime shell 
+## Runtime shell 
 1. help
    - brief= "Print help for a command"
    - usage= "help [COMMAND]"
@@ -352,8 +350,15 @@ todo -
       -  brief= "Show finger table of a node"
       -  usage= "show fingers <INDEX>"
 
-## References
+# References
 1. [Stoica, I.; Morris, R.; Kaashoek, M. F.; Balakrishnan, H. (2001). "Chord: A scalable peer-to-peer lookup service for internet applications" (PDF). ACM SIGCOMM Computer Communication Review.](https://pdos.csail.mit.edu/papers/chord:sigcomm01/chord_sigcomm.pdf)
 1. [Wikipedia](https://en.wikipedia.org/wiki/Chord_(peer-to-peer)) <br> We recognize that wikipedia isn't a trustworthy source of reference especially for academic papers. This is why all the information referenced from Wikipedia has been cross referenced with the other scientific papers mentioned here.
 1. [Rescola - Intro to DHT](https://www.ietf.org/proceedings/65/slides/plenaryt-2.pdf)
 1. [Security Considerations for Peer-to-Peer Distributed Hash Tables](https://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.11.7175&rep=rep1&type=pdf)
+
+
+# Workload distribution 
+todo
+
+# Effort spent on project 
+todo
