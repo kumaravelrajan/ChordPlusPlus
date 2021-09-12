@@ -20,6 +20,7 @@ set_target_properties(${LIBRARY_NAME} PROPERTIES LINKER_LANGUAGE CXX)
 
 target_link_libraries(${LIBRARY_NAME} lib::util)
 target_link_libraries(${LIBRARY_NAME} lib::logging)
+target_link_libraries(${LIBRARY_NAME} lib::config)
 target_link_libraries(${LIBRARY_NAME} CapnProto::capnp-rpc)
 target_link_libraries(${LIBRARY_NAME} CapnProto::kj)
 target_link_libraries(${LIBRARY_NAME} CapnProto::kj-tls)

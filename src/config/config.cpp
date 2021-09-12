@@ -29,6 +29,7 @@ bool splitIP(const std::string &value, std::string &address, uint16_t &port)
 config::Configuration config::parseConfigFile(const std::string &path)
 {
     Configuration config{};
+    bool boolean;
     std::string str{};
     uint64_t uint64;
 
@@ -39,15 +40,21 @@ config::Configuration config::parseConfigFile(const std::string &path)
     ini.default_section(ini.sections["DEFAULT"]);
     ini.interpolate();
 
-    if (inipp::get_value(ini.sections["dht"], "p2p_address", str = ""))
+    if (inipp::get_value(ini.sections["DEFAULT"], "hostkey", str))
+        config.private_key_path = str;
+    if (inipp::get_value(ini.sections["dht"], "certificate", str))
+        config.certificate_path = str;
+    if (inipp::get_value(ini.sections["dht"], "use_tls", boolean))
+        config.use_tls = boolean;
+    if (inipp::get_value(ini.sections["dht"], "p2p_address", str))
         splitIP(str, config.p2p_address, config.p2p_port);
-    if (inipp::get_value(ini.sections["dht"], "api_address", str = ""))
+    if (inipp::get_value(ini.sections["dht"], "api_address", str))
         splitIP(str, config.api_address, config.api_port);
-    if (inipp::get_value(ini.sections["dht"], "bootstrapNode_address", str = ""))
+    if (inipp::get_value(ini.sections["dht"], "bootstrapNode_address", str))
         splitIP(str, config.bootstrapNode_address, config.bootstrapNode_port);
     if (inipp::get_value(ini.sections["dht"], "node_amount", uint64))
         config.node_amount = uint64;
-    if (inipp::get_value(ini.sections["dht"], "startup_script", str = ""))
+    if (inipp::get_value(ini.sections["dht"], "startup_script", str))
         config.startup_script = str;
     return config;
 }

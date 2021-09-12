@@ -1,5 +1,4 @@
 #include "Peer.h"
-#include <capnp/ez-rpc.h>
 #include <stack>
 #include <util.h>
 #include <centralLogControl.h>
@@ -9,9 +8,11 @@ using dht::Peer;
 using dht::Node;
 
 
-PeerImpl::PeerImpl(std::shared_ptr<NodeInformation> nodeInformation, GetSuccessorMethod getSuccessorMethod) :
+PeerImpl::PeerImpl(std::shared_ptr<NodeInformation> nodeInformation, config::Configuration conf,
+                   GetSuccessorMethod getSuccessorMethod) :
     m_getSuccessorMethod{getSuccessorMethod},
-    m_nodeInformation{std::move(nodeInformation)} {}
+    m_nodeInformation{std::move(nodeInformation)},
+    m_conf{std::move(conf)} {}
 
 // Server methods
 
@@ -274,7 +275,7 @@ NodeInformation::id_type PeerImpl::idFromReader(capnp::Data::Reader id)
             false, true
         )) {
         // Check if successor is online
-        auto client = kj::heap<capnp::EzRpcClient>(successor->getIp(), successor->getPort());
+        auto client = getClient(successor->getIp(), successor->getPort());
         auto cap = client->getMain<Peer>();
         auto req = cap.getPredecessorRequest();
         return req.send().then(
@@ -295,7 +296,7 @@ NodeInformation::id_type PeerImpl::idFromReader(capnp::Data::Reader id)
             return std::optional<NodeInformation::Node>{};
         }
 
-        auto client = kj::heap<capnp::EzRpcClient>(closest_preceding->getIp(), closest_preceding->getPort());
+        auto client = getClient(closest_preceding->getIp(), closest_preceding->getPort());
         auto cap = client->getMain<Peer>();
         auto req = cap.getSuccessorRequest();
         req.setId(capnp::Data::Builder{kj::heapArray<kj::byte>(id.begin(), id.end())});
@@ -362,8 +363,8 @@ PeerImpl::getData(const NodeInformation::Node &node, const std::vector<uint8_t> 
         LOG_TRACE("Get from this node");
         return m_nodeInformation->getData(key);
     } else {
-        capnp::EzRpcClient client{node.getIp(), node.getPort()};
-        auto cap = client.getMain<Peer>();
+        auto client = getClient(node.getIp(), node.getPort());
+        auto cap = client->getMain<Peer>();
         auto req = cap.getDataRequest();
         req.setKey(capnp::Data::Builder(kj::heapArray<kj::byte>(key.begin(), key.end())));
         return req.send().then([LOG_CAPTURE](capnp::Response<Peer::GetDataResults> &&response) {
@@ -377,7 +378,7 @@ PeerImpl::getData(const NodeInformation::Node &node, const std::vector<uint8_t> 
         }, [LOG_CAPTURE](const kj::Exception &e) {
             LOG_DEBUG("Exception in request\n\t\t{}", e.getDescription().cStr());
             return std::optional<std::vector<uint8_t>>{};
-        }).wait(client.getWaitScope());
+        }).wait(client->getWaitScope());
     }
 }
 
@@ -395,8 +396,8 @@ void PeerImpl::setData(
         LOG_TRACE("Store in this node");
         m_nodeInformation->setData(key, value, ttl_seconds);
     } else {
-        capnp::EzRpcClient client{node.getIp(), node.getPort()};
-        auto cap = client.getMain<Peer>();
+        auto client = getClient(node.getIp(), node.getPort());
+        auto cap = client->getMain<Peer>();
         auto req = cap.setDataRequest();
         req.setKey(capnp::Data::Builder(kj::heapArray<kj::byte>(key.begin(), key.end())));
         req.setValue(capnp::Data::Builder(kj::heapArray<kj::byte>(value.begin(), value.end())));
@@ -405,7 +406,7 @@ void PeerImpl::setData(
             LOG_TRACE("got response");
         }, [LOG_CAPTURE](const kj::Exception &e) {
             LOG_DEBUG("Exception in request\n\t\t{}", e.getDescription().cStr());
-        }).wait(client.getWaitScope());
+        }).wait(client->getWaitScope());
     }
 }
 
@@ -428,7 +429,7 @@ PeerImpl::getClosestPrecedingHelper(const NodeInformation::Node &node, const Nod
         if (result.successor && *result.successor == m_nodeInformation->getNode()) {
             result.successor.reset();
         } else if (result.successor) {
-            auto client = kj::heap<capnp::EzRpcClient>(result.successor->getIp(), result.successor->getPort());
+            auto client = getClient(result.successor->getIp(), result.successor->getPort());
             auto cap = client->getMain<Peer>();
             auto req = cap.getPredecessorRequest();
             return req.send().attach(kj::mv(client)).then(
@@ -455,7 +456,7 @@ PeerImpl::getClosestPrecedingHelper(const NodeInformation::Node &node, const Nod
                 m_nodeInformation->getSuccessor()
             });
         } else {
-            auto client = kj::heap<capnp::EzRpcClient>(node.getIp(), node.getPort());
+            auto client = getClient(node.getIp(), node.getPort());
             auto cap = client->getMain<Peer>();
             auto req = cap.getClosestPrecedingRequest();
             req.setId(containerToArray<kj::byte>(id));
@@ -494,8 +495,8 @@ PeerImpl::getClosestPrecedingHelper(const NodeInformation::Node &node, const Nod
 void PeerImpl::getDataItemsOnJoinHelper(std::optional<NodeInformation::Node> successorNode)
 {
     LOG_GET
-    capnp::EzRpcClient client{successorNode->getIp(), successorNode->getPort()};
-    auto cap = client.getMain<Peer>();
+    auto client = getClient(successorNode->getIp(), successorNode->getPort());
+    auto cap = client->getMain<Peer>();
     auto req = cap.getDataItemsOnJoinRequest();
     buildNode(req.getNewNode(), m_nodeInformation->getNode());
 
@@ -514,5 +515,10 @@ void PeerImpl::getDataItemsOnJoinHelper(std::optional<NodeInformation::Node> suc
         LOG_TRACE("got response from GetDataItemsOnJoin");
     }, [LOG_CAPTURE](const kj::Exception &e) {
         LOG_DEBUG(e.getDescription().cStr());
-    }).wait(client.getWaitScope());
+    }).wait(client->getWaitScope());
+}
+
+kj::Own<rpc::SecureRpcClient> PeerImpl::getClient(const std::string &ip, uint16_t port)
+{
+    return rpc::getClient(m_conf, ip, port);
 }
