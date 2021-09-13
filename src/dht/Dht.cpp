@@ -295,7 +295,9 @@ std::vector<uint8_t> Dht::onDhtPutKeyIsHashOfData(const api::Message_DHT_PUT_KEY
 
     if (successor) {
         SPDLOG_DEBUG("Successor found: {}:{}", successor->getIp(), successor->getPort());
-        getPeerImpl().setData(*successor, message_data.key, message_data.value,
+        std::vector<uint8_t> vFinalHashedKey(finalHashedKey.size());
+        std::copy(finalHashedKey.begin(), finalHashedKey.end(), vFinalHashedKey.begin());
+        getPeerImpl().setData(*successor, vFinalHashedKey, message_data.value,
                               message_data.m_headerExtend.ttl);
     } else {
         SPDLOG_DEBUG("No Successor found!");
@@ -338,6 +340,9 @@ std::vector<uint8_t> Dht::onDhtPutKeyIsHashOfData(const api::Message_DHT_PUT_KEY
                         } else {
                             ReplicationOfEachDataItemOnEachNode[replicationSuccessor->getId()] = ++ReplicationOfEachDataItemOnEachNode.at(replicationSuccessor->getId());
                         }
+
+                        std::vector<uint8_t> vFinalHashedKey(finalHashedKey.size());
+                        std::copy(finalHashedKey.begin(), finalHashedKey.end(), vFinalHashedKey.begin());
                         getPeerImpl().setData(*replicationSuccessor, tempMessage_Data.key, message_data.value, message_data.m_headerExtend.ttl);
                     }
                 }
