@@ -343,7 +343,7 @@ std::vector<uint8_t> Dht::onDhtPutKeyIsHashOfData(const api::Message_DHT_PUT_KEY
 
                         std::vector<uint8_t> vFinalHashedKey(finalHashedKey.size());
                         std::copy(finalHashedKey.begin(), finalHashedKey.end(), vFinalHashedKey.begin());
-                        getPeerImpl().setData(*replicationSuccessor, tempMessage_Data.key, message_data.value, message_data.m_headerExtend.ttl);
+                        getPeerImpl().setData(*replicationSuccessor, vFinalHashedKey, message_data.value, message_data.m_headerExtend.ttl);
                     }
                 }
             }
