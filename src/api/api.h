@@ -27,7 +27,7 @@ namespace api
         using tcp = asio::ip::tcp;
 
         using request_handler_t = std::function<std::vector<uint8_t>(const MessageData &message_data, std::atomic_bool &cancelled)>;
-        template<typename MSG_TYPE, std::enable_if_t<util::is_one_of_v<MSG_TYPE, Message_KEY, Message_DHT_PUT, Message_DHT_PUT_KEY_IS_HASH_OF_DATA>, int> = 0>
+        template<typename MSG_TYPE, std::enable_if_t<util::is_one_of_v<MSG_TYPE, Message_KEY, Message_DHT_PUT, Message_DHT_PUT_KEY_IS_HASH_OF_DATA, Message_DHT_GET_KEY_IS_HASH_OF_DATA>, int> = 0>
         using request_handler_specific_t = std::function<std::vector<uint8_t>(const MSG_TYPE &message_data, std::atomic_bool &cancelled)>;
 
     public:

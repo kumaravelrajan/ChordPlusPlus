@@ -213,6 +213,37 @@ namespace util
         return ss.str();
     }
 
+    // Sha256 online calculators provide 64 character hashes - 2 characters = 1 byte.
+    // Byte dump of such a hash.
+    template<typename C, std::enable_if_t<is_iterable_v<C>, int> = 0>
+    inline std::string
+    HexDump64ToHexDump32(const C &bytes)
+    {
+        uint8_t HexDump32ToReturn[32];
+        
+        size_t i, j = 0;
+        std::stringstream ss{};
+        ss << std::setfill('0') << std::right;
+        
+        for (i = 0; i < bytes.size() - 1; i += 2) {
+            std::string str;
+            str.push_back(bytes[i]);
+            str.push_back(bytes[i+1]);
+            ss << std::hex << str;
+        }
+
+        std::string sample = ss.str();
+        const char *pos = &sample[0];
+        uint8_t toReturn[32];
+
+        for (size_t count = 0; count < 32; count++) {
+            sscanf(pos, "%2hhx", &toReturn[count]);
+            pos += 2;
+        }
+
+        return ss.str();
+    }
+
     template<typename T>
     inline std::array<uint8_t, SHA_DIGEST_LENGTH> hash_sha1(const T &bytes)
     {

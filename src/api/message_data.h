@@ -94,6 +94,14 @@ namespace api
         Message_KEY(uint16_t msg_type, const std::vector<uint8_t> &key);
     };
 
+    struct Message_DHT_GET_KEY_IS_HASH_OF_DATA : MessageData
+    {
+        std::vector<uint8_t> key;
+
+        Message_DHT_GET_KEY_IS_HASH_OF_DATA(std::vector<uint8_t> bytes); // NOLINT
+        Message_DHT_GET_KEY_IS_HASH_OF_DATA(uint16_t msg_type, const std::vector<uint8_t> &key);
+    };
+
     template<uint16_t>
     struct message_type_from_int
     {
@@ -115,6 +123,12 @@ namespace api
     struct message_type_from_int<util::constants::DHT_PUT_KEY_IS_HASH_OF_DATA>
     {
         using type = Message_DHT_PUT_KEY_IS_HASH_OF_DATA;
+    };
+
+    template<>
+    struct message_type_from_int<util::constants::DHT_GET_KEY_IS_HASH_OF_DATA>
+    {
+        using type = Message_DHT_GET_KEY_IS_HASH_OF_DATA;
     };
 
     template<uint16_t i>
