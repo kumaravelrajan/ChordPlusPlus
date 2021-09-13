@@ -265,6 +265,8 @@ The messages except DHT_PUT_KEY_IS_HASH_OF_DATA and DHT_GET_KEY_IS_HASH_OF_DATA 
 ---
 ![DHT GET](./assets/MSG_DHT_GET.png)
 
+**Note:** The online SHA256 hashers return the 32 byte SHA256 hash as 64 hex characters. For DHT_GET_KEY_IS_HASH_OF_DATA to work currently, the 64 hex characters which is the key should be passed in as hex characters. Eg - 64 char hex hash = 970c4ff4b9c1fd02c8cd520eb7e2baf3653126c4c2f6cc422ca7682d5493cdc4 should be passed in as \x97\x0c\x4f\xf4\xb9\xc1\xfd\x02\xc8\xcd\x52\x0e\xb7\xe2\xba\xf3\x65\x31\x26\xc4\xc2\xf6\xcc\x42\x2c\xa7\x68\x2d\x54\x93\xcd\xc4.
+
 ### Peer to peer communication
 The Message schema for inter-peer communication is defined in ../src/dht/schemas/peer.capnp
 
