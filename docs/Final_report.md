@@ -310,6 +310,7 @@ Also, the integrity of the stored data in the DHT can be maintained by using the
 Using Cmake:
 ```sh
 mkdir build
+cd build
 cmake ..
 make
 sudo make install
