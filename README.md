@@ -10,7 +10,3 @@ The Chord algorithm is a protocol for implementing a Distributed Hash Table (DHT
 
 This project implements the chord algorithm and in addition to improve the security of the P2P network implements measures such as symmetric encryption and proof-of-work. 
 
-# Setup
-
-Ensure docker is installed on your system. Run the dockerfile.
-
